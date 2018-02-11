@@ -25,7 +25,7 @@ import os, sys, traceback
 import logging.config
 from logging import handlers, INFO, ERROR, WARNING, DEBUG
 
-log_path = '/var/log'
+log_path = os.path.join(os.getenv("HOME"), 'virt_log')
 
 
 class virt_log(logging.Logger):
@@ -61,7 +61,7 @@ class virt_log(logging.Logger):
         except Exception:
             return
 
-    def csim_log(self, level, msg, args, exc_info=None, extra=None):
+    def __log(self, level, msg, args, exc_info=None, extra=None):
         '''
         Use self defined log to handle log, similar to the logging model
         '''
@@ -78,7 +78,7 @@ class virt_log(logging.Logger):
         '''
         msg = "\033[1;32;40m[SUCCESS] %s\033[0;0;0m" % (msg)
         if self.isEnabledFor(INFO):
-            self.csim_log(INFO, msg, args, **kwargs)
+            self.__log(INFO, msg, args, **kwargs)
 
     def fail(self, msg, *args, **kwargs):
         '''
@@ -87,7 +87,7 @@ class virt_log(logging.Logger):
         '''
         msg = "\033[1;31;40m[FAILURE] %s\033[0;0;0m" % (msg)
         if self.isEnabledFor(ERROR):
-            self.csim_log(ERROR, msg, args, **kwargs)
+            self.__log(ERROR, msg, args, **kwargs)
 
     def warn(self, msg, *args, **kwargs):
         '''
@@ -96,7 +96,7 @@ class virt_log(logging.Logger):
         '''
         msg = "\033[1;33;40m[WARNING] %s\033[0;0;0m" % (msg)
         if self.isEnabledFor(WARNING):
-            self.csim_log(WARNING, msg, args, **kwargs)
+            self.__log(WARNING, msg, args, **kwargs)
 
     warning = warn
 
@@ -106,7 +106,7 @@ class virt_log(logging.Logger):
         '''
         msg = "\033[1;31;40m[ ERROR ] %s\033[0;0;0m" % (msg)
         if self.isEnabledFor(ERROR):
-            self.csim_log(ERROR, msg, args, **kwargs)
+            self.__log(ERROR, msg, args, **kwargs)
 
     def exception(self, msg, *args, **kwargs):
         '''
@@ -115,23 +115,23 @@ class virt_log(logging.Logger):
         format_str = traceback.format_exc()
         if isinstance(msg, str):
             msg = "\033[1;31;40m[ ERROR ] %s\033[0;0;0m" % (msg)
-            self.csim_log(ERROR, msg, args, **kwargs)
+            self.__log(ERROR, msg, args, **kwargs)
 
         format_str = "\n" + format_str
-        self.csim_log(DEBUG, format_str, (), {})
+        self.__log(DEBUG, format_str, (), {})
 
 
 if not os.path.exists(log_path):
-    print "Error: make sure {0} is exists and have 'w' permission! try these cmds:\
-        \nsudo mkdir -p {0}\nsudo chmod -R a+w {0}".format(log_path)
-    exit(1)
+    os.mkdir(log_path)
 
 # The logging.conf can not be replaced by logging_server.conf,
 # if so, log can not written to log.log if its mode is 644
-logging.config.fileConfig("./logging.conf")
+conf_file = os.path.join(os.path.abspath('.'),"logging.conf")
+print conf_file
+logging.config.fileConfig(conf_file)
 log = virt_log("virt")
 temp_log = logging.getLogger("virt")
-log = temp_log.setLevel(temp_log.level)
+log.setLevel(temp_log.level)
 for handler in temp_log.handlers:
     log.addHandler(handler)
 #===============================================================================
