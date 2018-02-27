@@ -33,8 +33,11 @@ rotate_log.warning("test log for warning")
 rotate_log.error("test log for error")
 rotate_log.exception("test log for exception")
 
+print "console"
 log.debug("test log for debug.")
 log.info("test log for info")
 log.warning("test log for warning")
 log.error("test log for error")
 log.exception("test log for exception")
+log.success("test log for success")
+log.fail("test log for fail")
