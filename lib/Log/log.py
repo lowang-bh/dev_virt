@@ -73,7 +73,7 @@ class virt_log(logging.Logger):
 
     def success(self, msg, *args, **kwargs):
         '''
-        Used for CSIM log when print SUCCESS message
+        Used for  log when print SUCCESS message
         Key text [SUCCESS] will be show as: highlight;green;black backgroud
         '''
         msg = "\033[1;32;40m[SUCCESS] %s\033[0;0;0m" % (msg)
@@ -82,16 +82,25 @@ class virt_log(logging.Logger):
 
     def fail(self, msg, *args, **kwargs):
         '''
-        Used for CSIM log when print FAILURE message
+        Used for  log when print FAILURE message
         Key text [FAILURE] will be show as: highlight;red;black backgroud
         '''
         msg = "\033[1;31;40m[FAILURE] %s\033[0;0;0m" % (msg)
         if self.isEnabledFor(ERROR):
             self.__log(ERROR, msg, args, **kwargs)
 
+    def info(self, msg, *args, **kwargs):
+        '''
+        Used for  log when print SUCCESS message
+        Key text [SUCCESS] will be show as: highlight;green;black backgroud
+        '''
+        msg = "\033[1;32;40m[  INFO ] %s\033[0;0;0m" % (msg)
+        if self.isEnabledFor(INFO):
+            self.__log(INFO, msg, args, **kwargs)
+
     def warn(self, msg, *args, **kwargs):
         '''
-        Used for CSIM log when print WARNING message
+        Used for  log when print WARNING message
         Key text [WARNING] will be show as: highlight;yellow;black backgroud
         '''
         msg = "\033[1;33;40m[WARNING] %s\033[0;0;0m" % (msg)
@@ -110,7 +119,7 @@ class virt_log(logging.Logger):
 
     def exception(self, msg, *args, **kwargs):
         '''
-        Used for CSIM log when print EXCEPTION message
+        Used for  log when print EXCEPTION message
         '''
         format_str = traceback.format_exc()
         if isinstance(msg, str):
@@ -126,8 +135,7 @@ if not os.path.exists(log_path):
 
 # The logging.conf can not be replaced by logging_server.conf,
 # if so, log can not written to log.log if its mode is 644
-conf_file = os.path.join(os.path.abspath('.'),"logging.conf")
-print conf_file
+conf_file = os.path.join(os.path.abspath('.'), "logging.conf")
 logging.config.fileConfig(conf_file)
 log = virt_log("virt")
 temp_log = logging.getLogger("virt")
