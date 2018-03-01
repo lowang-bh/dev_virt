@@ -214,3 +214,7 @@ class XenVirtDriver(VirtDriver):
             return False
 
         return True
+
+
+if __name__ == "__main__":
+    log.info("test log")
