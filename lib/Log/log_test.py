@@ -7,7 +7,7 @@
 #########################################################################
 print "test log"
 import logging
-from log import log
+from lib.Log.log import log
 nohup_log = logging.getLogger("nohup")
 thread_log = logging.getLogger("thread")
 rotate_log = logging.getLogger('virt')

@@ -135,7 +135,9 @@ if not os.path.exists(log_path):
 
 # The logging.conf can not be replaced by logging_server.conf,
 # if so, log can not written to log.log if its mode is 644
-conf_file = os.path.join(os.path.abspath('.'), "logging.conf")
+
+conf_file = os.path.join(os.path.dirname(__file__), "logging.conf")
+#print conf_file
 logging.config.fileConfig(conf_file)
 log = virt_log("virt")
 temp_log = logging.getLogger("virt")
