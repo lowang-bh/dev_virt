@@ -27,6 +27,13 @@ class VirtDriver(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def is_instance_running(self, inst_name):
+        '''
+        @param inst_name: instance name
+        '''
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def create_instance(self, inst_name, reference_vm):
         '''
         @param inst_name: new instance name
@@ -35,9 +42,34 @@ class VirtDriver(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def is_instance_running(self, inst_name):
+    def delete_instance(self, inst_name):
+        '''
+        :param inst_name, instance name
+        :return True or False based on whether it is successful
+        '''
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def power_off_vm(self, inst_name):
+        '''
+        :param inst_name, instance name
+        :return True or False
+        '''
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def power_on_vm(self, inst_name):
+        '''
+        :param inst_name, power on vm
+        :return True or False
+        '''
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def reboot(self, inst_name):
         '''
         @param inst_name: instance name
+        @return: True or False based on whether it is successful
         '''
         raise NotImplementedError()
 
