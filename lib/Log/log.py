@@ -25,7 +25,8 @@ import os, sys, traceback
 import logging.config
 from logging import handlers, INFO, ERROR, WARNING, DEBUG
 
-log_path = os.path.join(os.getenv("HOME"), 'virt_log')
+#log_path = os.path.join(os.getenv("HOME"), 'virt_log')
+log_path = '/var/log'
 
 
 class virt_log(logging.Logger):
@@ -158,13 +159,12 @@ for handler in temp_log.handlers:
 #===============================================================================
 
 # backgroud process log
-# nohup_log = logging.getLogger("nohup")
 #===============================================================================
-# nohup_temp_log = logging.getLogger("nohup")
-# nohup_log = virt_log("nohup")
-# nohup_log.setLevel(nohup_temp_log.level)
-# for handler in nohup_temp_log.handlers:
-#     nohup_log.addHandler(handler)
+nohup_temp_log = logging.getLogger("nohup")
+nohup_log = virt_log("nohup")
+nohup_log.setLevel(nohup_temp_log.level)
+for handler in nohup_temp_log.handlers:
+    nohup_log.addHandler(handler)
 #===============================================================================
 
 # mod_syspvt record log
