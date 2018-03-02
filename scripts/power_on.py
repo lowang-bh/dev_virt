@@ -10,7 +10,6 @@ from optparse import OptionParser
 import time
 from lib.Log.log import log
 from lib.Val.virt_factory import VirtFactory
-from imaplib import host
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
@@ -34,7 +33,7 @@ if __name__ == "__main__":
         exit(1)
     host_name = options.host
     user = options.user if options.user else "root"
-    passwd = options.passwd if options.passwd else ""
+    passwd = str(options.passwd).replace('\\','') if options.passwd else ""
 
     if options.all:
         log.info("Start power on all VMs in server [%s].", host_name)
@@ -53,8 +52,23 @@ if __name__ == "__main__":
                 log.error("No VM exists with name [%s].", vm_name)
                 continue
 
+            res_dict.setdefault(vm_name, 0)
             log.info("Start to power on VM [%s].", vm_name)
             ret = virt_driver.power_on_vm(vm_name)
             if not ret:
                 log.error("VM [%s] power on failed.", vm_name)
+                res_dict[vm_name] = 1
             time.sleep(0.5)
+
+        failed_vm_list =[item[0] for item in filter(lambda x:x[1]==1, res_dict.items())]
+        if failed_vm_list:
+            log.fail("VMs %s power on failed.", str(failed_vm_list))
+            exit(1)
+        else:
+            log.success("All VM power on successfully.")
+            exit(0)
+    else:
+        parser.print_help()
+        exit(0)
+
+

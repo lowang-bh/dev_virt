@@ -13,7 +13,7 @@ if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
 
         create_vm.py -c new_vm_name -f template_name
-        create_vm.py -c new_vm_name -f template --host=ip --user=user --pwd=passwd
+        create_vm.py -c new_vm_name -f template [--host=ip --user=user --pwd=passwd]
         """
     parser = OptionParser(usage=usage)
     parser.add_option("--host", dest="host", help="IP for host server")
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     new_vm_name, template_name = options.vm_name, options.template
     host_name = options.host
     user = options.user if options.user else "root"
-    passwd = options.passwd if options.passwd else ""
+    passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
 
     virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
 
