@@ -120,6 +120,7 @@ class XenVirtDriver(VirtDriver):
         '''
         handler = self.get_handler()
         try:
+            log.debug("Start to copy templates:%s", reference_vm)
             templ_ref = handler.xenapi.VM.get_by_name_label(reference_vm)[0]  #get_by_name_label return a list
             new_vm_ref = handler.xenapi.VM.clone(templ_ref, inst_name)
             handler.xenapi.VM.provision(new_vm_ref)
@@ -164,8 +165,10 @@ class XenVirtDriver(VirtDriver):
         if handler is None:
             log.error("Can not get handler when try to power off VM [%s].", inst_name)
             return False
+
+        vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
         try:
-            handler.xenapi.VM.shutdown(inst_name)
+            handler.xenapi.VM.shutdown(vm_ref)
         except Exception, error:
             log.exception("Exception raised: %s when shutdown VM [%s].", error, inst_name)
             return False
@@ -237,7 +240,7 @@ class XenVirtDriver(VirtDriver):
 
 if __name__ == "__main__":
     log.info("test log")
-    virt = XenVirtDriver("10.143.248.13", "root", "Mojiti!906")
+    virt = XenVirtDriver("10.143.248.16", "root", "Mojiti!906")
     handler = virt.get_handler()
     vm_list = virt.get_vm_list()
     print vm_list
@@ -245,3 +248,25 @@ if __name__ == "__main__":
         record = virt.get_vm_record(vm)
         if record:
             log.info("%s %s %s", vm, record['uuid'], record['name_label'])
+    vm_name = "new_vm"
+    if virt.is_instance_exists(vm_name):
+        ret = virt.power_off_vm(vm_name)
+        if not ret:
+            log.error("Can not power off VM[%s]", vm_name)
+        ret = virt.delete_instance(vm_name)
+        if not ret:
+            log.error("delete vm failed: %s", vm_name)
+        else:
+            log.info("delete vm successfully.")
+
+    ret = virt.create_instance(vm_name, r"CentOS 7.2 for Lain")
+    if ret:
+        ret = virt.power_on_vm(vm_name)
+        if ret:
+            log.success("Power on vm successfully.")
+        else:
+            log.fail("Power on VM failed.")
+    else:
+        log.fail("Can not create new VM.")
+    print ret
+
