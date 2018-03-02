@@ -8,6 +8,7 @@
 # Created Time: 2018-02-08 11:34:12
 #########################################################################
 
+import time
 from lib.Log.log import log
 from lib.Val.virt_driver import VirtDriver
 from lib.Val.Xen import XenAPI
@@ -169,6 +170,7 @@ class XenVirtDriver(VirtDriver):
         vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
         try:
             handler.xenapi.VM.shutdown(vm_ref)
+            time.sleep(2)
         except Exception, error:
             log.exception("Exception raised: %s when shutdown VM [%s].", error, inst_name)
             return False
@@ -189,6 +191,7 @@ class XenVirtDriver(VirtDriver):
             vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
             try:
                 handler.xenapi.VM.start(vm_ref, False, False)
+                time.sleep(2)
             except Exception, error:
                 log.error("Raise exception:'%s' while power on vm:%s", error, inst_name)
                 return False
@@ -215,6 +218,7 @@ class XenVirtDriver(VirtDriver):
         vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
         try:
             handler.xenapi.VM.clean_reboot(vm_ref)
+            time.sleep(2)
         except Exception, error:
             log.exception("Exception: %s when reboot VM [%s].", error, inst_name)
             return False
