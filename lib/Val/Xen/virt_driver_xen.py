@@ -19,19 +19,19 @@ class XenVirtDriver(VirtDriver):
     '''
     '''
 
-    def __init__(self, hostname=None, user=None, passwd=None):
+    def __init__(self, hostname=None, user="root", passwd=""):
         VirtDriver.__init__(self, hostname, user, passwd)
         self._hypervisor_handler = None
-
-        if self.hostname is None:
-            self.hostname = 'localhost'
 
         self._hypervisor_handler = self.get_handler()
 
     def __del__(self):
-        if self._hypervisor_handler is not None:
-            self._hypervisor_handler.xenapi.session.logout()
-            self._hypervisor_handler = None
+        try:
+            if self._hypervisor_handler is not None:
+                self._hypervisor_handler.xenapi.session.logout()
+                self._hypervisor_handler = None
+        except Exception, error:
+            log.debug(error)
 
     def get_handler(self):
         '''
@@ -40,7 +40,11 @@ class XenVirtDriver(VirtDriver):
         if self._hypervisor_handler is not None:
             return self._hypervisor_handler
 
-        self._hypervisor_handler = XenAPI.xapi_local()  #no __nonzero__, can not use if/not for bool test
+        if self.hostname is None:
+            self._hypervisor_handler = XenAPI.xapi_local()  #no __nonzero__, can not use if/not for bool test
+        else:
+            log.debug("connecting to %s with user:%s,passwd:%s", "http://" + str(self.hostname), self.user, self.passwd)
+            self._hypervisor_handler = XenAPI.Session("http://" + str(self.hostname))
         try:
             self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1, 'XenVirtDriver')
         except Exception, error:
@@ -53,9 +57,12 @@ class XenVirtDriver(VirtDriver):
         '''
         release the session
         '''
-        if self._hypervisor_handler is not None:
-            self._hypervisor_handler.xenapi.session.logout()
-            self._hypervisor_handler = None
+        try:
+            if self._hypervisor_handler is not None:
+                self._hypervisor_handler.xenapi.session.logout()
+                self._hypervisor_handler = None
+        except Exception, error:
+            log.debug(error)
 
     def get_vm_list(self):
         """
@@ -111,10 +118,6 @@ class XenVirtDriver(VirtDriver):
         @see: VM ref clone (session ref session_id, VM ref vm, string new_name)
         @see: void provision (session ref session_id, VM ref vm)
         '''
-#        if reference_vm not in self.get_templates_list():
-#            log.error("No template named: %s", reference_vm)
-#            return False
-
         handler = self.get_handler()
         try:
             templ_ref = handler.xenapi.VM.get_by_name_label(reference_vm)[0]  #get_by_name_label return a list
@@ -152,7 +155,7 @@ class XenVirtDriver(VirtDriver):
         @see: void shutdown (session ref session_id, VM ref vm), it will attempts to
         first clean shutdown a VM and if it should fail then perform a hard shutdown on it.
         """
-        log.info("Start power off vm [%s].", inst_name)
+        log.debug("Start power off vm [%s].", inst_name)
         if not self.is_instance_running(inst_name):
             log.info("VM [%s] is already not running.", inst_name)
             return True
@@ -173,7 +176,7 @@ class XenVirtDriver(VirtDriver):
         """
         @summary: power on vm with name label inst_name
         """
-        log.info("Start power on VM [%s].", inst_name)
+        log.debug("Start power on VM [%s].", inst_name)
         if self.is_instance_running(inst_name):
             log.info("VM [%s] is already running.", inst_name)
             return True
@@ -215,6 +218,30 @@ class XenVirtDriver(VirtDriver):
 
         return True
 
+    def get_vm_record(self, inst_name):
+        """
+        return the record dict for inst_name
+        """
+        handler = self.get_handler()
+
+        record = {}
+        try:
+            vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
+            record = handler.xenapi.VM.get_record(vm_ref)
+        except Exception, error:
+            log.exception("Exception: %s when get record for VM [%s].", error, inst_name)
+            return {}
+
+        return record
+
 
 if __name__ == "__main__":
     log.info("test log")
+    virt = XenVirtDriver("10.143.248.13", "root", "Mojiti!906")
+    handler = virt.get_handler()
+    vm_list = virt.get_vm_list()
+    print vm_list
+    for vm in vm_list:
+        record = virt.get_vm_record(vm)
+        if record:
+            log.info("%s %s %s", vm, record['uuid'], record['name_label'])

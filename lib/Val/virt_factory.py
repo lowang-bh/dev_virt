@@ -22,7 +22,7 @@ class VirtFactory(object):
     '''
 
     @classmethod
-    def get_virt_driver(cls, host_name=None, user="root", passwd="passwd"):
+    def get_virt_driver(cls, host_name=None, user="root", passwd=""):
         '''
         return virt driver
         '''
