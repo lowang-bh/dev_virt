@@ -103,6 +103,7 @@ class XenVirtDriver(VirtDriver):
 
     def is_instance_running(self, inst_name):
         '''
+        VM states including:Halted, Paused, Running, Suspended
         '''
         if not self.is_instance_exists(inst_name):
             log.error("Instance with name %s doesn't exist.", inst_name)
@@ -113,6 +114,20 @@ class XenVirtDriver(VirtDriver):
         record = handler.xenapi.VM.get_record(vm_ref)
 
         return record['power_state'] == 'Running'
+
+    def is_instance_halted(self, inst_name):
+        """
+        VM is offline and not using any resources
+        """
+        if not self.is_instance_exists(inst_name):
+            log.error("Instance with name %s doesn't exist.", inst_name)
+            return False
+
+        handler = self.get_handler()
+        vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
+        record = handler.xenapi.VM.get_record(vm_ref)
+
+        return record['power_state'] == 'Halted'
 
     def create_instance(self, inst_name, reference_vm):
         '''
@@ -158,7 +173,7 @@ class XenVirtDriver(VirtDriver):
         first clean shutdown a VM and if it should fail then perform a hard shutdown on it.
         """
         log.debug("Start power off vm [%s].", inst_name)
-        if not self.is_instance_running(inst_name):
+        if self.is_instance_halted(inst_name):
             log.info("VM [%s] is already not running.", inst_name)
             return True
 
@@ -168,9 +183,10 @@ class XenVirtDriver(VirtDriver):
             return False
 
         vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
+
         try:
             handler.xenapi.VM.shutdown(vm_ref)
-            time.sleep(2)
+            time.sleep(1)
         except Exception, error:
             log.exception("Exception raised: %s when shutdown VM [%s].", error, inst_name)
             return False
@@ -189,8 +205,14 @@ class XenVirtDriver(VirtDriver):
         handler = self.get_handler()
         if handler is not None:
             vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
+            vm_state = handler.xenapi.VM.get_record(vm_ref)['power_state']
             try:
-                handler.xenapi.VM.start(vm_ref, False, False)
+                if vm_state == "Suspended":
+                    handler.xenapi.VM.resume(vm_ref, False, True)  # start_paused = False; force = True
+                elif vm_state == "Paused":
+                    handler.xenapi.VM.unpause(vm_ref)
+                else:  #vm_state == "Halted"
+                    handler.xenapi.VM.start(vm_ref, False, True)
                 time.sleep(2)
             except Exception, error:
                 log.error("Raise exception:'%s' while power on vm:%s", error, inst_name)
