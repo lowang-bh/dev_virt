@@ -243,8 +243,21 @@ class XenVirtDriver(VirtDriver):
 
 
 if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 1 and len(sys.argv) != 4:
+        print "Usage:"
+        print sys.argv[0], "[host-ip user passwd]"
+        sys.exit(1)
+    if len(sys.argv) == 4:
+        ip = sys.argv[1]
+        user = sys.argv[2]
+        passwd = str(sys.argv[3]).replace('\\', '')
+    else:
+        ip = None
+        user = "root"
+        passwd = ""
     log.info("test log")
-    virt = XenVirtDriver("10.143.248.16", "root", "Mojiti!906")
+    virt = XenVirtDriver(ip, user, passwd)
     handler = virt.get_handler()
     vm_list = virt.get_vm_list()
     print vm_list

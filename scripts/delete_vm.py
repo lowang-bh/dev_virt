@@ -23,13 +23,14 @@ if __name__ == "__main__":
     parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
 
     (options, args) = parser.parse_args()
+    log.debug("options:%s, args:%s", str(options), str(args))
 
     if options.host is not None and (options.user is None or options.passwd is None):
         log.fail("Please specify a user-name and passward for the given host:%s", options.host)
         exit(1)
     host_name = options.host
     user = options.user if options.user else "root"
-    passwd = str(options.passwd).replace('\\','') if options.passwd else ""
+    passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
 
     if args:
         virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
@@ -47,7 +48,7 @@ if __name__ == "__main__":
                 res_dict[vm_name] = 1
             time.sleep(0.5)
 
-        failed_vm_list =[item[0] for item in filter(lambda x:x[1]==1, res_dict.items())]
+        failed_vm_list = [item[0] for item in filter(lambda x:x[1] == 1, res_dict.items())]
         if failed_vm_list:
             log.fail("VMs %s deleted failed.", str(failed_vm_list))
             exit(1)
