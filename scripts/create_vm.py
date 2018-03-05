@@ -28,6 +28,7 @@ if __name__ == "__main__":
                       help="IP for new VM.")
 
     (options, args) = parser.parse_args()
+    log.debug("options:%s, args:%s", str(options), str(args))
     if options.vm_name is None:
         parser.print_help()
         exit(1)

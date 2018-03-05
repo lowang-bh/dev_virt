@@ -15,7 +15,7 @@ if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
 
         reset_vm.py --all       [--host=ip --user=user --pwd=passwd]
-        reset_vm.py --vm vmname [--host=ip --user=user --pwd=passwd]
+        reset_vm.py --vm=vmname [--host=ip --user=user --pwd=passwd]
         """
 
     parser = OptionParser(usage=usage)
@@ -29,13 +29,14 @@ if __name__ == "__main__":
                       help="Reset VM in server")
 
     (options, args) = parser.parse_args()
+    log.debug("options:%s, args:%s", str(options), str(args))
 
     if options.host is not None and (options.user is None or options.passwd is None):
         log.fail("Please specify a user-name and passward for the given host:%s", options.host)
         exit(1)
     host_name = options.host
     user = options.user if options.user else "root"
-    passwd = str(options.passwd).replace('\\','') if options.passwd else ""
+    passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
 
     if options.all:
         log.info("Start reset all VMs in server.")
