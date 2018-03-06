@@ -247,6 +247,20 @@ class XenVirtDriver(VirtDriver):
 
         return True
 
+    def get_vm_ref(self, inst_name):
+        """
+        @param inst_name: vm instance name
+        @return: return a reference object to the vm
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+        try:
+            vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
+        except Exception, error:
+            log.exception("Raise exceptions when get vm reference: %s.", error)
+            return None
+        return vm_ref
+
     def get_vm_record(self, inst_name):
         """
         return the record dict for inst_name
@@ -263,6 +277,22 @@ class XenVirtDriver(VirtDriver):
 
         return record
 
+    def get_vm_guest_metrics_record(self, inst_name):
+        """
+        return a dict with networks, os_version, uuid, memory, etc as keys
+        'network':{'0/ip': '10.143.248.80', '0/ipv6/0': 'fe80::b8d9:89ff:fef3:b252'}
+        'os_version': {'distro': 'centos',  'major': '7',  'minor': '1',
+                       'name': 'CentOS Linux release 7.1.1503 (Core)',
+                       'uname': '3.10.0-229.4.2.el7.x86_64'},
+        """
+        handler = self.get_handler()
+        try:
+            vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
+            guest_metrics_ref = handler.xenapi.VM.get_guest_metrics(vm_ref)
+            return handler.xenapi.VM_guest_metrics.get_record(guest_metrics_ref)
+        except Exception, error:
+            log.exception("Exceptions raised:%s", error)
+            return {}
 
 if __name__ == "__main__":
     import sys
