@@ -11,6 +11,7 @@ PLATFORM = "Xen"
 
 if PLATFORM == "Xen":
     from lib.Val.Xen.virt_driver_xen import XenVirtDriver
+    from lib.Val.Xen.vnet_driver_xen import XenVnetDriver
 
 if PLATFORM == "QEMU":
     from lib.Val.kvm.virt_driver_kvm import QemuVirtDriver
@@ -40,7 +41,7 @@ class VirtFactory(object):
         return vnet
         '''
         if PLATFORM == 'Xen':
-            raise TypeError('No network driver supported for Xen platform')
+            return XenVnetDriver(host_name, user, passwd)
 
         if PLATFORM == 'QEMU':
             raise TypeError('No network driver supported for Qemu platform')
