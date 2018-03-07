@@ -7,7 +7,8 @@
 '''
 from optparse import OptionParser
 from lib.Log.log import log
-from lib.Val.virt_factory import VirtFactory
+from lib.Val.virt_factory import VirtFactory, VM_MAC_PREFIX
+from lib.Utils.vm_utils import is_IP_available, create_new_vif
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
@@ -26,8 +27,10 @@ if __name__ == "__main__":
                       help="Create a new VM with a template.")
     parser.add_option("-t", "--templ", dest="template",
                       help="Template used to create a new VM.")
-    parser.add_option("--ip", dest="ip",
-                      help="IP for new VM.")
+
+    parser.add_option("--device", dest="device", help="The target device which vif attach(ed) to")
+    parser.add_option("--ip", dest="vif_ip", help="The ip assigned to the virtual interface")
+    parser.add_option("--netmask", dest="vif_netmask", help="The netmask for the target virtual interface")
 
     parser.add_option("--list-vm", dest="list_vm", action="store_true",
                       help="List all the vms in server.")
@@ -74,6 +77,15 @@ if __name__ == "__main__":
         if template_name not in virt_driver.get_templates_list():
             log.fail("No template named: %s", template_name)
             exit(1)
+        if options.vif_ip is not None:
+            option_dic = {"vif_ip":options.vif_ip, "vif_netmask":options.vif_netmask,
+                          "device":options.device, "host":options.host,
+                          "user":options.user, "passwd":options.passwd}
+            if not is_IP_available(**option_dic):
+                log.fail("IP check failed.")
+                exit(1)
+            mac_strs = ['%02x' % int(num) for num in options.vif_ip.split(".")]
+            mac_addr = VM_MAC_PREFIX + ":%s:%s:%s:%s" % tuple(mac_strs)
 
         ret = virt_driver.create_instance(new_vm_name, template_name)
         if ret:

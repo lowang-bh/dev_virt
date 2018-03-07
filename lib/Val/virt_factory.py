@@ -10,11 +10,13 @@
 PLATFORM = "Xen"
 
 if PLATFORM == "Xen":
+    VM_MAC_PREFIX = "00:66"
     from lib.Val.Xen.virt_driver_xen import XenVirtDriver
     from lib.Val.Xen.vnet_driver_xen import XenVnetDriver
 
 if PLATFORM == "QEMU":
     from lib.Val.kvm.virt_driver_kvm import QemuVirtDriver
+    VM_MAC_PREFIX = "52:54"
 
 
 class VirtFactory(object):
