@@ -12,8 +12,10 @@ from lib.Val.virt_factory import VirtFactory
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
 
-        create_vm.py -c new_vm_name -f template_name
-        create_vm.py -c new_vm_name -f template [--host=ip --user=user --pwd=passwd]
+        create_vm.py -c new_vm_name -t template
+        create_vm.py -c new_vm_name -t template [--host=ip --user=user --pwd=passwd]
+        create_vm.py --list-vm       [--host=ip --user=user --pwd=passwd]
+        create_vm.py --list-templ    [--host=ip --user=user --pwd=passwd]
         """
     parser = OptionParser(usage=usage)
     parser.add_option("--host", dest="host", help="IP for host server")
