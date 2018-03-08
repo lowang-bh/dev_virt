@@ -241,14 +241,16 @@ class XenVnetDriver(VnetDriver):
             return False
 
         vm_ref = self._hypervisor_handler.xenapi.VIF.get_VM(vif_ref)
-        if self._hypervisor_handler.xenapi.VM.get_record(vm_ref)['power_state'] != 'Running':
-            log.error("Only a running VM supports hot-plug a VIF.")
-            return False
+        power_status = self._hypervisor_handler.xenapi.VM.get_record(vm_ref)['power_state']
+        allowed_opera = self._hypervisor_handler.xenapi.VIF.get_record(vif_ref)['allowed_operations']
+        if 'plug' not in allowed_opera and power_status == 'Running':
+            log.error("VIF [%s] is already pluged.", vif_index)
+            return True
 
         try:
             self._hypervisor_handler.xenapi.VIF.plug(vif_ref)
         except Exception, error:
-            log.error("Only a running VM supports hot-plug a VIF:%s.", error)
+            log.error("Exception raised when hot-plug a VIF:%s.", error)
             return False
         return True
 
@@ -267,13 +269,16 @@ class XenVnetDriver(VnetDriver):
             return False
 
         vm_ref = self._hypervisor_handler.xenapi.VIF.get_VM(vif_ref)
-        if self._hypervisor_handler.xenapi.VM.get_record(vm_ref)['power_state'] != 'Running':
-            log.error("Only a running VM supports hot-unplug a VIF.")
-            return False
+        power_status = self._hypervisor_handler.xenapi.VM.get_record(vm_ref)['power_state']
+        allowed_opera =  self._hypervisor_handler.xenapi.VIF.get_record(vif_ref)['allowed_operations']
+        if 'unplug' not in allowed_opera and power_status == 'Running':
+            log.info("VIF [%s] is already unpluged.",vif_index)
+            return True
+
         try:
             self._hypervisor_handler.xenapi.VIF.unplug(vif_ref)
         except Exception, error:
-            log.exception("Only a running VM supports hot-unplug a VIF:%s", error)
+            log.exception("Exceptions raised when unplug a VIF:%s", error)
             return False
         return True
 
