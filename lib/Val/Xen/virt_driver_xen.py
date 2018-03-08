@@ -257,7 +257,7 @@ class XenVirtDriver(VirtDriver):
         try:
             vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
         except Exception, error:
-            log.exception("Raise exceptions when get vm reference: %s.", error)
+            log.exception("Raise exceptions when get vm reference: [%s].", error)
             return None
         return vm_ref
 

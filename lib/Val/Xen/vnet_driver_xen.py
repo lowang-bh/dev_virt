@@ -136,6 +136,21 @@ class XenVnetDriver(VnetDriver):
 
         return self._hypervisor_handler.xenapi.PIF.get_network(pif_ref)
 
+    def create_new_network(self, bridge_name):
+        """
+        create a new network, return the reference object
+        """
+        new_network_record = {'MTU': '1500', 'other_config': {}}
+        new_network_record['bridge'] = bridge_name
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        try:
+            return self._hypervisor_handler.xenapi.network.create(new_network_record)
+        except Exception, error:
+            log.exception("Exceptions: %s", error)
+            return None
+
     def get_all_vifs_indexes(self, inst_name):
         """
         @return: a list of all the index of interface device in guest VM
@@ -270,9 +285,9 @@ class XenVnetDriver(VnetDriver):
 
         vm_ref = self._hypervisor_handler.xenapi.VIF.get_VM(vif_ref)
         power_status = self._hypervisor_handler.xenapi.VM.get_record(vm_ref)['power_state']
-        allowed_opera =  self._hypervisor_handler.xenapi.VIF.get_record(vif_ref)['allowed_operations']
+        allowed_opera = self._hypervisor_handler.xenapi.VIF.get_record(vif_ref)['allowed_operations']
         if 'unplug' not in allowed_opera and power_status == 'Running':
-            log.info("VIF [%s] is already unpluged.",vif_index)
+            log.info("VIF [%s] is already unpluged.", vif_index)
             return True
 
         try:
