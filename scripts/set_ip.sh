@@ -45,10 +45,18 @@ if [[ $mymac == 00:66* ]];then
 
     MyGW=`echo $MyIP | awk -F. '{print $1"."$2"."$3".1"}'`
     MyBC=`echo $MyIP | awk -F. '{print $1"."$2"."$3".255"}'`
-
-    echo "IPADDR=$MyIP" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
-    echo "GATEWAY=$MyGW" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
-    echo "BROADCAST=$MyBC" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
+    if [[ ! -f /root/.IPCONFIGED$myeth ]];then
+        echo "IPADDR=$MyIP" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
+        echo "GATEWAY=$MyGW" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
+        echo "BROADCAST=$MyBC" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
+        echo "DNS1=10.106.170.107" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
+        echo "DNS2=10.106.170.108" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
+        touch /root/.IPCONFIGED$myeth
+    else
+        echo "Already configed $myeth"
+    fi
+    ifconfig $myeth $MyIP netmask 255.255.255.0
+    route add default gw $MyGW
 else
     echo "No MAC match the default pattern, exiting"
 fi
