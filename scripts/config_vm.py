@@ -29,9 +29,11 @@ if __name__ == "__main__":
     parser.add_option("--add-vif", dest="add_index", help="Add a virtual interface device to guest VM")
     parser.add_option("--del-vif", dest="del_index", help="Delete a virtual interface device from guest VM")
     parser.add_option("--vif", dest="vif_index", help="Configurate on a virtual interface device")
+
     parser.add_option("--device", dest="device", help="The target device which vif attach(ed) to")
     parser.add_option("--ip", dest="vif_ip", help="The ip assigned to the virtual interface")
     parser.add_option("--netmask", dest="vif_netmask", help="The netmask for the target virtual interface")
+
     parser.add_option("--list-vif", dest="list_vif", action="store_true",
                       help="List the virtual interface device in guest VM")
     parser.add_option("--list-pif", dest="list_pif", action="store_true",
@@ -52,7 +54,7 @@ if __name__ == "__main__":
         parser.print_help()
         exit(1)
     if not options.list_vif  and not options.list_pif and \
-        (not options.vif_index and not options.del_index):
+        (not options.vif_index and not options.del_index and not options.add_index):
         parser.print_help()
         exit(1)
 
@@ -81,10 +83,10 @@ if __name__ == "__main__":
         device_name = options.device
         mac_addr = None
 
+        option_dic = {"vif_ip":options.vif_ip, "vif_netmask":options.vif_netmask,
+                      "device":options.device, "host":options.host,
+                      "user":options.user, "passwd":options.passwd}
         if options.vif_ip:
-            option_dic = {"vif_ip":options.vif_ip, "vif_netmask":options.vif_netmask,
-                          "device":options.device, "host":options.host,
-                          "user":options.user, "passwd":options.passwd}
             if not is_IP_available(**option_dic):
                 log.fail("IP check failed.")
                 exit(1)

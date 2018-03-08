@@ -8,13 +8,14 @@
 from optparse import OptionParser
 from lib.Log.log import log
 from lib.Val.virt_factory import VirtFactory, VM_MAC_PREFIX
-from lib.Utils.vm_utils import is_IP_available, create_new_vif
+from lib.Utils.vm_utils import is_IP_available, config_vif
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
 
         create_vm.py -c new_vm_name -t template
         create_vm.py -c new_vm_name -t template [--host=ip --user=user --pwd=passwd]
+        create_vm.py -c new_vm_name -t template [--vif=vif_index --device=eth0 --ip=ip] [--host=ip --user=user --pwd=passwd]
         create_vm.py --list-vm       [--host=ip --user=user --pwd=passwd]
         create_vm.py --list-templ    [--host=ip --user=user --pwd=passwd]
         """
@@ -28,6 +29,7 @@ if __name__ == "__main__":
     parser.add_option("-t", "--templ", dest="template",
                       help="Template used to create a new VM.")
 
+    parser.add_option("--vif", dest="vif_index", help="Configurate on a virtual interface device")
     parser.add_option("--device", dest="device", help="The target device which vif attach(ed) to")
     parser.add_option("--ip", dest="vif_ip", help="The ip assigned to the virtual interface")
     parser.add_option("--netmask", dest="vif_netmask", help="The netmask for the target virtual interface")
@@ -77,7 +79,11 @@ if __name__ == "__main__":
         if template_name not in virt_driver.get_templates_list():
             log.fail("No template named: %s", template_name)
             exit(1)
-        if options.vif_ip is not None:
+
+        if options.vif_ip is not None:  #if an IP is specify, please specify a device, vif_index
+            if not options.device or not options.vif_index:
+                log.fail("Please specify a device and an VIF for configuring the IP.")
+                exit(1)
             option_dic = {"vif_ip":options.vif_ip, "vif_netmask":options.vif_netmask,
                           "device":options.device, "host":options.host,
                           "user":options.user, "passwd":options.passwd}
@@ -87,12 +93,26 @@ if __name__ == "__main__":
             mac_strs = ['%02x' % int(num) for num in options.vif_ip.split(".")]
             mac_addr = VM_MAC_PREFIX + ":%s:%s:%s:%s" % tuple(mac_strs)
 
+        #1. create VM
         ret = virt_driver.create_instance(new_vm_name, template_name)
+        if not ret:
+            log.fail("Failed to create VM [%s].Exiting....", new_vm_name)
+            exit(1)
+        log.info("New instance [%s] created successfully.", new_vm_name)
+        #2. config VM
+        if options.vif_ip is not None:
+            config_ret = config_vif(new_vm_name, options.device, options.vif_index, mac_addr, **option_dic)
+            if not config_ret:
+                log.warn("Vif configure failed.")
+            else:
+                log.info("Successfully configured the virtual interface device [%s] to VM [%s].", options.vif_index, new_vm_name)
+        #3. power on VM
+        ret = virt_driver.power_on_vm(new_vm_name)
         if ret:
-            log.success("Create VM [%s] successfully.", new_vm_name)
+            log.success("Create VM [%s] and power on successfully.", new_vm_name)
             exit(0)
         else:
-            log.fail("Failed to create VM [%s].", new_vm_name)
+            log.fail("VM [%s] created, but power on failed.", new_vm_name)
             exit(1)
     else:
         parser.print_help()

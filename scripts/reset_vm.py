@@ -55,6 +55,7 @@ if __name__ == "__main__":
             log.fail("No VM named %s.", vm_name)
             exit(1)
 
+        log.info("Start to reset [%s]", vm_name)
         ret = virt_driver.reboot(vm_name)
         if ret:
             log.success("VM [%s] reset successfully.", vm_name)

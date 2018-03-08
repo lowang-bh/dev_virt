@@ -38,7 +38,7 @@ def is_IP_available(vif_ip=None, vif_netmask=None, device=None, **kwargs):
             return False
     else:  # get the netmask on device as the default one
         vif_netmask = dest_metmask
-
+    log.debug("VIF IP is: %s, netmask is: %s", vif_ip, vif_netmask)
     if not vif_netmask:  # No default netmask and no given
         log.error("No netmask given, please specify one.")
         return False
@@ -61,7 +61,7 @@ def create_new_vif(inst_name, device_name, vif_index, mac_addr=None, **kwargs):
     @param device_name: vswitch (with the host-device attached) which the vif attach to
     @param vif_index: vif index
     """
-    log.info("Start to add a new virtual interface device with index:%s to VM [%s]", vif_index, inst_name)
+    log.info("Start to add a new virtual interface device with index:[%s] to VM [%s]", vif_index, inst_name)
 
     host_name = kwargs['host']
     user = kwargs['user'] if kwargs['user'] else "root"
@@ -75,11 +75,14 @@ def create_new_vif(inst_name, device_name, vif_index, mac_addr=None, **kwargs):
             if ret:
                 log.info("New virtual interface device [%s] attached to VM [%s] successfully.", vif_index, inst_name)
                 return True
+            else:
+                log.error("New virtual interface device attached failed to VM [%s].", inst_name)
+                return False
         else:
             log.info("New virtual interface device created successfully, but didn't plugin as VM is power off.")
             return True
 
-    log.debug("New virtual interface device created or attached failed.")
+    log.error("Can not create new virtual interface device [%s].", vif_index)
     return False
 
 
@@ -89,7 +92,7 @@ def destroy_old_vif(inst_name, vif_index, **kwargs):
     @param inst_name: Vm name
     @param vif_index: vif index
     """
-    log.info("Start to delete the interface device [%s] from VM [%s].", vif_index, inst_name)
+    log.info("Start to delete the old interface device [%s] from VM [%s].", vif_index, inst_name)
 
     host_name = kwargs['host']
     user = kwargs['user'] if kwargs['user'] else "root"
@@ -124,7 +127,8 @@ def config_vif(inst_name, device_name, vif_index, mac_addr=None, **kwargs):
     vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
 
     if vnet_driver.get_vif_by_index(inst_name, vif_index):
-        destroy_old_vif(inst_name, vif_index, **kwargs)
+        if not destroy_old_vif(inst_name, vif_index, **kwargs):
+            return False
 
     ret = create_new_vif(inst_name, device_name, vif_index, mac_addr, **kwargs)
 
