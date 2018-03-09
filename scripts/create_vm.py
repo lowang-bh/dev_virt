@@ -95,6 +95,7 @@ if __name__ == "__main__":
             mac_addr = VM_MAC_PREFIX + ":%s:%s:%s:%s" % tuple(mac_strs)
 
         #1. create VM
+        log.info("Start to create new instance: [%s]", new_vm_name)
         ret = virt_driver.create_instance(new_vm_name, template_name)
         if not ret:
             log.fail("Failed to create VM [%s].Exiting....", new_vm_name)

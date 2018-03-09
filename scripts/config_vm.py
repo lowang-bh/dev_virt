@@ -59,21 +59,25 @@ if __name__ == "__main__":
         exit(1)
 
     vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
     inst_name = args[0]
+    if not virt_driver.is_instance_exists(inst_name):
+        log.fail("No instance exist with name [%s].", inst_name)
+        exit(1)
 
     if options.list_vif:
         vif_list = vnet_driver.get_all_vifs_indexes(inst_name)
         if vif_list:
-            log.success("All virtual interface device: %s", sorted(vif_list))
+            log.info("All virtual interface device: %s", sorted(vif_list))
         else:
-            log.fail("No virtual interface device found.")
+            log.info("No virtual interface device found.")
 
     if options.list_pif:
         pif_list = vnet_driver.get_all_devices()
         if pif_list:
-            log.success("All device on the host: %s", sorted(pif_list))
+            log.info("All device on the host: %s", sorted(pif_list))
         else:
-            log.fail("No device found on the host.")
+            log.info("No device found on the host.")
 
     if options.add_index is not None:
         vif_index = options.add_index

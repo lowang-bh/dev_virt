@@ -239,7 +239,11 @@ class XenVnetDriver(VnetDriver):
             log.error("Error when destroy, please firstly unplug the VIF or power off the VM.")
             return False
 
-        self._hypervisor_handler.xenapi.VIF.destroy(vif_ref)
+        try:
+            self._hypervisor_handler.xenapi.VIF.destroy(vif_ref)
+        except Exception, error:
+            log.exception("Exceptions raised when destroy VIF:%s", error)
+            return False
         return True
 
     def attach_vif_to_vm(self, inst_name, vif_index):
