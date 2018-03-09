@@ -259,7 +259,7 @@ class XenVnetDriver(VnetDriver):
         power_status = self._hypervisor_handler.xenapi.VM.get_record(vm_ref)['power_state']
         allowed_opera = self._hypervisor_handler.xenapi.VIF.get_record(vif_ref)['allowed_operations']
         if 'plug' not in allowed_opera and power_status == 'Running':
-            log.error("VIF [%s] is already pluged.", vif_index)
+            log.info("VIF [%s] is already pluged.", vif_index)
             return True
 
         try:

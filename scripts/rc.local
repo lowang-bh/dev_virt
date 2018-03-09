@@ -12,7 +12,12 @@
 
 touch /var/lock/subsys/local
 if [[ -f /root/set_ip.sh ]];then
-    /root/set_ip.sh
+    ALLETHS=`ifconfig |/bin/egrep eth[0-9] |awk  '{print $1}'|tr -d ":"`
+    echo "All eths are: $ALLETHS"
+    for myeth in $ALLETHS
+    do
+        /root/set_ip.sh $myeth
+    done
 else
     echo "No set_ip.sh found."
 fi
