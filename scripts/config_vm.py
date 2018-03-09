@@ -116,19 +116,19 @@ if __name__ == "__main__":
             log.fail("Please specify a device or bridge for the new configured virtual interface.")
             exit(1)
         device_name = options.device
-
-        if options.vif_ip is None:
-            log.fail("Please specify a IP for the configured virtual interface.")
-            exit(1)
+        mac_addr = None
         option_dic = {"vif_ip":options.vif_ip, "vif_netmask":options.vif_netmask,
                       "device":options.device, "host":options.host,
                       "user":options.user, "passwd":options.passwd}
-        if not is_IP_available(**option_dic):
-            log.fail("IP check failed.")
-            exit(1)
 
-        mac_strs = ['%02x' % int(num) for num in options.vif_ip.split(".")]
-        mac_addr = VM_MAC_PREFIX + ":%s:%s:%s:%s" % tuple(mac_strs)
+        if options.vif_ip is not None:
+            if not is_IP_available(**option_dic):
+                log.fail("IP check failed.")
+                exit(1)
+            mac_strs = ['%02x' % int(num) for num in options.vif_ip.split(".")]
+            mac_addr = VM_MAC_PREFIX + ":%s:%s:%s:%s" % tuple(mac_strs)
+        else:
+            log.info("No IP specified, it will delete old VIF and create a new VIF to the target network.")
 
         if config_vif(inst_name, device_name, vif_index, mac_addr, **option_dic):
             log.success("New virtual interface device configured successfully.")

@@ -54,15 +54,16 @@ if __name__ == "__main__":
         virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
         all_vms = virt_driver.get_vm_list()
         if all_vms:
-            log.info(str(all_vms))
+            log.info(str(sorted(all_vms)))
         else:
             log.info("No VMs.")
 
     elif options.list_templ:
         virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
         all_templs = virt_driver.get_templates_list()
+        str_templ = "All templates are:\n" + "\n".join(sorted(all_templs))
         if all_templs:
-            log.info(str(all_templs))
+            log.info(str_templ)
         else:
             log.info("No templates.")
 

@@ -55,8 +55,12 @@ if [[ $mymac == 00:66* ]];then
     else
         echo "Already configed $myeth"
     fi
+    #config the IP when system up
     ifconfig $myeth $MyIP netmask 255.255.255.0
-    route add default gw $MyGW
+    #add default GW only when gw match the IP 10.* for a whole net, other IP as 192.168* will discard
+    if [[ $MyGW == 10.* ]];then
+        route add default gw $MyGW
+    fi
 else
     echo "No MAC match the default pattern, exiting"
 fi
