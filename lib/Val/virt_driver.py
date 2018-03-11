@@ -18,16 +18,39 @@ class VirtDriver(object):
         self.passwd = passwd
 
     @abc.abstractmethod
+    def get_vm_list(self):
+        """
+        :description get all the instances names on host
+        :return a list of VM names
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_templates_list(self):
+        """
+        :description get all the templates on host
+        :return a list of tempaltes names
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def is_instance_exists(self, inst_name):
         '''
         :description check whether the instance exists in virt-platform
         :param inst_name: the instance name
-        :return True or False,
+        :return True or False
         '''
         raise NotImplementedError()
 
     @abc.abstractmethod
     def is_instance_running(self, inst_name):
+        '''
+        @param inst_name: instance name
+        '''
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def is_instance_halted(self, inst_name):
         '''
         @param inst_name: instance name
         '''

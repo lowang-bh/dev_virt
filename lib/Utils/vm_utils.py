@@ -71,7 +71,7 @@ def create_new_vif(inst_name, device_name, vif_index, mac_addr=None, **kwargs):
     new_vif = vnet_driver.create_new_vif(inst_name, device_name, vif_index, MAC=mac_addr)
     if new_vif is not None:
         if VirtFactory.get_virt_driver(host_name, user, passwd).is_instance_running(inst_name):
-            ret = vnet_driver.attach_vif_to_vm(inst_name, vif_index)
+            ret = vnet_driver.plug_vif_to_vm(inst_name, vif_index)
             if ret:
                 log.info("New virtual interface device [%s] attached to VM [%s] successfully.", vif_index, inst_name)
                 return True
@@ -100,7 +100,7 @@ def destroy_old_vif(inst_name, vif_index, **kwargs):
     vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
 
     if VirtFactory.get_virt_driver(host_name, user, passwd).is_instance_running(inst_name):
-        ret = vnet_driver.detach_vif_from_vm(inst_name, vif_index)
+        ret = vnet_driver.unplug_vif_from_vm(inst_name, vif_index)
         if not ret:
             log.error("Failed to unplug the virtual interface device [%s] from VM.", vif_index)
             return False
