@@ -13,7 +13,6 @@ from lib.Utils.vm_utils import is_IP_available, create_new_vif, destroy_old_vif,
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] vm_name\n
-
         config_vm.py vm_name --add-vif=vif_index --device=eth0  [--host=ip --user=user --pwd=passwd]
         config_vm.py vm_name --del-vif=vif_index   [--host=ip --user=user --pwd=passwd]
         config_vm.py vm_name --vif=vif_index --device=eth0 --ip=ip [--host=ip --user=user --pwd=passwd]
@@ -30,7 +29,8 @@ if __name__ == "__main__":
     parser.add_option("--del-vif", dest="del_index", help="Delete a virtual interface device from guest VM")
     parser.add_option("--vif", dest="vif_index", help="Configurate on a virtual interface device")
 
-    parser.add_option("--device", dest="device", help="The target device which vif attach(ed) to")
+    parser.add_option("--device", dest="device", help="The target physic NIC name with an associated network vif attach(ed) to")
+    parser.add_option("--network", dest="network", help="The target bridge/switch network which vif connect(ed) to")
     parser.add_option("--ip", dest="vif_ip", help="The ip assigned to the virtual interface")
     parser.add_option("--netmask", dest="vif_netmask", help="The netmask for the target virtual interface")
 
@@ -81,10 +81,19 @@ if __name__ == "__main__":
 
     if options.add_index is not None:
         vif_index = options.add_index
-        if options.device is None:
-            log.fail("Please specify a device or bridge for the new created virtual interface.")
+        if options.device is None and options.network is None:
+            log.fail("Please specify a NIC or network for the new created virtual interface.")
             exit(1)
         device_name = options.device
+        if device_name and device_name not in vnet_driver.get_all_devices():
+            log.fail("Invalid device name:[%s].", device_name)
+            exit(1)
+
+        network = options.network
+        if network and network not in vnet_driver.get_vswitch_list():
+            log.fail("No network named: [%s].", network)
+            exit(1)
+
         mac_addr = None
 
         option_dic = {"vif_ip":options.vif_ip, "vif_netmask":options.vif_netmask,
@@ -97,7 +106,7 @@ if __name__ == "__main__":
             mac_strs = ['%02x' % int(num) for num in options.vif_ip.split(".")]
             mac_addr = VM_MAC_PREFIX + ":%s:%s:%s:%s" % tuple(mac_strs)
 
-        if create_new_vif(inst_name, device_name, vif_index, mac_addr, **option_dic):
+        if create_new_vif(inst_name, vif_index, device_name, network, mac_addr, **option_dic):
             log.success("New virtual interface device created successfully.")
             exit(0)
         else:
@@ -116,10 +125,20 @@ if __name__ == "__main__":
             exit(1)
     elif options.vif_index is not None:
         vif_index = options.vif_index
-        if options.device is None:
-            log.fail("Please specify a device or bridge for the new configured virtual interface.")
+        if options.device is None and options.network is None:
+            log.fail("Please specify a NIC or bridge for the new configured virtual interface.")
             exit(1)
+
         device_name = options.device
+        if device_name and device_name not in vnet_driver.get_all_devices():
+            log.fail("Invalid device name:[%s].", device_name)
+            exit(1)
+
+        network = options.network
+        if network and network not in vnet_driver.get_vswitch_list():
+            log.fail("No network named: [%s].", network)
+            exit(1)
+
         mac_addr = None
         option_dic = {"vif_ip":options.vif_ip, "vif_netmask":options.vif_netmask,
                       "device":options.device, "host":options.host,
@@ -134,7 +153,7 @@ if __name__ == "__main__":
         else:
             log.info("No IP specified, it will delete old VIF and create a new VIF to the target network.")
 
-        if config_vif(inst_name, device_name, vif_index, mac_addr, **option_dic):
+        if config_vif(inst_name, vif_index, device_name, network, mac_addr, **option_dic):
             log.success("New virtual interface device configured successfully.")
             exit(0)
         else:

@@ -12,12 +12,12 @@ from lib.Utils.vm_utils import is_IP_available, config_vif
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
-
         create_vm.py -c new_vm_name -t template
         create_vm.py -c new_vm_name -t template [--host=ip --user=user --pwd=passwd]
         create_vm.py -c new_vm_name -t template [--vif=vif_index --device=eth0 --ip=ip] [--host=ip --user=user --pwd=passwd]
         create_vm.py --list-vm       [--host=ip --user=user --pwd=passwd]
         create_vm.py --list-templ    [--host=ip --user=user --pwd=passwd]
+        create_vm.py --list-network  [--host=ip --user=user --pwd=passwd]
         """
     parser = OptionParser(usage=usage)
     parser.add_option("--host", dest="host", help="IP for host server")
@@ -30,7 +30,8 @@ if __name__ == "__main__":
                       help="Template used to create a new VM.")
 
     parser.add_option("--vif", dest="vif_index", help="Configurate on a virtual interface device")
-    parser.add_option("--device", dest="device", help="The target device which vif attach(ed) to")
+    parser.add_option("--device", dest="device", help="The target physic NIC name with an associated network vif attach(ed) to")
+    parser.add_option("--network", dest="network", help="The target bridge/switch network which vif connect(ed) to")
     parser.add_option("--ip", dest="vif_ip", help="The ip assigned to the virtual interface")
     parser.add_option("--netmask", dest="vif_netmask", help="The netmask for the target virtual interface")
 
@@ -38,6 +39,8 @@ if __name__ == "__main__":
                       help="List all the vms in server.")
     parser.add_option("--list-templ", dest="list_templ", action="store_true",
                       help="List all the templates in the server.")
+    parser.add_option("--list-network", dest="list_network", action="store_true",
+                      help="List the bridge/switch network in the host")
 
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
@@ -66,13 +69,20 @@ if __name__ == "__main__":
             log.info(str_templ)
         else:
             log.info("No templates.")
-
+    elif options.list_network:
+        vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
+        all_networks = vnet_driver.get_vswitch_list()
+        if all_networks:
+            log.info(str(sorted(all_networks)))
+        else:
+            log.info("No network found.")
     elif options.vm_name is not None:
         if options.template is None:
             log.fail("A template must be suppulied to create a new VM.")
             exit(1)
         new_vm_name, template_name = options.vm_name, options.template
         virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+        vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
 
         if virt_driver.is_instance_exists(new_vm_name):
             log.fail("There is already one VM named [%s]", new_vm_name)
@@ -82,9 +92,18 @@ if __name__ == "__main__":
             exit(1)
 
         if options.vif_ip is not None:  #if an IP is specify, please specify a device, vif_index
-            if not options.device or not options.vif_index:
-                log.fail("Please specify a device and an VIF for configuring the IP.")
+            if (not options.device and not options.network) or not options.vif_index:
+                log.fail("Please specify a device/network and an VIF for configuring the IP.")
                 exit(1)
+            device_name = options.device
+            if device_name and device_name not in vnet_driver.get_all_devices():
+                log.fail("Invalid device name:[%s].", device_name)
+                exit(1)
+            network = options.network
+            if network and network not in vnet_driver.get_vswitch_list():
+                log.fail("No network named: [%s].", network)
+                exit(1)
+
             option_dic = {"vif_ip":options.vif_ip, "vif_netmask":options.vif_netmask,
                           "device":options.device, "host":options.host,
                           "user":options.user, "passwd":options.passwd}
@@ -103,7 +122,7 @@ if __name__ == "__main__":
         log.info("New instance [%s] created successfully.", new_vm_name)
         #2. config VM
         if options.vif_ip is not None:
-            config_ret = config_vif(new_vm_name, options.device, options.vif_index, mac_addr, **option_dic)
+            config_ret = config_vif(new_vm_name, options.vif_index, options.device, options.network, mac_addr, **option_dic)
             if not config_ret:
                 log.warn("Vif configure failed.")
             else:

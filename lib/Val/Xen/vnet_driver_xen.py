@@ -211,7 +211,7 @@ class XenVnetDriver(VnetDriver):
         log.debug("No virtual interface with given index:[%s].", vif_index)
         return None
 
-    def create_new_vif(self, inst_name, device_name, vif_index, MAC=None):
+    def create_new_vif(self, inst_name, vif_index, device_name=None, network=None, MAC=None):
         """
         @param inst_name: name of the guest VM
         @param device_name: device name on the host which the network belong to
@@ -227,9 +227,17 @@ class XenVnetDriver(VnetDriver):
 
         handler = self.get_handler()
         vm_ref_list = handler.xenapi.VM.get_by_name_label(inst_name)
-        network_ref = self._get_network_ref_by_device(device_name)
-        if not vm_ref_list or network_ref is None:
-            log.error("Invalid params: %s, %s.", inst_name, device_name)
+        if not vm_ref_list:
+            log.error("No instance with name [%s].", inst_name)
+            return False
+
+        network_ref = None
+        if device_name is not None:
+            network_ref = self._get_network_ref_by_device(device_name)
+        elif network is not None:
+            network_ref = self._get_network_ref_by_bridge(bridge_name=network)
+        if network_ref is None:
+            log.error("No valide network found with params: NIC:%s, bridge:%s.", device_name, network)
             return None
 
         vif_ref = self.get_vif_by_index(inst_name, vif_index)
