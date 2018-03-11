@@ -54,7 +54,7 @@ def is_IP_available(vif_ip=None, vif_netmask=None, device=None, **kwargs):
     return True
 
 
-def create_new_vif(inst_name, device_name, vif_index, mac_addr=None, **kwargs):
+def create_new_vif(inst_name, vif_index, device_name=None, network=None, mac_addr=None, **kwargs):
     """
     create a new virtual interface on the target VM
     @param inst_name: Vm name
@@ -68,7 +68,7 @@ def create_new_vif(inst_name, device_name, vif_index, mac_addr=None, **kwargs):
     passwd = str(kwargs['passwd']).replace('\\', '') if kwargs['passwd'] else ""
     vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
 
-    new_vif = vnet_driver.create_new_vif(inst_name, device_name, vif_index, MAC=mac_addr)
+    new_vif = vnet_driver.create_new_vif(inst_name, vif_index, device_name, network, MAC=mac_addr)
     if new_vif is not None:
         if VirtFactory.get_virt_driver(host_name, user, passwd).is_instance_running(inst_name):
             ret = vnet_driver.plug_vif_to_vm(inst_name, vif_index)
@@ -112,7 +112,7 @@ def destroy_old_vif(inst_name, vif_index, **kwargs):
     return True
 
 
-def config_vif(inst_name, device_name, vif_index, mac_addr=None, **kwargs):
+def config_vif(inst_name, vif_index, device_name=None, network=None, mac_addr=None, **kwargs):
     """
     configure a vif: first destroy old vif and then create a new vif
     @param inst_name: Vm name
@@ -130,7 +130,7 @@ def config_vif(inst_name, device_name, vif_index, mac_addr=None, **kwargs):
         if not destroy_old_vif(inst_name, vif_index, **kwargs):
             return False
 
-    ret = create_new_vif(inst_name, device_name, vif_index, mac_addr, **kwargs)
+    ret = create_new_vif(inst_name, vif_index, device_name, network, mac_addr, **kwargs)
 
     return ret
 
