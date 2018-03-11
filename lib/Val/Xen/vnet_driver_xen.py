@@ -69,10 +69,18 @@ class XenVnetDriver(VnetDriver):
 
     def get_vswitch_list(self):
         """
+        return all the switch/bridge on host
         """
-        pass
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
 
-    def get_PIF_by_device(self, device_name):
+        switch_names_list = []
+        for network_ref in self._hypervisor_handler.xenapi.network.get_all():
+            switch_names_list.append(self._hypervisor_handler.xenapi.network.get_bridge(network_ref))
+
+        return switch_names_list
+
+    def _get_PIF_by_device(self, device_name):
         """
         @param device_name: interface name in Host, eg, eth0,etc
         @return: a PIF reference object about interface
@@ -89,7 +97,7 @@ class XenVnetDriver(VnetDriver):
 
     def get_all_devices(self):
         """
-        @return: return a dict with key is the interface name and value is PIF_ref
+        @return: return a list of all the interfaces device name in host
         """
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
@@ -100,7 +108,7 @@ class XenVnetDriver(VnetDriver):
             log.exception(error)
             return []
 
-    def get_device_infor(self, pif_ref=None, device_name=None):
+    def get_device_infor(self, device_name=None, pif_ref=None):
         """
         @param pif_ref: reference to a PIF object
         @param device_name: name of interface in host
@@ -109,19 +117,19 @@ class XenVnetDriver(VnetDriver):
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
 
-        if pif_ref is not None:
-            return self._hypervisor_handler.xenapi.PIF.get_record(pif_ref)
-        elif device_name is not None:
-            pif_ref = self.get_PIF_by_device(device_name)
+        if device_name is not None:
+            pif_ref = self._get_PIF_by_device(device_name)
             if not pif_ref:
                 log.error("Can not get device infor with given device name:%s.", device_name)
                 return {}
+            return self._hypervisor_handler.xenapi.PIF.get_record(pif_ref)
+        elif pif_ref is not None:
             return self._hypervisor_handler.xenapi.PIF.get_record(pif_ref)
         else:
             log.error("Please specify a device name to get device infor.")
             return {}
 
-    def get_network_by_device(self, device_name):
+    def _get_network_ref_by_device(self, device_name):
         """
         @param device_name: interface name on host
         @return: a reference to network
@@ -129,16 +137,32 @@ class XenVnetDriver(VnetDriver):
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
 
-        pif_ref = self.get_PIF_by_device(device_name)
+        pif_ref = self._get_PIF_by_device(device_name)
         if pif_ref is None:
             log.debug("Can not get network ref with device name [%s]", device_name)
             return None
 
         return self._hypervisor_handler.xenapi.PIF.get_network(pif_ref)
 
-    def create_new_network(self, bridge_name):
+    def _get_network_ref_by_bridge(self, bridge_name):
         """
-        create a new network, return the reference object
+        @param bridge_name: the bridge name description of the network object
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        all_networks = self._hypervisor_handler.xenapi.network.get_all()
+        for network in all_networks:
+            if self._hypervisor_handler.xenapi.network.get_bridge(network) == bridge_name:
+                return network
+
+        log.error("No netwrok found with bridge name [%s].", bridge_name)
+        return None
+
+    def _create_new_network(self, bridge_name):
+        """
+        create a new network
+        @return: return the reference object of network
         """
         new_network_record = {'MTU': '1500', 'other_config': {}}
         new_network_record['bridge'] = bridge_name
@@ -203,7 +227,7 @@ class XenVnetDriver(VnetDriver):
 
         handler = self.get_handler()
         vm_ref_list = handler.xenapi.VM.get_by_name_label(inst_name)
-        network_ref = self.get_network_by_device(device_name)
+        network_ref = self._get_network_ref_by_device(device_name)
         if not vm_ref_list or network_ref is None:
             log.error("Invalid params: %s, %s.", inst_name, device_name)
             return None
@@ -224,7 +248,7 @@ class XenVnetDriver(VnetDriver):
 
     def destroy_vif(self, inst_name, vif_index):
         """
-        @param vif_ref: reference object to virtual interface in guest VM
+        @param vif_index: index of virtual interface in guest VM
         """
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
@@ -246,7 +270,7 @@ class XenVnetDriver(VnetDriver):
             return False
         return True
 
-    def attach_vif_to_vm(self, inst_name, vif_index):
+    def plug_vif_to_vm(self, inst_name, vif_index):
         """
         Hotplug the specified VIF, dynamically attaching it to the running VM
         @param vif_index: virtual interface index
@@ -273,7 +297,7 @@ class XenVnetDriver(VnetDriver):
             return False
         return True
 
-    def detach_vif_from_vm(self, inst_name, vif_index):
+    def unplug_vif_from_vm(self, inst_name, vif_index):
         """
         Hot-unplug the specified VIF, dynamically unattaching it from the running VM
         @param vif_index: virtual interface index
