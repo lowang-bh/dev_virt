@@ -247,7 +247,8 @@ class XenVirtDriver(VirtDriver):
 
         return True
 
-    def get_vm_ref(self, inst_name):
+    #####  VM informations api ######
+    def _get_vm_ref(self, inst_name):
         """
         @param inst_name: vm instance name
         @return: return a reference object to the vm
@@ -294,6 +295,77 @@ class XenVirtDriver(VirtDriver):
             log.exception("Exceptions raised:%s", error)
             return {}
 
+    def _get_available_device(self, inst_name):
+        """
+        return a device number which is not used
+        """
+        handler = self.get_handler()
+        vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
+        all_vdbs = handler.xenapi.VM.get_VBDs(vm_ref)
+        device_list = []
+        for vdb_ref in all_vdbs:
+            device = handler.xenapi.VBD.get_userdevice(vdb_ref)
+            device_list.append(int(device))
+        max_num = max(device_list)
+        for i in range(max_num + 1):
+            if i not in device_list:
+                return str(i)
+        return str(max_num + 1)
+
+    def add_vdisk_to_vm(self, inst_name, storage_name, size):
+        """
+        @param inst_name: the name of VM
+        @param storage_name: which storage reposity the virtual disk put
+        @param size: the disk size
+        """
+        handler = self.get_handler()
+        userdevice = self._get_available_device(inst_name)
+        log.info("Start to add virtual disk [%s] to VM: [%s]", userdevice, inst_name)
+
+        name_description = "VDI created by API, on VM: %s, SR: %s" % (inst_name, storage_name)
+        record = {"name_label": inst_name + " data " + userdevice, "name_description": name_description}
+        try:
+            sr_ref = handler.xenapi.SR.get_by_name_label(storage_name)[0]
+        except Exception, error:
+            log.exception("No storage named [%s], exception: %s", storage_name, error)
+            return False
+
+        record["SR"] = sr_ref
+        record["virtual_size"] = str(int(size) * 1024 * 1024 * 1024)  #size GB
+        record['type'] = "user"
+        record['read_only'] = False
+        record['sharable'] = False
+        record["other_config"] = {}
+        try:
+            vdi_ref = handler.xenapi.VDI.create(record)
+        except Exception, error:
+            log.error("Create VDI raise error:[%s]", error)
+            return False
+
+        vbd_record = {"VDI":vdi_ref, 'other_config': {}, 'mode': 'RW', 'type': 'Disk',
+                      'empty': False, 'qos_algorithm_type': '', 'qos_algorithm_params': {}}
+        vbd_record['userdevice'] = str(userdevice)
+        vbd_record['bootable'] = False
+
+        try:
+            vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
+            vbd_record['VM'] = vm_ref
+            vbd_ref = handler.xenapi.VBD.create(vbd_record)
+            time.sleep(1)
+            log.info("Waiting for the virtual disk plug in...")
+            sleep_time = 0
+            while((handler.xenapi.VBD.get_device(vbd_ref) == '') and (sleep_time < 10)):
+                log.debug("wait device [%s] to plug in, sleep time %s.", handler.xenapi.VBD.get_device(vbd_ref), sleep_time)
+                handler.xenapi.VBD.plug(vbd_ref)
+                time.sleep(2)
+                sleep_time += 2
+        except Exception, error:
+            log.exception("Exception when create VBD: %s.", error)
+            return False
+
+        return True
+
+    ####    Host information  API  ####
     def get_host_cpu_info(self):
         """
         Return HV CPU info: cpu speed: MHZ;
@@ -311,12 +383,28 @@ class XenVirtDriver(VirtDriver):
             ret_cpu_dict['cpu_model'] = cpu_record['model']
             ret_cpu_dict['cpu_cores'] = len(cpu_refs)
             ret_cpu_dict['cpu_speed'] = cpu_record['speed']
-            ret_cpu_dict['cpu_sockets'] = 0 # no socket infor in host_cpu in Xen
+            ret_cpu_dict['cpu_sockets'] = 0  # no socket infor in host_cpu in Xen
         except Exception, error:
-            log.exception("Exceptions when get host cpu infor: %s",error)
+            log.exception("Exceptions when get host cpu infor: %s", error)
             return ret_cpu_dict
 
         return ret_cpu_dict
+
+    def get_host_all_storages(self):
+        """
+        return a list of all the storage names
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        ret_storage_list = []
+        try:
+            all_storage = self._hypervisor_handler.xenapi.SR.get_all()
+            ret_storage_list = [self._hypervisor_handler.xenapi.SR.get_name_label(sr_ref) for sr_ref in all_storage]
+        except Exception, error:
+            log.exception("Exception when get all storage info:%s", error)
+
+        return ret_storage_list
 
     def get_host_storage_info(self, storage_name="Local storage"):
         """
@@ -329,14 +417,14 @@ class XenVirtDriver(VirtDriver):
         try:
             sr_ref = self._hypervisor_handler.xenapi.SR.get_by_name_label(storage_name)[0]
         except  Exception, error:
-            log.exception("No storage repository named: [%s].", storage_name)
+            log.exception("No storage repository named: [%s], %s", storage_name, error)
             return ret_storage_dict
 
         total = self._hypervisor_handler.xenapi.SR.get_physical_size(sr_ref)
         used = self._hypervisor_handler.xenapi.SR.get_physical_utilisation(sr_ref)
-        ret_storage_dict['size_total'] =  int(total)/1024/1024/1024
-        ret_storage_dict['size_used'] = int(used)/1024/1024/1024
-        ret_storage_dict['size_free'] = (int(total) - int(used))/1024/1024/1024
+        ret_storage_dict['size_total'] = int(total) / 1024 / 1024 / 1024
+        ret_storage_dict['size_used'] = int(used) / 1024 / 1024 / 1024
+        ret_storage_dict['size_free'] = (int(total) - int(used)) / 1024 / 1024 / 1024
         return ret_storage_dict
 
     def get_host_mem_info(self):
@@ -346,19 +434,19 @@ class XenVirtDriver(VirtDriver):
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
 
-        ret_mem_dict={}
+        ret_mem_dict = {}
         try:
             host_ref = self._hypervisor_handler.xenapi.host.get_all()[0]
             host_metrics_ref = self._hypervisor_handler.xenapi.host.get_metrics(host_ref)
             total = self._hypervisor_handler.xenapi.host_metrics.get_memory_total(host_metrics_ref)
             free = self._hypervisor_handler.xenapi.host_metrics.get_memory_free(host_metrics_ref)
         except Exception, error:
-            log.exception("Exception raised when get host memory infor:%s",error)
+            log.exception("Exception raised when get host memory infor:%s", error)
             return ret_mem_dict
 
-        ret_mem_dict['size_total'] = int(total)/1024/1024
-        ret_mem_dict['size_free'] = int(free)/1024/1024
-        ret_mem_dict['size_used'] = (int(total) - int(free))/1024/1024
+        ret_mem_dict['size_total'] = int(total) / 1024 / 1024
+        ret_mem_dict['size_free'] = int(free) / 1024 / 1024
+        ret_mem_dict['size_used'] = (int(total) - int(free)) / 1024 / 1024
         return ret_mem_dict
 
     def get_host_sw_ver(self, short_name=True):
@@ -372,12 +460,13 @@ class XenVirtDriver(VirtDriver):
             soft_record = hv_handler.xenapi.host.get_software_version(host_ref)
 
             if short_name:
-                return "xapi: %s" %soft_record['xapi']
+                return "xapi: %s" % soft_record['xapi']
             else:
-                return "xen: %s, xapi: %s" %(soft_record['xen'], soft_record['xapi'])
+                return "xen: %s, xapi: %s" % (soft_record['xen'], soft_record['xapi'])
         except Exception, error:
             log.exception("Exceptions: %s", error)
             return ""
+
 
 if __name__ == "__main__":
     import sys
