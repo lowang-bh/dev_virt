@@ -294,6 +294,91 @@ class XenVirtDriver(VirtDriver):
             log.exception("Exceptions raised:%s", error)
             return {}
 
+    def get_host_cpu_info(self):
+        """
+        Return HV CPU info: cpu speed: MHZ;
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        ret_cpu_dict = {}
+        try:
+            host_ref = self._hypervisor_handler.xenapi.host.get_all()[0]
+            cpu_refs = self._hypervisor_handler.xenapi.host.get_host_CPUs(host_ref)
+            cpu_ref = cpu_refs[0]
+            cpu_record = self._hypervisor_handler.xenapi.host_cpu.get_record(cpu_ref)
+
+            ret_cpu_dict['cpu_model'] = cpu_record['model']
+            ret_cpu_dict['cpu_cores'] = len(cpu_refs)
+            ret_cpu_dict['cpu_speed'] = cpu_record['speed']
+            ret_cpu_dict['cpu_sockets'] = 0 # no socket infor in host_cpu in Xen
+        except Exception, error:
+            log.exception("Exceptions when get host cpu infor: %s",error)
+            return ret_cpu_dict
+
+        return ret_cpu_dict
+
+    def get_host_storage_info(self, storage_name="Local storage"):
+        """
+        Return HV storage info: Unit is GB
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        ret_storage_dict = {}
+        try:
+            sr_ref = self._hypervisor_handler.xenapi.SR.get_by_name_label(storage_name)[0]
+        except  Exception, error:
+            log.exception("No storage repository named: [%s].", storage_name)
+            return ret_storage_dict
+
+        total = self._hypervisor_handler.xenapi.SR.get_physical_size(sr_ref)
+        used = self._hypervisor_handler.xenapi.SR.get_physical_utilisation(sr_ref)
+        ret_storage_dict['size_total'] =  int(total)/1024/1024/1024
+        ret_storage_dict['size_used'] = int(used)/1024/1024/1024
+        ret_storage_dict['size_free'] = (int(total) - int(used))/1024/1024/1024
+        return ret_storage_dict
+
+    def get_host_mem_info(self):
+        """
+        Return HV memory info: Unit is MB
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        ret_mem_dict={}
+        try:
+            host_ref = self._hypervisor_handler.xenapi.host.get_all()[0]
+            host_metrics_ref = self._hypervisor_handler.xenapi.host.get_metrics(host_ref)
+            total = self._hypervisor_handler.xenapi.host_metrics.get_memory_total(host_metrics_ref)
+            free = self._hypervisor_handler.xenapi.host_metrics.get_memory_free(host_metrics_ref)
+        except Exception, error:
+            log.exception("Exception raised when get host memory infor:%s",error)
+            return ret_mem_dict
+
+        ret_mem_dict['size_total'] = int(total)/1024/1024
+        ret_mem_dict['size_free'] = int(free)/1024/1024
+        ret_mem_dict['size_used'] = (int(total) - int(free))/1024/1024
+        return ret_mem_dict
+
+    def get_host_sw_ver(self, short_name=True):
+        """
+        Return the HV SW version
+        """
+        hv_handler = self.get_handler()
+
+        try:
+            host_ref = hv_handler.xenapi.host.get_all()[0]
+            soft_record = hv_handler.xenapi.host.get_software_version(host_ref)
+
+            if short_name:
+                return "xapi: %s" %soft_record['xapi']
+            else:
+                return "xen: %s, xapi: %s" %(soft_record['xen'], soft_record['xapi'])
+        except Exception, error:
+            log.exception("Exceptions: %s", error)
+            return ""
+
 if __name__ == "__main__":
     import sys
     if len(sys.argv) != 1 and len(sys.argv) != 4:
