@@ -16,8 +16,10 @@ if __name__ == "__main__":
         config_vm.py vm_name --add-vif=vif_index --device=eth0  [--host=ip --user=user --pwd=passwd]
         config_vm.py vm_name --del-vif=vif_index   [--host=ip --user=user --pwd=passwd]
         config_vm.py vm_name --vif=vif_index --device=eth0 --ip=ip [--host=ip --user=user --pwd=passwd]
+        config_vm.py vm_name --add-disk=size --storage=storage_name    [--host=ip --user=user --pwd=passwd]
         config_vm.py vm_name --list-vif            [--host=ip --user=user --pwd=passwd]
         config_vm.py vm_name --list-pif            [--host=ip --user=user --pwd=passwd]
+        config_vm.py vm_name --list-SR             [--host=ip --user=user --pwd=passwd]
         """
 
     parser = OptionParser(usage=usage)
@@ -34,10 +36,14 @@ if __name__ == "__main__":
     parser.add_option("--ip", dest="vif_ip", help="The ip assigned to the virtual interface")
     parser.add_option("--netmask", dest="vif_netmask", help="The netmask for the target virtual interface")
 
+    parser.add_option("--add-disk", dest="disk_size", help="The disk size(GB) add to the VM")
+    parser.add_option("--storage", dest="storage_name", help="The storage location where the virtual disk put")
     parser.add_option("--list-vif", dest="list_vif", action="store_true",
                       help="List the virtual interface device in guest VM")
     parser.add_option("--list-pif", dest="list_pif", action="store_true",
                       help="List the interface device in the host")
+    parser.add_option("--list-SR", dest="list_sr", action="store_true",
+                      help="List the storage repository infor in the host")
 
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
@@ -53,8 +59,9 @@ if __name__ == "__main__":
         log.error("Please specify a VM name to config.")
         parser.print_help()
         exit(1)
-    if not options.list_vif  and not options.list_pif and \
-        (not options.vif_index and not options.del_index and not options.add_index):
+    if not options.list_vif  and not options.list_pif and not options.list_sr and\
+        (not options.vif_index and not options.del_index and not options.add_index and\
+         not options.disk_size):
         parser.print_help()
         exit(1)
 
@@ -78,6 +85,14 @@ if __name__ == "__main__":
             log.info("All device on the host: %s", sorted(pif_list))
         else:
             log.info("No device found on the host.")
+    if options.list_sr:
+        sr_name_list = virt_driver.get_host_all_storages()
+        log.info("All SR information:")
+        infor_formate = "%-20s\t%s"
+        log.info(infor_formate, "Storage_name", "Free_size(GB)")
+        for sr_name in sr_name_list:
+            storage = virt_driver.get_host_storage_info(storage_name=sr_name)
+            log.info(infor_formate, sr_name, storage["size_free"])
 
     if options.add_index is not None:
         vif_index = options.add_index
@@ -158,4 +173,24 @@ if __name__ == "__main__":
             exit(0)
         else:
             log.fail("New virtual interface device configured failed.")
+            exit(1)
+
+    elif options.disk_size:
+        if not options.storage_name:
+            log.fail("Please specify a storage name for the new virtual disk.")
+            exit(1)
+        size = int(options.disk_size)
+        storage_info = virt_driver.get_host_storage_info(storage_name=options.storage_name)
+        if not storage_info:
+            log.fail("Fail to get infor about storage [%s]", options.storage_name)
+            exit(1)
+        if size >= storage_info['size_free'] - 1:
+            log.fail("No enough volume on storage:[%s], at most [%s] GB is available", options.storage_name, storage_info['size_free'] - 1)
+            exit(1)
+        ret = virt_driver.add_vdisk_to_vm(inst_name, storage_name=options.storage_name, size=size)
+        if ret:
+            log.success("Successfully add a new disk with size [%s]GB to VM [%s].", size, inst_name)
+            exit(0)
+        else:
+            log.fail("Failed to add a new disk with size [%s]GB to VM [%s].", size, inst_name)
             exit(1)
