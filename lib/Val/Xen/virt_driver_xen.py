@@ -310,6 +310,11 @@ class XenVirtDriver(VirtDriver):
         for i in range(max_num + 1):
             if i not in device_list:
                 return str(i)
+        allowed_vbds = handler.xenapi.get_allowed_VBD_devices(vm_ref)
+        if str(max_num + 1) not in allowed_vbds:
+            log.error("No avaiable VBD device to be allocated on VM [%s.]", inst_name)
+            return ""
+
         return str(max_num + 1)
 
     def add_vdisk_to_vm(self, inst_name, storage_name, size):
@@ -320,6 +325,9 @@ class XenVirtDriver(VirtDriver):
         """
         handler = self.get_handler()
         userdevice = self._get_available_device(inst_name)
+        if not userdevice:
+            return False
+
         log.info("Start to add virtual disk [%s] to VM: [%s]", userdevice, inst_name)
 
         name_description = "VDI created by API, on VM: %s, SR: %s" % (inst_name, storage_name)
