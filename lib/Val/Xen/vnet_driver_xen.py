@@ -240,9 +240,9 @@ class XenVnetDriver(VnetDriver):
             log.error("No valide network found with params: NIC:%s, bridge:%s.", device_name, network)
             return None
 
-        vif_ref = self.get_vif_by_index(inst_name, vif_index)
-        if vif_ref is not None:
-            log.error("Virtual interface device [%s] already exists.", vif_index)
+        allows_index = handler.xenapi.VM.get_allowed_VIF_devices(vm_ref_list[0])
+        if str(vif_index) not in allows_index:
+            log.error("Virtual interface device [%s] is not allowed, allowed:%s", vif_index, allows_index)
             return None
 
         record['VM'] = vm_ref_list[0]
