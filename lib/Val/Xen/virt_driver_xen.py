@@ -376,14 +376,13 @@ class XenVirtDriver(VirtDriver):
         ret_cpu_dict = {}
         try:
             host_ref = self._hypervisor_handler.xenapi.host.get_all()[0]
-            cpu_refs = self._hypervisor_handler.xenapi.host.get_host_CPUs(host_ref)
-            cpu_ref = cpu_refs[0]
-            cpu_record = self._hypervisor_handler.xenapi.host_cpu.get_record(cpu_ref)
+            cpu_info = self._hypervisor_handler.xenapi.host.get_cpu_info(host_ref)
 
-            ret_cpu_dict['cpu_model'] = cpu_record['model']
-            ret_cpu_dict['cpu_cores'] = len(cpu_refs)
-            ret_cpu_dict['cpu_speed'] = cpu_record['speed']
-            ret_cpu_dict['cpu_sockets'] = 0  # no socket infor in host_cpu in Xen
+            ret_cpu_dict['cpu_model'] = cpu_info.get('model', "")
+            ret_cpu_dict['cpu_modelname'] = cpu_info.get('modelname', "")
+            ret_cpu_dict['cpu_cores'] = cpu_info.get("cpu_count", 0)
+            ret_cpu_dict['cpu_speed'] = cpu_info.get('speed', "0")
+            ret_cpu_dict['cpu_sockets'] = cpu_info.get("socket_count", 0)
         except Exception, error:
             log.exception("Exceptions when get host cpu infor: %s", error)
             return ret_cpu_dict
@@ -466,6 +465,24 @@ class XenVirtDriver(VirtDriver):
         except Exception, error:
             log.exception("Exceptions: %s", error)
             return ""
+
+    def get_host_plat_info(self):
+        """
+        Return HV platform info
+        This needs root permission to do
+        """
+        ret_plat_dict = {}
+        handler = self.get_handler()
+        try:
+            host_ref = handler.xenapi.host.get_all()[0]
+            bios_info = handler.xenapi.host.get_bios_strings(host_ref)
+            ret_plat_dict['vendor_name'] = bios_info.get('system-manufacturer', "")
+            ret_plat_dict['product_name'] = bios_info.get('system-product-name', "")
+            ret_plat_dict['serial_number'] = bios_info.get('system-serial-number',"")
+        except Exception, error:
+            log.error("Exception when get host platform infor:%s", error)
+
+        return ret_plat_dict
 
 
 if __name__ == "__main__":
