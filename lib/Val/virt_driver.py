@@ -96,3 +96,38 @@ class VirtDriver(object):
         '''
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def get_host_cpu_info(self):
+        """
+        Return HV CPU info with dict: cpu speed: MHZ; cpu_sockets,cpu_cores, cpu_model
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_host_storage_info(self, storage_name):
+        """
+        Return HV storage info: Unit is GB
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_host_mem_info(self):
+        """
+        Return HV memory info: Unit is MB
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_host_sw_ver(self, short_name=True):
+        """
+        Return the HV SW version
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_host_plat_info(self):
+        """
+        Return HV platform info
+        """
+        raise NotImplementedError()
+

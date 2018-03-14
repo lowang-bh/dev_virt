@@ -70,9 +70,9 @@ class XenVnetDriver(VnetDriver):
         except Exception, error:
             log.debug(error)
 
-    def get_vswitch_list(self):
+    def get_network_list(self):
         """
-        return all the switch/bridge on host
+        return all the switch/bridge/network on host
         """
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
@@ -82,6 +82,17 @@ class XenVnetDriver(VnetDriver):
             switch_names_list.append(self._hypervisor_handler.xenapi.network.get_bridge(network_ref))
 
         return switch_names_list
+
+    def is_network_exist(self, network_name):
+        """
+        @param switch_name: the network name of bridge(when use linux bridge) or switch(when use openvswitch)
+        @return: Ture if exist or False
+        """
+        all_switchs = self.get_network_list()
+        if network_name in all_switchs:
+            return True
+        else:
+            return False
 
     def _get_PIF_by_device(self, device_name):
         """
@@ -193,7 +204,17 @@ class XenVnetDriver(VnetDriver):
         all_vifs = self._hypervisor_handler.xenapi.VM.get_VIFs(vm_ref)
         return [self._hypervisor_handler.xenapi.VIF.get_device(vif) for vif in all_vifs]
 
-    def get_vif_by_index(self, inst_name, vif_index):
+    def is_vif_exist(self, inst_name, vif_index):
+        """
+        @param vif_index: the interface index in guest VM
+        @return: True if exist else False
+        """
+        if vif_index in self.get_all_vifs_indexes(inst_name):
+            return True
+        else:
+            return False
+
+    def _get_vif_by_index(self, inst_name, vif_index):
         """
         @param vif_index: the interface index  in guest VM
         @return: a reference object to the virtual interface
@@ -264,7 +285,7 @@ class XenVnetDriver(VnetDriver):
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
 
-        vif_ref = self.get_vif_by_index(inst_name, vif_index)
+        vif_ref = self._get_vif_by_index(inst_name, vif_index)
         if vif_ref is None:
             log.error("No virtual interface device found with index [%s] when try to destroy vif.", vif_index)
             return False
@@ -289,7 +310,7 @@ class XenVnetDriver(VnetDriver):
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
 
-        vif_ref = self.get_vif_by_index(inst_name, vif_index)
+        vif_ref = self._get_vif_by_index(inst_name, vif_index)
         if vif_ref is None:
             log.error("No vif found with index [%s] when try to attach vif.", vif_index)
             return False
@@ -317,7 +338,7 @@ class XenVnetDriver(VnetDriver):
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
 
-        vif_ref = self.get_vif_by_index(inst_name, vif_index)
+        vif_ref = self._get_vif_by_index(inst_name, vif_index)
         if vif_ref is None:
             log.error("No vif found with index [%s] when try to detach vif.", vif_index)
             return False

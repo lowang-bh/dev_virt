@@ -7,7 +7,8 @@
 # Created Time: 2018-02-08 11:29:36
 #########################################################################
 
-PLATFORM = "Xen"
+import os
+PLATFORM = os.getenv("PLATFORM", "Xen")
 
 if PLATFORM == "Xen":
     VM_MAC_PREFIX = "00:66"
@@ -16,6 +17,7 @@ if PLATFORM == "Xen":
 
 if PLATFORM == "QEMU":
     from lib.Val.kvm.virt_driver_kvm import QemuVirtDriver
+    from lib.Val.kvm.vnet_driver_kvm import QemuVnetDriver
     VM_MAC_PREFIX = "52:54"
 
 
@@ -46,6 +48,6 @@ class VirtFactory(object):
             return XenVnetDriver(host_name, user, passwd)
 
         if PLATFORM == 'QEMU':
-            raise TypeError('No network driver supported for Qemu platform')
+            return  QemuVnetDriver(host_name, user, passwd)
 
         raise TypeError('No network driver supported')

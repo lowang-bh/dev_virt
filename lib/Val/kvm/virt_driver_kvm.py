@@ -35,7 +35,7 @@ DOMAIN_INFO_CPUS = 3
 DOMAIN_INFO_CPU_TIME = 4
 
 # qemu:///session is for non-root user
-TARGET_HV = "qemu:///session"
+DEFAULT_HV = "qemu:///session"
 
 HV_EXE_SUCCESS = 0
 HV_EXE_ERROR = -1
@@ -52,21 +52,22 @@ class QemuVirtDriver(VirtDriver):
     derived class of VirtDriver
     '''
 
-    def __init__(self, host_name=None, user=None, passwd=None):
-        VirtDriver.__init__(self, host_name, user, passwd)
+    def __init__(self, hostname=None, user=None, passwd=None):
+        VirtDriver.__init__(self, hostname, user, passwd)
         self._hypervisor_handler = None
 
-        if self.host_name is None:
-            self.host_name = "localhost"
         self._auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_PASSPHRASE], self._request_cred, None]
-
-        log.debug("Try to connect to libvirt in host: %s", self.host_name)
         # conn = libvirt.open(name) need root username
         # conn = libvirt.openReadOnly(name) has not write promission
-        # self._hypervisor_root_handler = libvirt.openAuth("{0}{1}{2}".format('qemu+tcp://', self.host_name, '/system'), self._auth, 0)
+        # self._hypervisor_root_handler = libvirt.openAuth("{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system'), self._auth, 0)
 
         self._hypervisor_root_handler = None
-        self._hypervisor_handler = libvirt.open(TARGET_HV)
+
+        log.debug("Try to connect to libvirt in host: %s", self.hostname)
+        if self.hostname is None:
+            self._hypervisor_handler = libvirt.open(DEFAULT_HV)
+        else:
+            self._hypervisor_handler = libvirt.openAuth("{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system'), self._auth, 0)
 
     def _request_cred(self, credentials, user_data):
         for credential in credentials:
@@ -79,7 +80,7 @@ class QemuVirtDriver(VirtDriver):
     def __del__(self):
 
         if self._hypervisor_handler:
-            log.debug("try to close the connect to libvirt: %s", self.host_name)
+            log.debug("try to close the connect to libvirt: %s", self.hostname)
             self._hypervisor_handler.close()
 
     def _get_root_handler(self):
@@ -89,7 +90,7 @@ class QemuVirtDriver(VirtDriver):
         if self._hypervisor_root_handler:
             return self._hypervisor_root_handler
 
-        self._hypervisor_root_handler = libvirt.openAuth("{0}{1}{2}".format('qemu+tcp://', self.host_name, '/system'), self._auth, 0)
+        self._hypervisor_root_handler = libvirt.openAuth("{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system'), self._auth, 0)
         if self._hypervisor_root_handler:
             return self._hypervisor_root_handler
 
@@ -110,7 +111,11 @@ class QemuVirtDriver(VirtDriver):
         if self._hypervisor_handler:
             return self._hypervisor_handler
 
-        self._hypervisor_handler = libvirt.open(TARGET_HV)
+        if self.hostname is None:
+            self._hypervisor_handler = libvirt.open(DEFAULT_HV)
+        else:
+            self._hypervisor_handler = libvirt.openAuth("{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system'), self._auth, 0)
+
         if not self._hypervisor_handler:
             return None
 
@@ -187,7 +192,7 @@ class QemuVirtDriver(VirtDriver):
 
         hv_handler = self.get_handler()
         if not hv_handler:
-            log.error("Can not connect to host: %s when create domain %s.", self.host_name, vm_name)
+            log.error("Can not connect to host: %s when create domain %s.", self.hostname, vm_name)
             return False
         if vm_name in [dom.name() for dom in hv_handler.listAllDomains()]:
             log.info("Vm %s is registered.", vm_name)
@@ -225,7 +230,7 @@ class QemuVirtDriver(VirtDriver):
             return False
         hv_handler = self.get_handler()
         if not hv_handler:
-            log.error("Can not connect to host: %s when create domain %s.", self.host_name, vm_name)
+            log.error("Can not connect to host: %s when create domain %s.", self.hostname, vm_name)
             return False
         target_xml = TEMPLATE_CFG_POOL + vm_name + ".xml"
 
@@ -349,7 +354,7 @@ class QemuVirtDriver(VirtDriver):
         # after change the xml, redeine it
         hv_handler = self.get_handler()
         if not hv_handler:
-            log.error("Can not connect to host: %s when create domain %s.", self.host_name, vm_name)
+            log.error("Can not connect to host: %s when create domain %s.", self.hostname, vm_name)
             return False
         try:
             # if failed it will raise libvirtError, return value is always a Domain object
@@ -646,3 +651,17 @@ class QemuVirtDriver(VirtDriver):
                 ret_plat_dict['serial_number'] = item.text
 
         return ret_plat_dict
+
+    def get_templates_list(self):
+        """
+        :description get all the templates on host
+        :return a list of tempaltes names
+        """
+        raise NotImplementedError()
+
+    def is_instance_halted(self, inst_name):
+        '''
+        @param inst_name: instance name
+        '''
+        raise NotImplementedError()
+

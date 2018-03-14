@@ -99,6 +99,10 @@ def destroy_old_vif(inst_name, vif_index, **kwargs):
     passwd = str(kwargs['passwd']).replace('\\', '') if kwargs['passwd'] else ""
     vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
 
+    if not vnet_driver.is_vif_exist(inst_name, vif_index):
+        log.info("No old vif with index [%s], don't need to destroy.", vif_index)
+        return True
+
     if VirtFactory.get_virt_driver(host_name, user, passwd).is_instance_running(inst_name):
         ret = vnet_driver.unplug_vif_from_vm(inst_name, vif_index)
         if not ret:
@@ -121,14 +125,8 @@ def config_vif(inst_name, vif_index, device_name=None, network=None, mac_addr=No
     """
     log.info("Start to configure the interface device [%s] in VM [%s].", vif_index, inst_name)
 
-    host_name = kwargs['host']
-    user = kwargs['user'] if kwargs['user'] else "root"
-    passwd = str(kwargs['passwd']).replace('\\', '') if kwargs['passwd'] else ""
-    vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
-
-    if vnet_driver.get_vif_by_index(inst_name, vif_index):
-        if not destroy_old_vif(inst_name, vif_index, **kwargs):
-            return False
+    if not destroy_old_vif(inst_name, vif_index, **kwargs):
+        return False
 
     ret = create_new_vif(inst_name, vif_index, device_name, network, mac_addr, **kwargs)
 
