@@ -105,7 +105,7 @@ if __name__ == "__main__":
             exit(1)
 
         network = options.network
-        if network and network not in vnet_driver.get_vswitch_list():
+        if network and network not in vnet_driver.get_network_list():
             log.fail("No network named: [%s].", network)
             exit(1)
 
@@ -150,7 +150,7 @@ if __name__ == "__main__":
             exit(1)
 
         network = options.network
-        if network and network not in vnet_driver.get_vswitch_list():
+        if network and network not in vnet_driver.get_network_list():
             log.fail("No network named: [%s].", network)
             exit(1)
 

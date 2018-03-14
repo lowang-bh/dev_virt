@@ -298,7 +298,7 @@ class XenVirtDriver(VirtDriver):
             log.exception("Exceptions raised:%s", error)
             return {}
 
-    def _get_available_device(self, inst_name):
+    def _get_available_device_num(self, inst_name):
         """
         return a device number which is not used
         """
@@ -327,7 +327,7 @@ class XenVirtDriver(VirtDriver):
         @param size: the disk size
         """
         handler = self.get_handler()
-        userdevice = self._get_available_device(inst_name)
+        userdevice = self._get_available_device_num(inst_name)
         if not userdevice:
             return False
 
@@ -489,7 +489,7 @@ class XenVirtDriver(VirtDriver):
             bios_info = handler.xenapi.host.get_bios_strings(host_ref)
             ret_plat_dict['vendor_name'] = bios_info.get('system-manufacturer', "")
             ret_plat_dict['product_name'] = bios_info.get('system-product-name', "")
-            ret_plat_dict['serial_number'] = bios_info.get('system-serial-number',"")
+            ret_plat_dict['serial_number'] = bios_info.get('system-serial-number', "")
         except Exception, error:
             log.error("Exception when get host platform infor:%s", error)
 

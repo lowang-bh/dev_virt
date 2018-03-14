@@ -71,7 +71,7 @@ if __name__ == "__main__":
             log.info("No templates.")
     elif options.list_network:
         vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
-        all_networks = vnet_driver.get_vswitch_list()
+        all_networks = vnet_driver.get_network_list()
         if all_networks:
             log.info(str(sorted(all_networks)))
         else:
@@ -100,7 +100,7 @@ if __name__ == "__main__":
                 log.fail("Invalid device name:[%s].", device_name)
                 exit(1)
             network = options.network
-            if network and network not in vnet_driver.get_vswitch_list():
+            if network and network not in vnet_driver.get_network_list():
                 log.fail("No network named: [%s].", network)
                 exit(1)
 
