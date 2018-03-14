@@ -97,6 +97,15 @@ class VirtDriver(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def add_vdisk_to_vm(self, inst_name, storage_name, size):
+        """
+        @param inst_name: the name of VM
+        @param storage_name: which storage repository the virtual disk put
+        @param size: the disk size
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def get_host_cpu_info(self):
         """
         Return HV CPU info with dict: cpu speed: MHZ; cpu_sockets,cpu_cores, cpu_model
