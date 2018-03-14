@@ -90,7 +90,12 @@ class QemuVirtDriver(VirtDriver):
         if self._hypervisor_root_handler:
             return self._hypervisor_root_handler
 
-        self._hypervisor_root_handler = libvirt.openAuth("{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system'), self._auth, 0)
+        if self.hostname is None:
+            url = "{0}{1}{2}".format('qemu+tcp://', "localhost", '/system')
+        else:
+            url = "{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system')
+
+        self._hypervisor_root_handler = libvirt.openAuth(url, self._auth, 0)
         if self._hypervisor_root_handler:
             return self._hypervisor_root_handler
 
