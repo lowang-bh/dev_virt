@@ -86,7 +86,7 @@ class IpCheck(object):
 
 def is_IP_pingable(ip_address):
     """
-    @retrun: True or False if ip_address pingable
+    @return: True or False if ip_address pingable
     """
     import os
     ping_cmd = "ping -c1 -W1 %s  >/dev/null 2>&1 " % (ip_address)
