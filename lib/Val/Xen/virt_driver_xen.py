@@ -29,6 +29,7 @@ class XenVirtDriver(VirtDriver):
     def __del__(self):
         try:
             if self._hypervisor_handler is not None:
+                log.debug("Release handler in virt driver, ID:%s", id(self._hypervisor_handler))
                 self._hypervisor_handler.xenapi.session.logout()
                 self._hypervisor_handler = None
         except Exception, error:
@@ -52,6 +53,7 @@ class XenVirtDriver(VirtDriver):
             log.exception("Exception raised:%s when get handler.", error)
             return None
 
+        log.debug("Get handler in virt driver, ID:%s", id(self._hypervisor_handler))
         return self._hypervisor_handler
 
     def delete_handler(self):
@@ -60,6 +62,7 @@ class XenVirtDriver(VirtDriver):
         '''
         try:
             if self._hypervisor_handler is not None:
+                log.debug("Release handler manually in virt driver, ID:%s", id(self._hypervisor_handler))
                 self._hypervisor_handler.xenapi.session.logout()
                 self._hypervisor_handler = None
         except Exception, error:
