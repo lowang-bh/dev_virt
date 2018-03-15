@@ -140,3 +140,10 @@ class VirtDriver(object):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def get_vm_record(self, inst_name):
+        """
+        return the record dict for inst_name
+        """
+        raise NotImplementedError()
+
