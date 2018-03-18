@@ -25,11 +25,11 @@ if __name__ == "__main__":
     parser = OptionParser(usage=usage)
     parser.add_option("--host", dest="host", help="IP for host server")
     parser.add_option("-u", "--user", dest="user", help="User name for host server")
-    parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
+    parser.add_option("-p", "--pwd", dest="passwd", help="Password for host server")
 
     parser.add_option("--add-vif", dest="add_index", help="Add a virtual interface device to guest VM")
     parser.add_option("--del-vif", dest="del_index", help="Delete a virtual interface device from guest VM")
-    parser.add_option("--vif", dest="vif_index", help="Configurate on a virtual interface device")
+    parser.add_option("--vif", dest="vif_index", help="Configure on a virtual interface device")
 
     parser.add_option("--device", dest="device", help="The target physic NIC name with an associated network vif attach(ed) to")
     parser.add_option("--network", dest="network", help="The target bridge/switch network which vif connect(ed) to")
