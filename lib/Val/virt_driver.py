@@ -147,3 +147,9 @@ class VirtDriver(object):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def get_host_all_storages(self):
+        """
+        return a list of all the storage names
+        """
+        raise NotImplementedError()
