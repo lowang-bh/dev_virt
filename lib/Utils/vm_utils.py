@@ -133,5 +133,34 @@ def config_vif(inst_name, vif_index, device_name=None, network=None, mac_addr=No
     return ret
 
 
+def print_vm_info(inst_name, **kwargs):
+    """
+    :param inst_name:
+    :param kwargs: host, user, passwd
+    :return:
+    """
+    host_name = kwargs['host']
+    user = kwargs['user']
+    passwd = kwargs['passwd']
+
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+
+    log.info("General hardware and software information for VM: [%s]", inst_name)
+
+    vm_record = virt_driver.get_vm_record(inst_name)
+
+
+    log.info("\nVM CPU informations:")
+    log.info("\tMax Vcpus: %s", vm_record.get("VCPUs_max"))
+
+    log.info("\nVM memory informations:")
+    log.info("\tMax memory: %s GB", vm_record.get("memory_target", 0))
+
+
+    #log.info("\nHost Memory informations:")
+
+    #log.info("\nHost Default Storage informations:")
+
+
 if __name__ == "__main__":
     pass

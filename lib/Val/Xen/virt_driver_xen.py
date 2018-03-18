@@ -271,7 +271,7 @@ class XenVirtDriver(VirtDriver):
         """
         handler = self.get_handler()
 
-        record = {}
+        vm_record = {}
         try:
             vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
             record = handler.xenapi.VM.get_record(vm_ref)
@@ -279,7 +279,18 @@ class XenVirtDriver(VirtDriver):
             log.exception("Exception: %s when get record for VM [%s].", error, inst_name)
             return {}
 
-        return record
+        vm_record['VCPUs_max'] = record.get('VCPUs_max', None)
+        vm_record['VCPUs_at_startup'] = record.get('VCPUs_at_startup', None)
+        vm_record['domid'] = record.get('domid', None)
+        vm_record['uuid'] = record.get('uuid', None)
+        vm_record['name_label'] = inst_name
+        vm_record['memory_dynamic_max'] = record.get('memory_dynamic_max', None)
+        vm_record['memory_dynamic_min'] = record.get('memory_dynamic_min', '0')
+        vm_record['memory_static_max'] = record.get('memory_static_max', None)
+        vm_record['memory_static_min'] = record.get('memory_static_min', None)
+        vm_record['memory_target'] = float("%.3f" % (float(record.get("memory_target", 0)) / 1024 / 1024 /1024) )
+
+        return vm_record
 
     def get_vm_guest_metrics_record(self, inst_name):
         """

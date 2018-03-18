@@ -55,10 +55,7 @@ if __name__ == "__main__":
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
 
-    if not args:
-        log.error("Please specify a VM name to config.")
-        parser.print_help()
-        exit(1)
+
     if not options.list_vif  and not options.list_pif and not options.list_sr and\
         (not options.vif_index and not options.del_index and not options.add_index and\
          not options.disk_size):
@@ -67,6 +64,30 @@ if __name__ == "__main__":
 
     vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
     virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+
+    if options.list_pif:
+        pif_list = vnet_driver.get_all_devices()
+        if pif_list:
+            log.info("All device on the host: %s", sorted(pif_list))
+        else:
+            log.info("No device found on the host.")
+        exit(0)
+
+    if options.list_sr:
+        sr_name_list = virt_driver.get_host_all_storages()
+        log.info("All SR information:")
+        infor_formate = "%-20s\t%s"
+        log.info(infor_formate, "Storage_name", "Free_size(GB)")
+        for sr_name in sr_name_list:
+            storage = virt_driver.get_host_storage_info(storage_name=sr_name)
+            log.info(infor_formate, sr_name, storage["size_free"])
+        exit(0)
+
+    if not args:
+        log.error("Please specify a VM name to config.")
+        parser.print_help()
+        exit(1)
+
     inst_name = args[0]
     if not virt_driver.is_instance_exists(inst_name):
         log.fail("No instance exist with name [%s].", inst_name)
@@ -78,21 +99,9 @@ if __name__ == "__main__":
             log.info("All virtual interface device: %s", sorted(vif_list))
         else:
             log.info("No virtual interface device found.")
+        exit(0)
 
-    if options.list_pif:
-        pif_list = vnet_driver.get_all_devices()
-        if pif_list:
-            log.info("All device on the host: %s", sorted(pif_list))
-        else:
-            log.info("No device found on the host.")
-    if options.list_sr:
-        sr_name_list = virt_driver.get_host_all_storages()
-        log.info("All SR information:")
-        infor_formate = "%-20s\t%s"
-        log.info(infor_formate, "Storage_name", "Free_size(GB)")
-        for sr_name in sr_name_list:
-            storage = virt_driver.get_host_storage_info(storage_name=sr_name)
-            log.info(infor_formate, sr_name, storage["size_free"])
+
 
     if options.add_index is not None:
         vif_index = options.add_index
