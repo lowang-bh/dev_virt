@@ -38,7 +38,6 @@ class XenVirtDriverTestCase(unittest.TestCase):
     def test_is_instance_running(self):
         for vm in self.vms:
             self.assertEqual(self.virt_driver.is_instance_running(vm), True, "%s is not running" % vm)
-            self.assertEqual(self.virt_driver.get_vm_record(vm)['power_state'], "Running", "%s is not running" % vm)
 
 #    def test_power_on_vm(self):
 #        vm = "new_vm"

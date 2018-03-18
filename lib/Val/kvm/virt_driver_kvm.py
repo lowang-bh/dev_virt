@@ -620,14 +620,14 @@ class QemuVirtDriver(VirtDriver):
         hv_driver =  self.get_handler()
         try:
             pool_dom = hv_driver.storagePoolLookupByName(storage_name)
-            poo_info = pool_dom.info()
+            pool_info = pool_dom.info()
         except libvirtError, error:
             log.exception("Exceptions: %s", error)
             return ret_storage_dict
 
         GB = 1024 * 1024 * 1024
-        ret_storage_dict['size_total'] = float("%.3f" %(float(poo_info[1]) / GB))
-        ret_storage_dict['size_free']  = float("%.3f" %(float(poo_info[3]) / GB))
+        ret_storage_dict['size_total'] = float("%.3f" %(float(pool_info[1]) / GB))
+        ret_storage_dict['size_free']  = float("%.3f" %(float(pool_info[3]) / GB))
         ret_storage_dict['size_used']  = ret_storage_dict['size_total'] - ret_storage_dict['size_free']
 
         return ret_storage_dict
@@ -696,7 +696,24 @@ class QemuVirtDriver(VirtDriver):
         """
         return the record dict for inst_name
         """
-        raise NotImplementedError()
+        handler = self.get_handler()
+        try:
+            dom = handler.lookupByName(inst_name)
+        except libvirtError:
+            return {}
+
+        vm_record = {}
+        vm_record['VCPUs_max'] = dom.maxVcpus()
+        vm_record['VCPUs_at_startup'] = None
+        vm_record['domid'] = dom.ID()
+        vm_record['uuid'] = dom.UUIDString()
+        vm_record['name_label'] = inst_name
+        vm_record['memory_dynamic_max'] = None
+        vm_record['memory_dynamic_min'] = None
+        vm_record['memory_static_max'] = None
+        vm_record['memory_static_min'] = None
+        vm_record['memory_target'] = float("%.3f" %(dom.maxMemory() /1024.0/1024.0))
+        return  vm_record
 
     def add_vdisk_to_vm(self, inst_name, storage_name, size):
         """
