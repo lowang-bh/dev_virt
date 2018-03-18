@@ -593,10 +593,23 @@ class QemuVirtDriver(VirtDriver):
         ret_cpu_dict['cpu_model'] = str(hv_info[0])
         ret_cpu_dict['cpu_cores'] = hv_info[2]
         # return MHz
-        ret_cpu_dict['cpu_speed'] = int(hv_info[3]) * 1000 * 1000
-        # number of NUMA nodes X number of sockets per node
+        ret_cpu_dict['cpu_speed'] = int(hv_info[3])
+        # number of NUMA nodes * number of sockets per node
         ret_cpu_dict['cpu_sockets'] = int(hv_info[4]) * int(hv_info[5])
+        ret_cpu_dict['cores_per_socket'] = int(hv_info[6])
+        #number of threads per core
+        ret_cpu_dict['thread_per_core'] = int(hv_info[7])
+
         return ret_cpu_dict
+
+    def get_host_all_storages(self):
+        """
+        return a list of all the storage names
+        """
+        hv_driver =  self.get_handler()
+        pool_list = hv_driver.listAllStoragePools(0)
+        return [pool_dom.name() for pool_dom in pool_list]
+
 
     def get_host_storage_info(self, storage_name="default"):
         """
@@ -606,15 +619,16 @@ class QemuVirtDriver(VirtDriver):
         ret_storage_dict = {}
         hv_driver =  self.get_handler()
         try:
-            pool = hv_driver.storagePoolLookupByName(storage_name)
+            pool_dom = hv_driver.storagePoolLookupByName(storage_name)
+            poo_info = pool_dom.info()
         except libvirtError, error:
             log.exception("Exceptions: %s", error)
             return ret_storage_dict
 
         GB = 1024 * 1024 * 1024
-        ret_storage_dict['size_total'] = float("%.3f" %(float(pool[1]) / GB))
-        ret_storage_dict['size_free']  = float("%.3f" %(float(pool[3]) / GB))
-        ret_storage_dict['size_used']  = ret_storage_dict['size_total'] - ret_storage_dict['size_used']
+        ret_storage_dict['size_total'] = float("%.3f" %(float(poo_info[1]) / GB))
+        ret_storage_dict['size_free']  = float("%.3f" %(float(poo_info[3]) / GB))
+        ret_storage_dict['size_used']  = ret_storage_dict['size_total'] - ret_storage_dict['size_free']
 
         return ret_storage_dict
 
@@ -632,8 +646,8 @@ class QemuVirtDriver(VirtDriver):
             log.warn("Could not get memory info")
             return ret_mem_dict
 
-        ret_mem_dict['size_total'] = mem_info['total']
-        ret_mem_dict['size_free'] = mem_info['free']
+        ret_mem_dict['size_total'] = float("%.3f" %(mem_info['total']/ 1024.0 /1024.0))
+        ret_mem_dict['size_free'] = float("%.3F" %(mem_info['free']/ 1024.0 /1024.0))
         ret_mem_dict['size_used'] = ret_mem_dict['size_total'] - ret_mem_dict['size_free']
         return ret_mem_dict
 

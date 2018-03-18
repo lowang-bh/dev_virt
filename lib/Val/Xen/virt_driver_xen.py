@@ -394,6 +394,10 @@ class XenVirtDriver(VirtDriver):
             ret_cpu_dict['cpu_cores'] = cpu_info.get("cpu_count", 0)
             ret_cpu_dict['cpu_speed'] = cpu_info.get('speed', "0")
             ret_cpu_dict['cpu_sockets'] = cpu_info.get("socket_count", 0)
+            # number of cores per socket
+            ret_cpu_dict['cores_per_socket'] = 0
+            # number of threads per core
+            ret_cpu_dict['thread_per_core'] = 0
         except Exception, error:
             log.exception("Exceptions when get host cpu infor: %s", error)
             return ret_cpu_dict
@@ -439,7 +443,7 @@ class XenVirtDriver(VirtDriver):
 
     def get_host_mem_info(self):
         """
-        Return HV memory info: Unit is MB
+        Return HV memory info: Unit is GB
         """
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
@@ -454,8 +458,8 @@ class XenVirtDriver(VirtDriver):
             log.exception("Exception raised when get host memory infor:%s", error)
             return ret_mem_dict
 
-        ret_mem_dict['size_total'] = float("%.3f" %(float(total) / 1024 / 1024))
-        ret_mem_dict['size_free'] = float("%.3f" %(float(free) / 1024 / 1024))
+        ret_mem_dict['size_total'] = float("%.3f" %(float(total) / 1024 / 1024 / 1024))
+        ret_mem_dict['size_free'] = float("%.3f" %(float(free) / 1024 / 1024 / 1024))
         ret_mem_dict['size_used'] = ret_mem_dict['size_total']  - ret_mem_dict['size_free']
         return ret_mem_dict
 
