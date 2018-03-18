@@ -85,11 +85,11 @@ class XenVnetDriver(VnetDriver):
 
     def is_network_exist(self, network_name):
         """
-        @param switch_name: the network name of bridge(when use linux bridge) or switch(when use openvswitch)
-        @return: Ture if exist or False
+        @param network_name: the network name of bridge(when use linux bridge) or switch(when use openvswitch)
+        @return: True if exist or False
         """
-        all_switchs = self.get_network_list()
-        if network_name in all_switchs:
+        all_switches = self.get_network_list()
+        if network_name in all_switches:
             return True
         else:
             return False
@@ -170,7 +170,7 @@ class XenVnetDriver(VnetDriver):
             if self._hypervisor_handler.xenapi.network.get_bridge(network) == bridge_name:
                 return network
 
-        log.error("No netwrok found with bridge name [%s].", bridge_name)
+        log.error("No network found with bridge name [%s].", bridge_name)
         return None
 
     def _create_new_network(self, bridge_name):
@@ -178,8 +178,10 @@ class XenVnetDriver(VnetDriver):
         create a new network
         @return: return the reference object of network
         """
-        new_network_record = {'MTU': '1500', 'other_config': {}}
-        new_network_record['bridge'] = bridge_name
+        new_network_record = {'MTU': '1500', 'other_config': {}, 'bridge': bridge_name}
+        name_label = "network on bridge %s" % bridge_name
+        new_network_record['name_label'] = name_label
+
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
 

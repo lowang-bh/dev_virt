@@ -432,9 +432,9 @@ class XenVirtDriver(VirtDriver):
 
         total = self._hypervisor_handler.xenapi.SR.get_physical_size(sr_ref)
         used = self._hypervisor_handler.xenapi.SR.get_physical_utilisation(sr_ref)
-        ret_storage_dict['size_total'] = int(total) / 1024 / 1024 / 1024
-        ret_storage_dict['size_used'] = int(used) / 1024 / 1024 / 1024
-        ret_storage_dict['size_free'] = (int(total) - int(used)) / 1024 / 1024 / 1024
+        ret_storage_dict['size_total'] = float("%.3f" %(float(total) / 1024 / 1024 / 1024))
+        ret_storage_dict['size_used'] = float("%.3f" %(float(used) / 1024 / 1024 / 1024))
+        ret_storage_dict['size_free'] = ret_storage_dict['size_total'] - ret_storage_dict['size_used']
         return ret_storage_dict
 
     def get_host_mem_info(self):
@@ -454,9 +454,9 @@ class XenVirtDriver(VirtDriver):
             log.exception("Exception raised when get host memory infor:%s", error)
             return ret_mem_dict
 
-        ret_mem_dict['size_total'] = int(total) / 1024 / 1024
-        ret_mem_dict['size_free'] = int(free) / 1024 / 1024
-        ret_mem_dict['size_used'] = (int(total) - int(free)) / 1024 / 1024
+        ret_mem_dict['size_total'] = float("%.3f" %(float(total) / 1024 / 1024))
+        ret_mem_dict['size_free'] = float("%.3f" %(float(free) / 1024 / 1024))
+        ret_mem_dict['size_used'] = ret_mem_dict['size_total']  - ret_mem_dict['size_free']
         return ret_mem_dict
 
     def get_host_sw_ver(self, short_name=True):

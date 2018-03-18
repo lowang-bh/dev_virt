@@ -598,16 +598,24 @@ class QemuVirtDriver(VirtDriver):
         ret_cpu_dict['cpu_sockets'] = int(hv_info[4]) * int(hv_info[5])
         return ret_cpu_dict
 
-    def get_host_storage_info(self):
+    def get_host_storage_info(self, storage_name="default"):
         """
-        Return HV storage info
+        Return HV storage info: Unit is GB
         """
         # Here only the VM storage directory calculated
-        disk_info = os.statvfs(VM_HOUSE)
         ret_storage_dict = {}
-        ret_storage_dict['size_total'] = disk_info.f_frsize * disk_info.f_blocks
-        ret_storage_dict['size_free'] = disk_info.f_frsize * disk_info.f_bfree
-        ret_storage_dict['size_used'] = ret_storage_dict['size_total'] - ret_storage_dict['size_free']
+        hv_driver =  self.get_handler()
+        try:
+            pool = hv_driver.storagePoolLookupByName(storage_name)
+        except libvirtError, error:
+            log.exception("Exceptions: %s", error)
+            return ret_storage_dict
+
+        GB = 1024 * 1024 * 1024
+        ret_storage_dict['size_total'] = float("%.3f" %(float(pool[1]) / GB))
+        ret_storage_dict['size_free']  = float("%.3f" %(float(pool[3]) / GB))
+        ret_storage_dict['size_used']  = ret_storage_dict['size_total'] - ret_storage_dict['size_used']
+
         return ret_storage_dict
 
     def get_host_mem_info(self):
@@ -670,3 +678,16 @@ class QemuVirtDriver(VirtDriver):
         '''
         raise NotImplementedError()
 
+    def get_vm_record(self, inst_name):
+        """
+        return the record dict for inst_name
+        """
+        raise NotImplementedError()
+
+    def add_vdisk_to_vm(self, inst_name, storage_name, size):
+        """
+        @param inst_name: the name of VM
+        @param storage_name: which storage repository the virtual disk put
+        @param size: the disk size
+        """
+        raise NotImplementedError()

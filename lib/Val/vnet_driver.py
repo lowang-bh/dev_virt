@@ -32,7 +32,7 @@ class VnetDriver(object):
     def is_network_exist(self, network_name):
         """
         @param network_name: the name of network created on bridge(when use linux bridge) or switch(when use openvswitch)
-        @return: Ture if exist or False
+        @return: True if exist or False
         """
 
     @abc.abstractmethod
