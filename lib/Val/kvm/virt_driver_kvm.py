@@ -606,10 +606,9 @@ class QemuVirtDriver(VirtDriver):
         """
         return a list of all the storage names
         """
-        hv_driver =  self.get_handler()
+        hv_driver = self.get_handler()
         pool_list = hv_driver.listAllStoragePools(0)
         return [pool_dom.name() for pool_dom in pool_list]
-
 
     def get_host_storage_info(self, storage_name="default"):
         """
@@ -617,7 +616,7 @@ class QemuVirtDriver(VirtDriver):
         """
         # Here only the VM storage directory calculated
         ret_storage_dict = {}
-        hv_driver =  self.get_handler()
+        hv_driver = self.get_handler()
         try:
             pool_dom = hv_driver.storagePoolLookupByName(storage_name)
             pool_info = pool_dom.info()
@@ -626,9 +625,9 @@ class QemuVirtDriver(VirtDriver):
             return ret_storage_dict
 
         GB = 1024 * 1024 * 1024
-        ret_storage_dict['size_total'] = float("%.3f" %(float(pool_info[1]) / GB))
-        ret_storage_dict['size_free']  = float("%.3f" %(float(pool_info[3]) / GB))
-        ret_storage_dict['size_used']  = ret_storage_dict['size_total'] - ret_storage_dict['size_free']
+        ret_storage_dict['size_total'] = float("%.3f" % (float(pool_info[1]) / GB))
+        ret_storage_dict['size_free'] = float("%.3f" % (float(pool_info[3]) / GB))
+        ret_storage_dict['size_used'] = ret_storage_dict['size_total'] - ret_storage_dict['size_free']
 
         return ret_storage_dict
 
@@ -646,8 +645,8 @@ class QemuVirtDriver(VirtDriver):
             log.warn("Could not get memory info")
             return ret_mem_dict
 
-        ret_mem_dict['size_total'] = float("%.3f" %(mem_info['total']/ 1024.0 /1024.0))
-        ret_mem_dict['size_free'] = float("%.3F" %(mem_info['free']/ 1024.0 /1024.0))
+        ret_mem_dict['size_total'] = float("%.3f" % (mem_info['total'] / 1024.0 / 1024.0))
+        ret_mem_dict['size_free'] = float("%.3F" % (mem_info['free'] / 1024.0 / 1024.0))
         ret_mem_dict['size_used'] = ret_mem_dict['size_total'] - ret_mem_dict['size_free']
         return ret_mem_dict
 
@@ -712,7 +711,7 @@ class QemuVirtDriver(VirtDriver):
         vm_record['memory_dynamic_min'] = None
         vm_record['memory_static_max'] = None
         vm_record['memory_static_min'] = None
-        vm_record['memory_target'] = float("%.3f" %(dom.maxMemory() /1024.0/1024.0))
+        vm_record['memory_target'] = float("%.3f" % (dom.maxMemory() / 1024.0 / 1024.0))
         return  vm_record
 
     def add_vdisk_to_vm(self, inst_name, storage_name, size):
