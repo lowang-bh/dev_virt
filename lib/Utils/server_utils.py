@@ -32,6 +32,7 @@ def print_server_hardware_info(**kwargs):
     log.info("\tProcessor Model: %s", cpu_info.get("cpu_model"))
     log.info("\tProcessor Sockets: %s", cpu_info.get("cpu_sockets", 0))
     log.info("\tCores per Socket: %s", cpu_info.get("cores_per_socket", 0))
+    log.info("\tThreads per Core: %s", cpu_info.get("thread_per_core", 1))
     log.info("\tLogical Processors: %s", cpu_info.get("cpu_cores"))
     log.info("\tProcessor Speed: %s MHz", cpu_info.get("cpu_speed"))
 
