@@ -406,9 +406,9 @@ class XenVirtDriver(VirtDriver):
             ret_cpu_dict['cpu_speed'] = cpu_info.get('speed', "0")
             ret_cpu_dict['cpu_sockets'] = cpu_info.get("socket_count", 0)
             # number of cores per socket
-            ret_cpu_dict['cores_per_socket'] = 0
-            # number of threads per core
-            ret_cpu_dict['thread_per_core'] = 0
+            ret_cpu_dict['cores_per_socket'] = int(ret_cpu_dict['cpu_cores']) / int(ret_cpu_dict['cpu_sockets'])
+            # number of threads per core, xenserver has no infor about this
+            ret_cpu_dict['thread_per_core'] = 1
         except Exception, error:
             log.exception("Exceptions when get host cpu infor: %s", error)
             return ret_cpu_dict
