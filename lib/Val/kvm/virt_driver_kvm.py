@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#! -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #########################################################################
 # File Name: virt_driver_kvm.py
 # Attentions: provide command API for operations on KVM VMs
