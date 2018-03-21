@@ -19,12 +19,14 @@ from app.settings import DB_HOST, LOGIN_URL
 @six.add_metaclass(abc.ABCMeta)
 class DatabaseDriver(object):
 
-    def __init__(self, user="root", passwd="access"):
+    def __init__(self, user="admin", passwd="access"):
         self.user = user
         self.passwd = passwd
         self.db_host = DB_HOST
         self.login_url = LOGIN_URL
+        self.url = None
         self.session = None
+        self.respond = None
 
         login_data = {'username': self.user, 'password': self.passwd}
 
@@ -32,8 +34,9 @@ class DatabaseDriver(object):
 
         login_res = self.session.post(self.login_url, data=login_data)
         res_content = json.loads(login_res.content)
+        print type(res_content), res_content
 
-        if res_content.status == 1:  # the success check depend on the login html
+        if res_content['status'] == 1:  # the success check depend on the login html
             log.debug("login db_host [%s] with username [%s] success.", self.db_host, self.user)
         else:
             log.error("Login db_host [%s] with username [%s] failed.", self.db_host, self.user)
@@ -49,8 +52,70 @@ class DatabaseDriver(object):
         else:
             return True
 
+    @classmethod
+    def db_name(cls, url):
+        """
+        :param url:
+        :return:
+        """
+        return "/".join(url.strip('/').split('/')[3:])
+
+    @classmethod
+    def respond_data(cls, content):
+        """
+        return the HTTP response data
+        :param content:
+        :return:
+        """
+        if isinstance(content, dict):
+            return content['data']
+        elif isinstance(content, str):
+            return json.loads(content)['data']
+
+        return {}
+
+    @classmethod
+    def is_respond_error(cls, content):
+        """
+        return True is error occur in the content else False
+        :param content:
+        :return:
+        """
+        if "errors" in cls.respond_data(content):
+            return True
+
+        return False
+
+    @classmethod
+    def respond_msg(cls, content):
+        """
+        return the msg in http response content
+        :param content:
+        :return:
+        """
+        if isinstance(content, dict):
+            return content.get("msg", "")
+        elif isinstance(content, str):
+            return json.loads(content).get("msg", "")
+
+        return ""
+
+    @classmethod
+    def respond_code(cls, content):
+        """
+        return the HTTP response code
+        :param content:
+        :return:
+        """
+        if isinstance(content, dict):
+            return content.get('code', None)
+        elif isinstance(content, str):
+            return json.loads(content).get("code", None)
+
+        return None
+
     @abc.abstractmethod
-    def create(self, data=None):
+    def create(self, **kwargs):
         """
         create a record to database
         :param data: dict data use to request
@@ -59,29 +124,29 @@ class DatabaseDriver(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def delete(self, pk=None):
+    def delete(self, id=None):
         """
         Delete a record from database
-        :param pk:
+        :param id:
         :return:
         """
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def update(self, pk=None, data=None):
+    def update(self, id=None, data=None):
         """
         update the data to a record with its primary key is pk
-        :param pk:
+        :param id:
         :param data:
         :return: True or False
         """
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def query(self, pk=None):
+    def query(self, id=None):
         """
         query from database
-        :param pk:
+        :param id:
         :return: the record with Dict
         """
         raise NotImplementedError()
