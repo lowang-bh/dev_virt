@@ -288,7 +288,7 @@ class XenVirtDriver(VirtDriver):
         vm_record['memory_dynamic_min'] = record.get('memory_dynamic_min', '0')
         vm_record['memory_static_max'] = record.get('memory_static_max', None)
         vm_record['memory_static_min'] = record.get('memory_static_min', None)
-        vm_record['memory_target'] = float("%.3f" % (float(record.get("memory_target", 0)) / 1024 / 1024 /1024) )
+        vm_record['memory_target'] = float("%.3f" % (float(record.get("memory_target", 0)) / 1024 / 1024 / 1024))
 
         return vm_record
 
@@ -315,23 +315,65 @@ class XenVirtDriver(VirtDriver):
         """
         handler = self.get_handler()
         vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
-        all_vdbs = handler.xenapi.VM.get_VBDs(vm_ref)
+        all_vbds = handler.xenapi.VM.get_VBDs(vm_ref)
         device_list = []
-        for vdb_ref in all_vdbs:
-            device = handler.xenapi.VBD.get_userdevice(vdb_ref)
+        for vbd_ref in all_vbds:
+            device = handler.xenapi.VBD.get_userdevice(vbd_ref)
             device_list.append(int(device))
         max_num = max(device_list)
         for i in range(max_num + 1):
             if i not in device_list:
                 return str(i)
-        allowed_vbds = handler.xenapi.get_allowed_VBD_devices(vm_ref)
+        allowed_vbds = handler.xenapi.VM.get_allowed_VBD_devices(vm_ref)
         if str(max_num + 1) not in allowed_vbds:
             log.error("No avaiable VBD device to be allocated on VM [%s.]", inst_name)
             return ""
 
         return str(max_num + 1)
 
-    def add_vdisk_to_vm(self, inst_name, storage_name, size):
+    def get_all_device(self, inst_name):
+        """
+        :param inst_name:
+        :return: return all the virtual disk names
+        """
+        handler = self.get_handler()
+
+        vm_ref = self._get_vm_ref(inst_name)
+        all_vdbs = handler.xenapi.VM.get_VBDs(vm_ref)
+        device_list = []
+        for vdb_ref in all_vdbs:
+            device = handler.xenapi.VBD.get_userdevice(vdb_ref)
+            device_list.append(device)
+
+        return device_list
+
+    def get_disk_size(self, inst_name, device):
+        """
+        :param inst_name: VM name
+        :param device: the disk number
+        :return: return size in GB, or 0 if no device found
+        """
+        handler = self.get_handler()
+
+        vm_ref = self._get_vm_ref(inst_name)
+        all_vbds = handler.xenapi.VM.get_VBDs(vm_ref)
+        for vbd_ref in all_vbds:
+            if str(device) == handler.xenapi.VBD.get_userdevice(vbd_ref):
+                break
+        else:
+            log.error("No virtual disk with device name [%s].", device)
+            return 0
+
+        vdi_ref = handler.xenapi.VBD.get_VDI(vbd_ref)
+        if "NULL" not in vdi_ref:
+            disk_size =  handler.xenapi.VDI.get_virtual_size(vdi_ref)
+            return int(disk_size) / 1024.0 / 1024.0 / 1024.0
+        else:
+            log.debug("No virtual disk with device [%s].", device)
+            return 0
+
+
+    def add_vdisk_to_vm(self, inst_name, storage_name='Local storage', size=2):
         """
         @param inst_name: the name of VM
         @param storage_name: which storage repository the virtual disk put
@@ -447,8 +489,8 @@ class XenVirtDriver(VirtDriver):
 
         total = self._hypervisor_handler.xenapi.SR.get_physical_size(sr_ref)
         used = self._hypervisor_handler.xenapi.SR.get_physical_utilisation(sr_ref)
-        ret_storage_dict['size_total'] = float("%.3f" %(float(total) / 1024 / 1024 / 1024))
-        ret_storage_dict['size_used'] = float("%.3f" %(float(used) / 1024 / 1024 / 1024))
+        ret_storage_dict['size_total'] = float("%.3f" % (float(total) / 1024 / 1024 / 1024))
+        ret_storage_dict['size_used'] = float("%.3f" % (float(used) / 1024 / 1024 / 1024))
         ret_storage_dict['size_free'] = ret_storage_dict['size_total'] - ret_storage_dict['size_used']
         return ret_storage_dict
 
@@ -469,9 +511,9 @@ class XenVirtDriver(VirtDriver):
             log.exception("Exception raised when get host memory infor:%s", error)
             return ret_mem_dict
 
-        ret_mem_dict['size_total'] = float("%.3f" %(float(total) / 1024 / 1024 / 1024))
-        ret_mem_dict['size_free'] = float("%.3f" %(float(free) / 1024 / 1024 / 1024))
-        ret_mem_dict['size_used'] = ret_mem_dict['size_total']  - ret_mem_dict['size_free']
+        ret_mem_dict['size_total'] = float("%.3f" % (float(total) / 1024 / 1024 / 1024))
+        ret_mem_dict['size_free'] = float("%.3f" % (float(free) / 1024 / 1024 / 1024))
+        ret_mem_dict['size_used'] = ret_mem_dict['size_total'] - ret_mem_dict['size_free']
         return ret_mem_dict
 
     def get_host_sw_ver(self, short_name=True):

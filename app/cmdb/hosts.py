@@ -103,7 +103,7 @@ class Host(DatabaseDriver):
             log.debug(self.resp.content)
 
         if not self.respond_data_count:
-            log.error("No records found with query data: %s.", data)
+            log.warn("No records found with query data: %s.", data)
             return []
         else:
             return self.respond_data_list
