@@ -334,7 +334,7 @@ class XenVirtDriver(VirtDriver):
     def get_all_device(self, inst_name):
         """
         :param inst_name:
-        :return: return all the virtual disk names
+        :return: return all the virtual disk number
         """
         handler = self.get_handler()
 
@@ -345,7 +345,7 @@ class XenVirtDriver(VirtDriver):
             device = handler.xenapi.VBD.get_userdevice(vdb_ref)
             device_list.append(device)
 
-        return device_list
+        return sorted(device_list)
 
     def get_disk_size(self, inst_name, device):
         """
@@ -491,7 +491,7 @@ class XenVirtDriver(VirtDriver):
         used = self._hypervisor_handler.xenapi.SR.get_physical_utilisation(sr_ref)
         ret_storage_dict['size_total'] = float("%.3f" % (float(total) / 1024 / 1024 / 1024))
         ret_storage_dict['size_used'] = float("%.3f" % (float(used) / 1024 / 1024 / 1024))
-        ret_storage_dict['size_free'] = ret_storage_dict['size_total'] - ret_storage_dict['size_used']
+        ret_storage_dict['size_free'] = float("%.3f" % (ret_storage_dict['size_total'] - ret_storage_dict['size_used']))
         return ret_storage_dict
 
     def get_host_mem_info(self):
@@ -513,7 +513,7 @@ class XenVirtDriver(VirtDriver):
 
         ret_mem_dict['size_total'] = float("%.3f" % (float(total) / 1024 / 1024 / 1024))
         ret_mem_dict['size_free'] = float("%.3f" % (float(free) / 1024 / 1024 / 1024))
-        ret_mem_dict['size_used'] = ret_mem_dict['size_total'] - ret_mem_dict['size_free']
+        ret_mem_dict['size_used'] = float("%.3f" % (ret_mem_dict['size_total'] - ret_mem_dict['size_free']))
         return ret_mem_dict
 
     def get_host_sw_ver(self, short_name=True):

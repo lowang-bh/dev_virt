@@ -132,6 +132,25 @@ def config_vif(inst_name, vif_index, device_name=None, network=None, mac_addr=No
 
     return ret
 
+def get_all_disk_info(inst_name, **kwargs):
+    """
+    return a dict with its key is disk number and value is disk size of GB
+    :param inst_name:
+    :return:
+    """
+    host_name = kwargs['host']
+    user = kwargs['user']
+    passwd = kwargs['passwd']
+
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+
+    disk_info = {}
+    disk_list =  virt_driver.get_all_device(inst_name=inst_name)
+    for disk_num in disk_list:
+        size = str(virt_driver.get_disk_size(inst_name=inst_name, device=disk_num)) + " GB"
+        disk_info.setdefault(disk_num, size)
+
+    return  disk_info
 
 def print_vm_info(inst_name, **kwargs):
     """
@@ -163,4 +182,4 @@ def print_vm_info(inst_name, **kwargs):
 
 
 if __name__ == "__main__":
-    pass
+    print get_all_disk_info(inst_name="test2", host="10.143.248.16", user="root", passwd="Mojiti!906")
