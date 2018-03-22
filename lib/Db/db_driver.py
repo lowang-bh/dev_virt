@@ -26,7 +26,7 @@ class DatabaseDriver(object):
         self.login_url = LOGIN_URL
         self.url = None
         self.session = None
-        self.respond = None
+        self.resp = None
 
         login_data = {'username': self.user, 'password': self.passwd}
 
