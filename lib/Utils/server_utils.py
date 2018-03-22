@@ -47,3 +47,25 @@ def print_server_hardware_info(**kwargs):
     log.info("\tStorage Size: %s GB", storage_info.get('size_total', 0))
     log.info("\tStorage Used: %s GB", storage_info.get('size_used', 0))
     log.info("\tStorage Free: %s GB", storage_info.get('size_free', 0))
+
+
+def get_host_all_storage_info(**kwargs):
+    host_name = kwargs['host']
+    user = kwargs['user'] if kwargs['user'] else "root"
+    passwd = str(kwargs['passwd']).replace('\\', '') if kwargs['passwd'] else ""
+
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+
+    storage_info = {}
+    sr_list = virt_driver.get_host_all_storages()
+    for sr in sr_list:
+        size = virt_driver.get_host_storage_info(storage_name=sr)
+        storage_info.setdefault(sr, size['size_free'])
+
+    return storage_info
+
+
+if __name__ == "__main__":
+    d= get_host_all_storage_info(host="10.143.248.16", user="root", passwd="Mojiti!906")
+    for k,v in d.iteritems():
+        print k,"\t\t", v
