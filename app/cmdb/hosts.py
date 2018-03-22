@@ -25,16 +25,17 @@ class Host(DatabaseDriver):
         url = self.url
         db_name = self.db_name(url)
 
-        res = self.session.post(url, data=data)
-        log.info("Http return code: %s", res.status_code)
-        if res.status_code == requests.codes.created or res.status_code == requests.codes.ok:
+        log.debug("Create url: %s", url)
+        self.resp = self.session.post(url, data=data)
+        log.info("Http return code: %s", self.resp.status_code)
+        if self.resp.status_code == requests.codes.created or self.resp.status_code == requests.codes.ok:
             log.info("Create data to database: [%s] successfully.", db_name)
             return True
         else:
             log.error("Create data to database: [%s] failed, please check the log at '/var/log/virt.log'.", db_name)
-            #res_dict_data = json.loads(res.content)['data']
+            #res_dict_data = json.loads(self.resp.content)['data']
             #{"msg":"执行异常！","code":400,"data":{"errors":{"sn":["具有 sn 的 hosts 已存在。"]}}}
-            log.debug(res.content)
+            log.debug(self.resp.content)
             return False
 
     def delete(self, id=None, **kwargs):
@@ -43,12 +44,17 @@ class Host(DatabaseDriver):
         :param pk:
         :return:
         """
-        url = self.url if id is None else "/".join(self.url, str(id))
+        url = self.url if id is None else self.url + str(id)
         db_name = self.db_name(url)
+        log.debug("Delete url: %s", url)
 
-        res = self.session.delete(url)
-        if self.is_respond_error(json.loads(res.content)):
-            log.warn("Delete data from database: [%s] failed.", res.status_code)
+        self.resp = self.session.delete(url)
+        if self.resp.status_code == requests.codes.no_content:
+            log.info("Delete data from database [%s] successfully.", db_name)
+        elif self.resp.status_code == requests.codes.not_found:
+            log.warn("Not found when delete from [%s]: 404", db_name)
+        elif self.is_respond_error(json.loads(self.resp.content)):
+            log.warn("Delete data from database: [%s] failed, return code: %s.", db_name, self.resp.status_code)
             return  False
 
         return True
@@ -73,35 +79,33 @@ class Host(DatabaseDriver):
 
         data = {}
         url += "?"
-        select_item =[]
+        select_item = []
         if id:
             data['id'] = id
-            select_item.append("id=%s" %id)
+            select_item.append("id=%s" % id)
         if sn:
             data['sn'] = sn
-            select_item.append("sn=%s" %sn)
+            select_item.append("sn=%s" % sn)
         if hostname:
             data['hostname'] = hostname
-            select_item.append("hostname=%s" %hostname)
+            select_item.append("hostname=%s" % hostname)
 
         url += "&".join(select_item)
-        log.info("Query URL: %s", url)
+        log.debug("Query URL: %s", url)
 
-        res = self.session.get(url)
-        if res.status_code == requests.codes.ok:
+        self.resp = self.session.get(url)
+        if self.resp.status_code == requests.codes.ok:
             log.info("Query from database: [%s] with record [%s] successfully.", db_name, data)
         else:
             log.error("Query from database: [%s] with record [%s] failed, please check the log at '/var/log/virt.log'.", db_name, data)
-            log.debug(res.content)
+            log.debug(self.resp.content)
 
-        response_data =  self.respond_data(res.content)
+        response_data = self.respond_data(self.resp.content)
         if not int(response_data.get("count", 0)):
-            log.error("No record found with query data: %s.", data)
+            log.error("No records found with query data: %s.", data)
             return  []
         else:
             return response_data.get('list', [])
-
-
 
 
 class VirtualHost(Host):
@@ -132,20 +136,22 @@ class VirtualHost(Host):
         url = self.url
         db_name = self.db_name(url)
 
-        res = self.session.post(url, data=post_data)
-        log.info("Http return code: %s", res.status_code)
-        if res.status_code == requests.codes.created or res.status_code == requests.codes.ok:
+        log.debug("Create virtual host url: %s", url)
+        self.resp = self.session.post(url, data=post_data)
+        if self.resp.status_code == requests.codes.created or self.resp.status_code == requests.codes.ok:
             log.info("Create data to database: [%s] successfully.", db_name)
             return True
         else:
-            log.error("Create data to database: [%s] failed, please check the log at '/var/log/virt.log'.", db_name)
-            #res_dict_data = json.loads(res.content)['data']
+            log.error("Create data to database: [%s] failed, Http return code: %s, please check the log at '/var/log/virt.log'.",
+                      db_name, self.resp.status_code)
+            #res_dict_data = json.loads(self.resp.content)['data']
             #{"msg":"执行异常！","code":400,"data":{"errors":{"sn":["具有 sn 的 hosts 已存在。"]}}}
-            log.debug(res.content)
+            log.debug(self.resp.content)
             return False
 
+
 if __name__ == "__main__":
-    virhost= VirtualHost()
+    virhost = VirtualHost()
     testdata = {
         "sn": "virtual vm 1",
         "cpu_cores": 1,
@@ -159,7 +165,11 @@ if __name__ == "__main__":
         print "Host init failed"
         exit(1)
 
-    print virhost.query(sn="virtual vm 1")
+    print virhost.query(hostname="virtualVm1")
+    print virhost.respond_code(virhost.resp.content)
+    print virhost.respond_msg(virhost.resp.content)
+    print virhost.respond_data(virhost.resp.content)
 
+    virhost.delete(id=12)
 
-    #print virhost.create(**testdata)
+    print virhost.create(**testdata)
