@@ -33,8 +33,7 @@ class Host(DatabaseDriver):
             return True
         else:
             log.error("Create data to database: [%s] failed, please check the log at '/var/log/virt.log'.", db_name)
-            #res_dict_data = json.loads(self.resp.content)['data']
-            #{"msg":"执行异常！","code":400,"data":{"errors":{"sn":["具有 sn 的 hosts 已存在。"]}}}
+            # {"msg":"执行异常！","code":400,"data":{"errors":{"sn":["具有 sn 的 hosts 已存在。"]}}}
             log.debug(self.resp.content)
             return False
 
@@ -53,16 +52,16 @@ class Host(DatabaseDriver):
             log.info("Delete data from database [%s] successfully.", db_name)
         elif self.resp.status_code == requests.codes.not_found:
             log.warn("Not found when delete from [%s]: 404", db_name)
-        elif self.is_respond_error(json.loads(self.resp.content)):
+        elif self.is_respond_error:
             log.warn("Delete data from database: [%s] failed, return code: %s.", db_name, self.resp.status_code)
-            return  False
+            return False
 
         return True
 
     def update(self, id=None, data=None):
         """
         update the data to a record with its primary key is pk
-        :param pk:
+        :param id:
         :param data:
         :return: True or False
         """
@@ -71,7 +70,9 @@ class Host(DatabaseDriver):
     def query(self, id=None, sn=None, hostname=None):
         """
         query from database
-        :param id:
+        :param id: PK id
+        :param sn: UUID of VM or host
+        :param hostname: The name of VM or host
         :return: the record with Dict
         """
         url = self.url
@@ -97,15 +98,15 @@ class Host(DatabaseDriver):
         if self.resp.status_code == requests.codes.ok:
             log.info("Query from database: [%s] with record [%s] successfully.", db_name, data)
         else:
-            log.error("Query from database: [%s] with record [%s] failed, please check the log at '/var/log/virt.log'.", db_name, data)
+            log.error("Query from database: [%s] with record [%s] failed, please check the log at '/var/log/virt.log'.",
+                      db_name, data)
             log.debug(self.resp.content)
 
-        response_data = self.respond_data(self.resp.content)
-        if not int(response_data.get("count", 0)):
+        if not self.respond_data_count:
             log.error("No records found with query data: %s.", data)
-            return  []
+            return []
         else:
-            return response_data.get('list', [])
+            return self.respond_data_list
 
 
 class VirtualHost(Host):
@@ -116,6 +117,7 @@ class VirtualHost(Host):
     def create(self, hostname, sn, cpu_cores, memory_size, disk_size, disk_num, first_ip):
         """
         overwrite the create method in Host for virtual machine
+        :param hostname: Name of VM
         :param sn: The UUID of the VM
         :param cpu_cores: cpu numbers
         :param memory_size: memory size with unit of GB
@@ -124,7 +126,7 @@ class VirtualHost(Host):
         :param first_ip: the IP assigned to the VM
         :return:
         """
-        post_data = {"machine_type": "虚拟机", "ip_static":True, "os_deploy":True}
+        post_data = {"machine_type": "虚拟机", "ip_static": True, "os_deploy": True}
         post_data.setdefault('hostname', hostname)
         post_data.setdefault('sn', sn)
         post_data.setdefault('cpu_cores', cpu_cores)
@@ -142,10 +144,8 @@ class VirtualHost(Host):
             log.info("Create data to database: [%s] successfully.", db_name)
             return True
         else:
-            log.error("Create data to database: [%s] failed, Http return code: %s, please check the log at '/var/log/virt.log'.",
-                      db_name, self.resp.status_code)
-            #res_dict_data = json.loads(self.resp.content)['data']
-            #{"msg":"执行异常！","code":400,"data":{"errors":{"sn":["具有 sn 的 hosts 已存在。"]}}}
+            log.error("Create data to database: [%s] failed, Http return code: %s, please check the log at "
+                      "'/var/log/virt.log'.", db_name, self.resp.status_code)
             log.debug(self.resp.content)
             return False
 
@@ -159,17 +159,23 @@ if __name__ == "__main__":
         "disk_size": 20,
         "disk_num": 1,
         "hostname": "virtualVm1",
-        "first_ip":"192.168.1.2"
+        "first_ip": "192.168.1.2"
         }
     if  not virhost:
         print "Host init failed"
         exit(1)
 
     print virhost.query(hostname="virtualVm1")
-    print virhost.respond_code(virhost.resp.content)
-    print virhost.respond_msg(virhost.resp.content)
-    print virhost.respond_data(virhost.resp.content)
+    print virhost.respond_code
+    print virhost.respond_msg
+    print virhost.respond_data
 
-    virhost.delete(id=12)
-
-    print virhost.create(**testdata)
+    with VirtualHost() as test:
+        queryDic = test.query(sn=testdata['sn'], hostname=testdata['hostname'])
+        print test.respond_data_count
+        deleteId = queryDic[0]['id']
+        virhost.delete(id=deleteId)
+        test.create(**testdata)
+        test.query(sn=testdata['sn'], hostname=testdata['hostname'])
+        print test.respond_data
+        print test.respond_data_list[0]['id']

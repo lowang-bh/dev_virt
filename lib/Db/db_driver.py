@@ -13,7 +13,7 @@ import requests
 import json
 
 from lib.Log.log import log
-from app.settings import DB_HOST, LOGIN_URL
+from app.settings import DB_HOST, LOGIN_URL, LOGOUT_URL
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -24,6 +24,7 @@ class DatabaseDriver(object):
         self.passwd = passwd
         self.db_host = DB_HOST
         self.login_url = LOGIN_URL
+        self.logout_url = LOGOUT_URL
         self.url = None
         self.session = None
         self.resp = None
@@ -34,7 +35,6 @@ class DatabaseDriver(object):
 
         login_res = self.session.post(self.login_url, data=login_data)
         res_content = json.loads(login_res.content)
-        print type(res_content), res_content
 
         if res_content['status'] == 1:  # the success check depend on the login html
             log.debug("login db_host [%s] with username [%s] success.", self.db_host, self.user)
@@ -52,6 +52,24 @@ class DatabaseDriver(object):
         else:
             return True
 
+    def __enter__(self):
+        log.debug("return database driver.")
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        log.debug("close session connected to db")
+        self.close()
+
+    def close(self):
+        """
+        logout and close the session
+        :return:
+        """
+        self.session.get(self.logout_url)
+        self.session.cookies.clear()
+        self.session.close()
+        self.session = None
+
     @classmethod
     def db_name(cls, url):
         """
@@ -60,57 +78,75 @@ class DatabaseDriver(object):
         """
         return "/".join(url.strip('/').split('/')[3:])
 
-    @classmethod
-    def respond_data(cls, content):
+    @property
+    def respond_data(self):
         """
         return the HTTP response data
-        :param content:
         :return:
         """
-        if isinstance(content, dict):
-            return content['data']
-        elif isinstance(content, str):
-            return json.loads(content)['data']
+        if isinstance(self.resp, requests.models.Response):
+            return json.loads(self.resp.content).get('data', {})
+        elif isinstance(self.resp, str):
+            return json.loads(self.resp).get('data', {})
+        elif isinstance(self.resp, dict):
+            return self.resp.get('data', {})
 
         return {}
 
-    @classmethod
-    def is_respond_error(cls, content):
+    @property
+    def respond_data_count(self):
         """
-        return True is error occur in the content else False
-        :param content:
+        :return: return the record counts in response
+        """
+        count = self.respond_data.get("count", 0)
+        return int(count)
+
+    @property
+    def respond_data_list(self):
+        """
+        return the respond data list
         :return:
         """
-        if "errors" in cls.respond_data(content):
+        return self.respond_data.get("list", [])
+
+    @property
+    def is_respond_error(self):
+        """
+        return True is error occur in the content else False
+        :return:
+        """
+        if "errors" in self.respond_data:
             return True
 
         return False
 
-    @classmethod
-    def respond_msg(cls, content):
+    @property
+    def respond_msg(self):
         """
         return the msg in http response content
-        :param content:
         :return:
         """
-        if isinstance(content, dict):
-            return content.get("msg", "")
-        elif isinstance(content, str):
-            return json.loads(content).get("msg", "")
+        if isinstance(self.resp, requests.models.Response):
+            return json.loads(self.resp.content).get("msg", "")
+        elif isinstance(self.resp, str):
+            return json.loads(self.resp).get("msg", "")
+        elif isinstance(self.resp, dict):
+            return self.resp.get("msg", "")
 
         return ""
 
-    @classmethod
-    def respond_code(cls, content):
+    @property
+    def respond_code(self):
         """
         return the HTTP response code
-        :param content:
         :return:
         """
-        if isinstance(content, dict):
-            return content.get('code', None)
-        elif isinstance(content, str):
-            return json.loads(content).get("code", None)
+        if isinstance(self.resp, requests.models.Response):
+            return json.loads(self.resp.content).get("code", None)
+        elif isinstance(self.resp, str):
+            return json.loads(self.resp).get("code", None)
+        elif isinstance(self.resp, dict):
+            return self.resp.get("code", None)
 
         return None
 
