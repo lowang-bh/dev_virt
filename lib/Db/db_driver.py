@@ -84,12 +84,15 @@ class DatabaseDriver(object):
         return the HTTP response data
         :return:
         """
-        if isinstance(self.resp, requests.models.Response):
-            return json.loads(self.resp.content).get('data', {})
-        elif isinstance(self.resp, str):
-            return json.loads(self.resp).get('data', {})
-        elif isinstance(self.resp, dict):
-            return self.resp.get('data', {})
+        try:
+            if isinstance(self.resp, requests.models.Response):
+                return json.loads(self.resp.content).get('data', {})
+            elif isinstance(self.resp, str):
+                return json.loads(self.resp).get('data', {})
+            elif isinstance(self.resp, dict):
+                return self.resp.get('data', {})
+        except ValueError, error:
+            log.exception(error)
 
         return {}
 
