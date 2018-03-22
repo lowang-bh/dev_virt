@@ -57,11 +57,23 @@ class VirtualHostTestCase(unittest.TestCase):
 
         self.assertNotEqual(self.virthost.query(id=pk), [], "query with new pk should not be []")
 
-    def test_c_delete(self):
-        log.info("Test test_c_delete")
+    def test_c_update(self):
+        log.info("Test test_c_update")
+        self.assertFalse(self.virthost.update(id=-1, data={}), "update id=-1 record should return False")
+        self.assertFalse(self.virthost.update(id=1, data=None), "update data is None should return False")
+        self.assertTrue(self.virthost.update(hostname=self.testdata['hostname'], data={"hostname":"test_c_update", "first_ip":"10.101.10.10"}),
+                        "Update should return True")
+
+
+
+
+    def test_d_delete(self):
+        log.info("Test test_d_delete")
+        self.assertTrue(self.virthost.update(sn=self.testdata['sn'], data={'hostname':self.testdata['hostname']}))
         data = self.virthost.query(sn=self.testdata['sn'], hostname=self.testdata['hostname'])
+        self.assertNotEqual(data, [], "should not be []")
         pk = data[0]['id']
-        self.assertTrue(self.virthost.delete(id=pk), "shoud delete successfully")
+        self.assertTrue(self.virthost.delete(id=pk), "should delete successfully")
         self.assertListEqual(self.virthost.query(id=pk), [], "query with new pk after delete should be []")
         self.assertEqual(self.virthost.respond_data_count, 0, "after delete record should be 0")
 
