@@ -8,6 +8,7 @@
 import unittest
 
 from app.cmdb.hosts import VirtualHost
+from lib.Log.log import log
 
 
 class VirtualHostTestCase(unittest.TestCase):
@@ -28,6 +29,7 @@ class VirtualHostTestCase(unittest.TestCase):
         self.virthost.close()
 
     def test_a_quiry(self):
+        log.info("Test test_a_quiry")
         self.assertListEqual(self.virthost.query(id=-1), [], "query id=-1 should be []")
         self.assertListEqual(self.virthost.query(sn=self.testdata['sn'],
                                                  hostname=self.testdata['hostname']),
@@ -38,6 +40,7 @@ class VirtualHostTestCase(unittest.TestCase):
                          "query with hostname should be []")
 
     def test_b_create(self):
+        log.info("Test test_b_create")
         self.assertTrue(self.virthost.create(**self.testdata), "create should be true")
 
         data = self.virthost.query(sn=self.testdata['sn'], hostname=self.testdata['hostname'])
@@ -55,6 +58,7 @@ class VirtualHostTestCase(unittest.TestCase):
         self.assertNotEqual(self.virthost.query(id=pk), [], "query with new pk should not be []")
 
     def test_c_delete(self):
+        log.info("Test test_c_delete")
         data = self.virthost.query(sn=self.testdata['sn'], hostname=self.testdata['hostname'])
         pk = data[0]['id']
         self.assertTrue(self.virthost.delete(id=pk), "shoud delete successfully")
