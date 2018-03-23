@@ -10,7 +10,6 @@
      host <-----    PIF    ----->network<-----  VIF----->    VM
 '''
 
-import time
 from lib.Log.log import log
 from lib.Val.vnet_driver import VnetDriver
 from lib.Val.Xen import XenAPI
@@ -204,7 +203,7 @@ class XenVnetDriver(VnetDriver):
             log.error("No VM with name [%s].", inst_name)
             return []
         all_vifs = self._hypervisor_handler.xenapi.VM.get_VIFs(vm_ref)
-        return [self._hypervisor_handler.xenapi.VIF.get_device(vif) for vif in all_vifs]
+        return sorted([self._hypervisor_handler.xenapi.VIF.get_device(vif) for vif in all_vifs])
 
     def is_vif_exist(self, inst_name, vif_index):
         """
@@ -215,6 +214,27 @@ class XenVnetDriver(VnetDriver):
             return True
         else:
             return False
+
+    def get_vif_info(self, inst_name, vif_index):
+        """
+        return a dict of vif information, MAC, IP, etc
+        :param inst_name:
+        :param vif_index:
+        :return:
+        """
+        vif_ref = self._get_vif_by_index(inst_name=inst_name, vif_index=vif_index)
+        if not vif_index:
+            log.error("Can not find VIF with index: %s", vif_index)
+            return {}
+
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        vif_dict = {}
+        mac = self._hypervisor_handler.xenapi.VIF.get_MAC(vif_ref)
+        vif_dict.setdefault("mac", mac)
+
+        return vif_dict
 
     def _get_vif_by_index(self, inst_name, vif_index):
         """
