@@ -30,6 +30,9 @@ class VirtualHostTestCase(unittest.TestCase):
 
     def test_a_quiry(self):
         log.info("Test test_a_quiry")
+        self.assertNotEqual(self.virthost.query(), [], "query with no params should not be []")
+        print self.virthost.respond_data_count
+        self.assertNotEqual(self.virthost.respond_data_count, 0 , "query with no params return record counts should not be 0")
         self.assertListEqual(self.virthost.query(id=-1), [], "query id=-1 should be []")
         self.assertListEqual(self.virthost.query(sn=self.testdata['sn'],
                                                  hostname=self.testdata['hostname']),
@@ -73,6 +76,7 @@ class VirtualHostTestCase(unittest.TestCase):
         data = self.virthost.query(sn=self.testdata['sn'], hostname=self.testdata['hostname'])
         self.assertNotEqual(data, [], "should not be []")
         pk = data[0]['id']
+        self.assertFalse(self.virthost.delete(), "Delete without params should not successfully")
         self.assertTrue(self.virthost.delete(id=pk), "should delete successfully")
         self.assertListEqual(self.virthost.query(id=pk), [], "query with new pk after delete should be []")
         self.assertEqual(self.virthost.respond_data_count, 0, "after delete record should be 0")
