@@ -101,7 +101,7 @@ class HostDriver(DatabaseDriver):
         log.debug("Patch url:%s, data:%s", url, data)
         self.resp = self.session.patch(url, data=data)
         if self.resp.status_code == requests.codes.ok:
-            log.info("Update successfully.")
+            log.info("Update to database successfully.")
             return True
         elif self.is_respond_error:
             log.error("Update failed. Return code: %s", self.resp.status_code)
@@ -158,7 +158,7 @@ class VirtualHostDriver(HostDriver):
     def __init__(self, *args, **kwargs):
         super(VirtualHostDriver, self).__init__(*args, **kwargs)
 
-    def create(self, hostname, sn, cpu_cores, memory_size, disk_size, disk_num, first_ip="0.0.0.0"):
+    def create(self, hostname, sn, cpu_cores, memory_size, disk_size, disk_num, first_ip=None):
         """
         overwrite the create method in Host for virtual machine
         :param hostname: Name of VM
