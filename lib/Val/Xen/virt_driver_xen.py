@@ -331,26 +331,27 @@ class XenVirtDriver(VirtDriver):
 
         return str(max_num + 1)
 
-    def get_all_device(self, inst_name):
+    def get_all_disk(self, inst_name):
         """
         :param inst_name:
-        :return: return all the virtual disk number
+        :return: return all the virtual disk number, eg, 1,2, etc and its name in guest, eg:hda1
         """
         handler = self.get_handler()
 
         vm_ref = self._get_vm_ref(inst_name)
         all_vdbs = handler.xenapi.VM.get_VBDs(vm_ref)
-        device_list = []
+        device_dict = {}
         for vdb_ref in all_vdbs:
-            device = handler.xenapi.VBD.get_userdevice(vdb_ref)
-            device_list.append(device)
+            device_number = handler.xenapi.VBD.get_userdevice(vdb_ref)
+            device_name = handler.xenapi.VBD.get_device(vdb_ref)
+            device_dict.setdefault(device_number, device_name)
 
-        return sorted(device_list)
+        return device_dict
 
-    def get_disk_size(self, inst_name, device):
+    def get_disk_size(self, inst_name, device_num):
         """
         :param inst_name: VM name
-        :param device: the disk number
+        :param device_num: the disk index number
         :return: return size in GB, or 0 if no device found
         """
         handler = self.get_handler()
@@ -358,10 +359,10 @@ class XenVirtDriver(VirtDriver):
         vm_ref = self._get_vm_ref(inst_name)
         all_vbds = handler.xenapi.VM.get_VBDs(vm_ref)
         for vbd_ref in all_vbds:
-            if str(device) == handler.xenapi.VBD.get_userdevice(vbd_ref):
+            if str(device_num) == handler.xenapi.VBD.get_userdevice(vbd_ref):
                 break
         else:
-            log.error("No virtual disk with device name [%s].", device)
+            log.error("No virtual disk with device_num name [%s].", device_num)
             return 0
 
         vdi_ref = handler.xenapi.VBD.get_VDI(vbd_ref)
@@ -369,7 +370,7 @@ class XenVirtDriver(VirtDriver):
             disk_size =  handler.xenapi.VDI.get_virtual_size(vdi_ref)
             return int(disk_size) / 1024.0 / 1024.0 / 1024.0
         else:
-            log.debug("No virtual disk with device [%s].", device)
+            log.debug("No virtual disk with device_num [%s].", device_num)
             return 0
 
 

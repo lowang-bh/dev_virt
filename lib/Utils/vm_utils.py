@@ -145,12 +145,32 @@ def get_all_disk_info(inst_name, **kwargs):
     virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
 
     disk_info = {}
-    disk_list =  virt_driver.get_all_device(inst_name=inst_name)
-    for disk_num in disk_list:
-        size = str(virt_driver.get_disk_size(inst_name=inst_name, device=disk_num)) + " GB"
+    disk_dict =  virt_driver.get_all_disk(inst_name=inst_name)
+    for disk_num in disk_dict:
+        size = str(virt_driver.get_disk_size(inst_name=inst_name, device_num=disk_num)) + " GB"
         disk_info.setdefault(disk_num, size)
 
     return  disk_info
+
+def print_vm_disk_info(inst_name, **kwargs):
+    """
+    :param inst_name:
+    :param kwargs:
+    :return:
+    """
+    host_name = kwargs['host']
+    user = kwargs['user']
+    passwd = kwargs['passwd']
+
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+
+    log.info("All disk information with disk number and size(GB):")
+
+    disk_dict =  virt_driver.get_all_disk(inst_name=inst_name)
+    for disk_num in sorted(disk_dict):
+        size = str(virt_driver.get_disk_size(inst_name=inst_name, device_num=disk_num)) + " GB"
+        log.info("\t%s\t%s", disk_num, size)
+
 
 def print_vm_info(inst_name, **kwargs):
     """
@@ -169,11 +189,11 @@ def print_vm_info(inst_name, **kwargs):
     vm_record = virt_driver.get_vm_record(inst_name)
 
 
-    log.info("\nVM CPU informations:")
-    log.info("\tMax Vcpus: %s", vm_record.get("VCPUs_max"))
+    log.info("VM CPU informations:")
+    log.info("\tMax Vcpus: %s\n", vm_record.get("VCPUs_max"))
 
-    log.info("\nVM memory informations:")
-    log.info("\tMax memory: %s GB", vm_record.get("memory_target", 0))
+    log.info("VM memory informations:")
+    log.info("\tMax memory: %s GB\n", vm_record.get("memory_target", 0))
 
 
     #log.info("\nHost Memory informations:")
@@ -182,4 +202,13 @@ def print_vm_info(inst_name, **kwargs):
 
 
 if __name__ == "__main__":
-    print get_all_disk_info(inst_name="test2", host="10.143.248.16", user="root", passwd="Mojiti!906")
+    from optparse import OptionParser
+
+    parser = OptionParser()
+    parser.add_option("--host", dest="host", help="IP for host server")
+    parser.add_option("-u", "--user", dest="user", help="User name for host server")
+    parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
+
+    (options, args) = parser.parse_args()
+    log.debug("options:%s, args:%s", str(options), str(args))
+    print get_all_disk_info(inst_name="test2", host=options.host, user=options.user, passwd=options.passwd)

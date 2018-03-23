@@ -155,19 +155,19 @@ class VirtDriver(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def get_disk_size(self, inst_name, device):
+    def get_disk_size(self, inst_name, device_num):
         """
         :param inst_name: VM name
-        :param device: the disk number
+        :param device_num: the disk index number
         :return: return size in GB, or 0 if no device found
         """
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def get_all_device(self, inst_name):
+    def get_all_disk(self, inst_name):
         """
         :param inst_name:
-        :return: return all the virtual disk number
+        :return: return all the virtual disk number, eg, 1,2, etc and its name in guest, eg:hda1
         """
         raise NotImplementedError()
 

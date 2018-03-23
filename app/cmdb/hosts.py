@@ -9,10 +9,10 @@ from lib.Db.db_driver import DatabaseDriver
 from app.settings import HOSTs_URL
 
 
-class Host(DatabaseDriver):
+class HostDriver(DatabaseDriver):
 
     def __init__(self, *args, **kwagrs):
-        super(Host, self).__init__(*args, **kwagrs)
+        super(HostDriver, self).__init__(*args, **kwagrs)
         self.url = HOSTs_URL
 
     def create(self, **kwargs):
@@ -25,6 +25,7 @@ class Host(DatabaseDriver):
         url = self.url
         db_name = self.db_name(url)
         data = kwargs
+        data.setdefault("machine_type", "物理机")
 
         log.debug("Create url: %s, with data:%s", url, data)
         self.resp = self.session.post(url, data=data)
@@ -138,12 +139,12 @@ class Host(DatabaseDriver):
             return self.respond_data_list
 
 
-class VirtualHost(Host):
+class VirtualHostDriver(HostDriver):
 
     def __init__(self, *args, **kwargs):
-        super(VirtualHost, self).__init__(*args, **kwargs)
+        super(VirtualHostDriver, self).__init__(*args, **kwargs)
 
-    def create(self, hostname, sn, cpu_cores, memory_size, disk_size, disk_num, first_ip):
+    def create(self, hostname, sn, cpu_cores, memory_size, disk_size, disk_num, first_ip="0.0.0.0"):
         """
         overwrite the create method in Host for virtual machine
         :param hostname: Name of VM
@@ -180,7 +181,7 @@ class VirtualHost(Host):
 
 
 if __name__ == "__main__":
-    virhost = VirtualHost()
+    virhost = VirtualHostDriver()
     testdata = {
         "sn": "virtual vm 1",
         "cpu_cores": 1,
@@ -199,7 +200,7 @@ if __name__ == "__main__":
     print virhost.respond_msg
     print virhost.respond_data
 
-    with VirtualHost() as test:
+    with VirtualHostDriver() as test:
         queryDic = test.query(sn=testdata['sn'], hostname=testdata['hostname'])
         if not test.respond_data_count:
             test.create(**testdata)

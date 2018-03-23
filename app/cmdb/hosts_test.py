@@ -7,14 +7,14 @@
 '''
 import unittest
 
-from app.cmdb.hosts import VirtualHost
+from app.cmdb.hosts import VirtualHostDriver, HostDriver
 from lib.Log.log import log
 
 
 class VirtualHostTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.virthost = VirtualHost()
+        self.virthost = VirtualHostDriver()
         self.testdata = {
                         "sn": "virtualVmTestCase",
                         "cpu_cores": 1,
@@ -85,6 +85,24 @@ class VirtualHostTestCase(unittest.TestCase):
         self.assertEqual(self.virthost.query(hostname=self.testdata['hostname']), [],
                          "query with hostname should be []")
 
+class HostTestCase(VirtualHostTestCase):
+
+    def setUp(self):
+        log.info("Setup in HostTestCase")
+        self.virthost = HostDriver()
+        self.testdata = {
+                        "sn": "hostDriverTestCase",
+                        "cpu_cores": 4,
+                        "memory_size": 4,
+                        "disk_size": 20,
+                        "disk_num": 2,
+                        "hostname": "Physical Host Test Case",
+                        "first_ip": "192.168.11.11"
+                        }
+
+    def tearDown(self):
+        log.info("tearDown in HostTestCase")
+        self.virthost.close()
 
 if __name__ == "__main__":
     unittest.main()
