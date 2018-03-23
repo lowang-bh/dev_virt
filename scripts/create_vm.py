@@ -9,6 +9,7 @@ from optparse import OptionParser
 from lib.Log.log import log
 from lib.Val.virt_factory import VirtFactory, VM_MAC_PREFIX
 from lib.Utils.vm_utils import is_IP_available, config_vif
+from lib.Utils.db_utils import create_vm_database_info, update_memory_to_database
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
@@ -120,6 +121,12 @@ if __name__ == "__main__":
             log.fail("Failed to create VM [%s].Exiting....", new_vm_name)
             exit(1)
         log.info("New instance [%s] created successfully.", new_vm_name)
+
+        db_ret = create_vm_database_info(inst_name=new_vm_name, **option_dic)
+        if not db_ret:
+            log.fail("Failed to update to database, please check. Exiting...")
+            exit(1)
+
         #2. config VM
         if options.vif_ip is not None:
             config_ret = config_vif(new_vm_name, options.vif_index, options.device, options.network, mac_addr, **option_dic)
@@ -130,6 +137,7 @@ if __name__ == "__main__":
         #3. power on VM
         ret = virt_driver.power_on_vm(new_vm_name)
         if ret:
+            update_memory_to_database(inst_name=new_vm_name, **option_dic)
             log.success("Create VM [%s] and power on successfully.", new_vm_name)
             exit(0)
         else:

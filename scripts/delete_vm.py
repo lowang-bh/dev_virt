@@ -10,6 +10,7 @@ from optparse import OptionParser
 import time
 from lib.Log.log import log
 from lib.Val.virt_factory import VirtFactory
+from lib.Utils.db_utils import delete_vm_database_info
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
@@ -31,13 +32,14 @@ if __name__ == "__main__":
     host_name = options.host
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
+    option_dic = {"host": options.host, "user": options.user, "passwd": options.passwd}
 
     if args:
         virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
         res_dict = {}
         for vm_name in args:
             if not virt_driver.is_instance_exists(vm_name):
-                log.error("No VM exists with name [%s].", vm_name)
+                log.warn("No VM exists with name [%s].", vm_name)
                 continue
 
             res_dict.setdefault(vm_name, 0)
@@ -46,6 +48,11 @@ if __name__ == "__main__":
             if not ret:
                 log.error("VM [%s] deleted failed.", vm_name)
                 res_dict[vm_name] = 1
+
+            db_ref = delete_vm_database_info(inst_name=vm_name)
+            if not db_ref:
+                log.warn("Failed to clear the database information of VM [%s], please do it manually.", vm_name)
+
             time.sleep(0.5)
 
         failed_vm_list = [item[0] for item in filter(lambda x:x[1] == 1, res_dict.items())]

@@ -124,6 +124,13 @@ class DatabaseDriver(object):
         return False
 
     @property
+    def respond_errors(self):
+        """
+        :return: the errors in response
+        """
+        return self.respond_data.get('errors', "Can not get errors.")
+
+    @property
     def respond_msg(self):
         """
         return the msg in http response content

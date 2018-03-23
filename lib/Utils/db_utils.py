@@ -52,15 +52,25 @@ def create_vm_database_info(inst_name, **kwargs):
     return ret
 
 
-def delete_vm_database_info(inst_name, **kwargs):
+def delete_vm_database_info(inst_name):
     """
     delete from database with VM name is inst_name
     :param inst_name:
-    :param kwargs:
     :return:
     """
     log.info("Start to delete [%s] information from databse.", inst_name)
 
+    db_driver = DbFactory.get_db_driver("VirtHost")
+    return db_driver.delete(hostname=inst_name)
+
+
+def update_memory_to_database(inst_name, **kwargs):
+    """
+    :param inst_name:
+    :param kwargs:
+    :return:
+    """
+    log.info("Update %s memory information to database.", inst_name)
     host_name = kwargs['host']
     user = kwargs['user'] if kwargs['user'] else "root"
     passwd = str(kwargs['passwd']).replace('\\', '') if kwargs['passwd'] else ""
@@ -71,9 +81,22 @@ def delete_vm_database_info(inst_name, **kwargs):
     vm_record = virt_driver.get_vm_record(inst_name=inst_name)
     if not vm_record:
         return False
+    memory_size = vm_record['memory_target']
     sn = vm_record['uuid']
 
-    return db_driver.delete(sn=sn)
+    return db_driver.update(sn=sn, data={"memory_size":memory_size})
+
+
+def update_vif_to_database(inst_name, *kwargs):
+    """
+    :param inst_name:
+    :param kwargs:
+    :return:
+    """
+    log.info("Update %s vif information to database.", inst_name)
+
+    raise NotImplementedError()
+
 
 
 if __name__ == "__main__":
@@ -94,8 +117,8 @@ if __name__ == "__main__":
         exit(1)
 
     if options.create:
-        print create_vm_database_info(inst_name="test2", host=options.host, user=options.user, passwd=options.passwd)
+        print create_vm_database_info(inst_name=options.create, host=options.host, user=options.user, passwd=options.passwd)
     elif options.delete:
-        print delete_vm_database_info(inst_name="test2", host=options.host, user=options.user, passwd=options.passwd)
+        print delete_vm_database_info(inst_name=options.delete)
     else:
         parser.print_help()

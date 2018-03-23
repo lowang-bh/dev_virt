@@ -10,6 +10,7 @@ from optparse import OptionParser
 import time
 from lib.Log.log import log
 from lib.Val.virt_factory import VirtFactory
+from lib.Utils.db_utils import update_memory_to_database
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
@@ -35,6 +36,8 @@ if __name__ == "__main__":
     host_name = options.host
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
+    option_dic = {"host":options.host, "user":options.user, "passwd":options.passwd}
+
 
     if options.all:
         log.info("Start power on all VMs in server [%s].", host_name)
@@ -44,6 +47,8 @@ if __name__ == "__main__":
             log.info("Start power on VM [%s].", vm_name)
             virt_driver.power_on_vm(vm_name)
             time.sleep(0.5)
+        for vm_name in all_vms_names:
+            update_memory_to_database(vm_name, **option_dic)
         exit(0)
     elif args:
         virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
@@ -60,6 +65,7 @@ if __name__ == "__main__":
                 log.error("VM [%s] power on failed.", vm_name)
                 res_dict[vm_name] = 1
             time.sleep(0.5)
+            update_memory_to_database(inst_name=vm_name, **option_dic)
 
         failed_vm_list = [item[0] for item in filter(lambda x:x[1] == 1, res_dict.items())]
         if failed_vm_list:
