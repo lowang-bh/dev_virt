@@ -167,11 +167,10 @@ def print_all_vifs_info(inst_name, **kwargs):
     log.info("All Vifs information with vif index number and MAC, IP:")
 
     vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
-    vif_indexes = vnet_driver.get_all_vifs_indexes(inst_name=inst_name)
 
-    for vif_index in vif_indexes:
-        vifinfo = vnet_driver.get_vif_info(inst_name, vif_index)
-        log.info("\t%s\tMAC:%s", vif_index, vifinfo['mac'])
+    vifs_info = vnet_driver.get_all_vif_info(inst_name=inst_name)
+    for vif_index in vifs_info:
+        log.info("\t%s\tMAC: %s, IP: %s", vif_index, vifs_info[vif_index]['mac'], vifs_info[vif_index]['ip'])
 
     return True
 
@@ -234,12 +233,15 @@ def print_vm_info(inst_name, **kwargs):
     vm_record = virt_driver.get_vm_record(inst_name)
 
     log.info("VM CPU informations:")
-    log.info("\tMax Vcpus: %s\n", vm_record.get("VCPUs_max"))
+    log.info("Max Vcpus: %s\n", vm_record.get("VCPUs_max"))
 
     log.info("VM memory informations:")
-    log.info("\tMax memory: %s GB\n", vm_record.get("memory_target", 0))
+    log.info("Dynamic Memory: Max: %-4s GB, Min: %-4s GB", vm_record.get("memory_dynamic_max"), vm_record.get("memory_dynamic_min"))
+    log.info("Static  Memory: Max: %-4s GB, Min: %-4s GB", vm_record.get("memory_static_max"), vm_record.get("memory_static_min"))
+    log.info("Current memory: %s GB\n", vm_record.get("memory_target", 0))
 
-    # log.info("\nHost Memory informations:")
+    log.info("VM OS informations:")
+    log.info("OS type: %s\n", virt_driver.get_os_type(inst_name, short_name=False))
 
     # log.info("\nHost Default Storage informations:")
 

@@ -7,7 +7,6 @@
 # Created Time: 2018-02-08 11:32:30
 #########################################################################
 
-import os
 import subprocess
 import libvirt
 import xml.etree.ElementTree as xmlEtree
@@ -328,7 +327,7 @@ class QemuVirtDriver(VirtDriver):
         '''
         dom = self._get_domain_handler(domain_name=inst_name)
         if dom:
-            return dom.OSType()
+            return dom.OSType()  # In KVM it will return hvm
         else:
             return None
 

@@ -279,20 +279,35 @@ class XenVirtDriver(VirtDriver):
             log.exception("Exception: %s when get record for VM [%s].", error, inst_name)
             return {}
 
+        GB = 1024 ** 3
         vm_record['VCPUs_max'] = record.get('VCPUs_max', None)
         vm_record['VCPUs_at_startup'] = record.get('VCPUs_at_startup', None)
         vm_record['domid'] = record.get('domid', None)
         vm_record['uuid'] = record.get('uuid', None)
         vm_record['name_label'] = inst_name
-        vm_record['memory_dynamic_max'] = record.get('memory_dynamic_max', None)
-        vm_record['memory_dynamic_min'] = record.get('memory_dynamic_min', '0')
-        vm_record['memory_static_max'] = record.get('memory_static_max', None)
-        vm_record['memory_static_min'] = record.get('memory_static_min', None)
-        vm_record['memory_target'] = float("%.3f" % (float(record.get("memory_target", 0)) / 1024 / 1024 / 1024))
+        vm_record['memory_dynamic_max'] = float("%.3f" % (float(record.get('memory_dynamic_max', '0')) / GB))
+        vm_record['memory_dynamic_min'] = float("%.3f" % (float(record.get('memory_dynamic_min', '0')) / GB))
+        vm_record['memory_static_max'] = float("%.3f" % (float(record.get('memory_static_max', '0')) / GB))
+        vm_record['memory_static_min'] = float("%.3f" % (float(record.get('memory_static_min', '0')) / GB))
+        vm_record['memory_target'] = float("%.3f" % (float(record.get("memory_target", 0)) / GB))
 
         return vm_record
 
-    def get_vm_guest_metrics_record(self, inst_name):
+    def get_os_type(self, inst_name, short_name=True):
+        '''
+        get the os type, return string
+        '''
+        guest_metrics = self._get_vm_guest_metrics_record(inst_name)
+        if not guest_metrics:
+            return None
+        os_infor =  guest_metrics.get('os_version', {})
+        if short_name:
+            return ".".join([os_infor.get('distro', 'Unknown'), os_infor.get('major', '0'), os_infor.get('minor', '0')])
+        else:
+            return os_infor.get('name', 'Unknown')
+
+
+    def _get_vm_guest_metrics_record(self, inst_name):
         """
         return a dict with networks, os_version, uuid, memory, etc as keys
         'network':{'0/ip': '10.143.248.80', '0/ipv6/0': 'fe80::b8d9:89ff:fef3:b252'}
