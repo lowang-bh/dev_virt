@@ -110,3 +110,21 @@ class VnetDriver(object):
         :return:
         """
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_all_vif_info(self, inst_name):
+        """
+        :return: return all the VIFs's information: mac and IP
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_vif_ip(self, inst_name, vif_index):
+        """
+        :param inst_name:
+        :param vif_index:
+        :return:
+        """
+        raise NotImplementedError()
+
+

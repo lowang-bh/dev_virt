@@ -215,6 +215,27 @@ class XenVnetDriver(VnetDriver):
         else:
             return False
 
+    def get_vif_ip(self, inst_name, vif_index):
+        """
+        :param inst_name:
+        :param vif_index:
+        :return:
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        try:
+            vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
+        except IndexError:
+            log.error("No VM with name [%s].", inst_name)
+            return None
+
+        guest_metrics_ref = self._hypervisor_handler.xenapi.VM.get_guest_metrics(vm_ref)
+        network_dict = self._hypervisor_handler.xenapi.VM_guest_metrics.get_networks(guest_metrics_ref)
+
+        return network_dict.get(str(vif_index)+"/ip", None)
+
+
     def get_vif_info(self, inst_name, vif_index):
         """
         return a dict of vif information, MAC, IP, etc
@@ -223,7 +244,7 @@ class XenVnetDriver(VnetDriver):
         :return:
         """
         vif_ref = self._get_vif_by_index(inst_name=inst_name, vif_index=vif_index)
-        if not vif_index:
+        if not vif_ref:
             log.error("Can not find VIF with index: %s", vif_index)
             return {}
 
@@ -233,8 +254,37 @@ class XenVnetDriver(VnetDriver):
         vif_dict = {}
         mac = self._hypervisor_handler.xenapi.VIF.get_MAC(vif_ref)
         vif_dict.setdefault("mac", mac)
+        vif_dict.setdefault('ip', self.get_vif_ip(inst_name, vif_index))
 
         return vif_dict
+
+    def get_all_vif_info(self, inst_name):
+        """
+        :return: return all the VIFs's information: mac and IP
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        try:
+            vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
+        except IndexError:
+            log.error("No VM with name [%s].", inst_name)
+            return {}
+
+        vifs_info = {}
+        all_vifs = self._hypervisor_handler.xenapi.VM.get_VIFs(vm_ref)
+        for vif_ref in all_vifs:
+            vindex = self._hypervisor_handler.xenapi.VIF.get_device(vif_ref)
+            vifs_info.setdefault(vindex, {})
+            mac = self._hypervisor_handler.xenapi.VIF.get_MAC(vif_ref)
+            vifs_info[vindex]['mac'] = mac
+
+        guest_metrics_ref = self._hypervisor_handler.xenapi.VM.get_guest_metrics(vm_ref)
+        network_dict = self._hypervisor_handler.xenapi.VM_guest_metrics.get_networks(guest_metrics_ref)
+        for vindex in vifs_info:
+            vifs_info[vindex].setdefault('ip', network_dict.get(str(vindex)+"/ip", None))
+
+        return vifs_info
 
     def _get_vif_by_index(self, inst_name, vif_index):
         """
@@ -380,3 +430,18 @@ class XenVnetDriver(VnetDriver):
             return False
         return True
 
+if __name__ == "__main__":
+    vnet = XenVnetDriver("10.143.248.16","root", "Mojiti!906")
+    print vnet.get_all_vifs_indexes("test2")
+    print vnet.get_vif_ip("test2", 0)
+    print vnet.get_vif_ip("test2", 1)
+    print vnet.get_vif_ip("test2", 2)
+    print vnet.get_vif_ip("test2", 3)
+
+    print vnet.get_vif_info("test2", 0)
+    print vnet.get_vif_info("test2", 1)
+    print vnet.get_vif_info("test2", 2)
+    print vnet.get_vif_info("test2", 3)
+
+
+    print vnet.get_all_vif_info("test2")

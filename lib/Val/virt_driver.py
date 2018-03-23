@@ -171,3 +171,11 @@ class VirtDriver(object):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def get_os_type(self, inst_name):
+        '''
+        get the os type, return string
+        '''
+        raise NotImplementedError()
+
+
