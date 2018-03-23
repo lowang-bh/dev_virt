@@ -142,3 +142,12 @@ class QemuVnetDriver(VnetDriver):
         """
         raise NotImplementedError()
 
+    def get_vif_info(self, inst_name, vif_index):
+        """
+        return a dict of vif information, MAC, IP, etc
+        :param inst_name:
+        :param vif_index:
+        :return:
+        """
+        raise NotImplementedError()
+

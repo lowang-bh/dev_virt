@@ -8,7 +8,7 @@
 
 from optparse import OptionParser
 from lib.Log.log import log
-from lib.Utils.vm_utils import print_vm_info, print_vm_disk_info
+from lib.Utils.vm_utils import print_vm_info, print_vm_disk_info, print_all_vifs_info
 from lib.Val.virt_factory import VirtFactory
 
 if __name__ == "__main__":
@@ -22,6 +22,7 @@ if __name__ == "__main__":
     parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
     parser.add_option("--list", dest="list", action="store_true", help="List the cpu and memory information")
     parser.add_option("--list-disk", dest="list_disk", action="store_true", help="List the virtual disk size")
+    parser.add_option("--list-vifs", dest="list_vifs", action="store_true", help="List all the VIFs information")
 
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
@@ -50,7 +51,11 @@ if __name__ == "__main__":
         print_vm_info(vm_name, **option_dic)
     elif options.list_disk:
         print_vm_disk_info(inst_name=vm_name, **option_dic)
+    elif options.list_vifs:
+        print_all_vifs_info(inst_name=vm_name, **option_dic)
     else:
         print_vm_info(vm_name, **option_dic)
         print_vm_disk_info(inst_name=vm_name, **option_dic)
+        print_all_vifs_info(inst_name=vm_name, **option_dic)
+
     exit(0)

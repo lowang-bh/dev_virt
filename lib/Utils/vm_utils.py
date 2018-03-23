@@ -14,7 +14,7 @@ def is_IP_available(vif_ip=None, vif_netmask=None, device=None, **kwargs):
     """
     check if a IP and Netmask usable
     """
-    #No ip , don't need to check
+    # No ip , don't need to check
     if not vif_ip:
         return True
 
@@ -132,6 +132,50 @@ def config_vif(inst_name, vif_index, device_name=None, network=None, mac_addr=No
 
     return ret
 
+
+def get_all_vifs_info(inst_name, **kwargs):
+    """
+    :param inst_name:
+    :param kwargs:
+    :return: A dict with key is vif index and value is mac, ip, etc
+    """
+    host_name = kwargs['host']
+    user = kwargs['user']
+    passwd = kwargs['passwd']
+
+    vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
+
+    vif_indexes = vnet_driver.get_all_vifs_indexes(inst_name=inst_name)
+    vifs_info = {}
+
+    for vif_index in vif_indexes:
+        vifs_info.setdefault(vif_index, vnet_driver.get_vif_info(inst_name, vif_index))
+
+    return vifs_info
+
+
+def print_all_vifs_info(inst_name, **kwargs):
+    """
+    :param inst_name:
+    :param kwargs:
+    :return:
+    """
+    host_name = kwargs['host']
+    user = kwargs['user']
+    passwd = kwargs['passwd']
+
+    log.info("All Vifs information with vif index number and MAC, IP:")
+
+    vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
+    vif_indexes = vnet_driver.get_all_vifs_indexes(inst_name=inst_name)
+
+    for vif_index in vif_indexes:
+        vifinfo = vnet_driver.get_vif_info(inst_name, vif_index)
+        log.info("\t%s\tMAC:%s", vif_index, vifinfo['mac'])
+
+    return True
+
+
 def get_all_disk_info(inst_name, **kwargs):
     """
     return a dict with its key is disk number and value is disk size of GB
@@ -145,12 +189,13 @@ def get_all_disk_info(inst_name, **kwargs):
     virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
 
     disk_info = {}
-    disk_dict =  virt_driver.get_all_disk(inst_name=inst_name)
+    disk_dict = virt_driver.get_all_disk(inst_name=inst_name)
     for disk_num in disk_dict:
         size = str(virt_driver.get_disk_size(inst_name=inst_name, device_num=disk_num)) + " GB"
         disk_info.setdefault(disk_num, size)
 
-    return  disk_info
+    return disk_info
+
 
 def print_vm_disk_info(inst_name, **kwargs):
     """
@@ -166,7 +211,7 @@ def print_vm_disk_info(inst_name, **kwargs):
 
     log.info("All disk information with disk number and size(GB):")
 
-    disk_dict =  virt_driver.get_all_disk(inst_name=inst_name)
+    disk_dict = virt_driver.get_all_disk(inst_name=inst_name)
     for disk_num in sorted(disk_dict):
         size = str(virt_driver.get_disk_size(inst_name=inst_name, device_num=disk_num)) + " GB"
         log.info("\t%s\t%s", disk_num, size)
@@ -188,17 +233,15 @@ def print_vm_info(inst_name, **kwargs):
 
     vm_record = virt_driver.get_vm_record(inst_name)
 
-
     log.info("VM CPU informations:")
     log.info("\tMax Vcpus: %s\n", vm_record.get("VCPUs_max"))
 
     log.info("VM memory informations:")
     log.info("\tMax memory: %s GB\n", vm_record.get("memory_target", 0))
 
+    # log.info("\nHost Memory informations:")
 
-    #log.info("\nHost Memory informations:")
-
-    #log.info("\nHost Default Storage informations:")
+    # log.info("\nHost Default Storage informations:")
 
 
 if __name__ == "__main__":
@@ -212,3 +255,4 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
     print get_all_disk_info(inst_name="test2", host=options.host, user=options.user, passwd=options.passwd)
+    print get_all_vifs_info(inst_name="test2", host=options.host, user=options.user, passwd=options.passwd)
