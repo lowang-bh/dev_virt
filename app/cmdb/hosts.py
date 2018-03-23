@@ -39,24 +39,38 @@ class HostDriver(DatabaseDriver):
             log.debug(self.resp.content)
             return False
 
-    def delete(self, id=None, **kwargs):
+    def delete(self, id=None, sn=None, hostname=None):
         """
         Delete a record from database
         :param pk:
         :return:
         """
-        url = self.url if id is None else self.url + str(id)
-        db_name = self.db_name(url)
-        log.debug("Delete url: %s", url)
-
-        self.resp = self.session.delete(url)
-        if self.resp.status_code == requests.codes.no_content:
-            log.info("Delete data from database [%s] successfully.", db_name)
-        elif self.resp.status_code == requests.codes.not_found:
-            log.warn("Not found the record when delete from [%s]: 404", db_name)
-        elif self.is_respond_error:
-            log.warn("Delete data from database: [%s] failed, return code: %s.", db_name, self.resp.status_code)
+        if id is None and sn is None and hostname is None:
+            log.error("Delete record from DB need an ID, a hostname or a SN to identify which record will be deleted.")
             return False
+
+        if id is None:
+            query_data = self.query(sn=sn, hostname=hostname)
+            if not query_data:
+                log.info("No record found to delete with sn:%s and hostname:%s.", sn, hostname)
+                return True
+            id_list = [record['id'] for record in query_data]
+        else:
+            id_list = [id]
+
+        for id in id_list:
+            url = self.url + str(id)
+            db_name = self.db_name(url)
+            log.debug("Delete url: %s", url)
+
+            self.resp = self.session.delete(url)
+            if self.resp.status_code == requests.codes.no_content:
+                log.info("Delete data from database [%s] successfully.", db_name)
+            elif self.resp.status_code == requests.codes.not_found:
+                log.warn("Not found the record when delete from [%s]: 404", db_name)
+            elif self.is_respond_error:
+                log.warn("Delete data from database: [%s] failed, return code: %s.", db_name, self.resp.status_code)
+                return False
 
         return True
 
@@ -199,6 +213,9 @@ if __name__ == "__main__":
     print virhost.respond_code
     print virhost.respond_msg
     print virhost.respond_data
+    print virhost.delete(hostname="virtual Vm Test Case")
+    print virhost.delete(sn="hostDriverTestCase")
+    print virhost.resp, virhost.resp.content
 
     with VirtualHostDriver() as test:
         queryDic = test.query(sn=testdata['sn'], hostname=testdata['hostname'])
@@ -211,5 +228,4 @@ if __name__ == "__main__":
         virhost.delete(id=deleteId)
         test.create(**testdata)
         test.query(sn=testdata['sn'], hostname=testdata['hostname'])
-        print test.respond_data
         print test.respond_data_list[0]['id']

@@ -12,7 +12,7 @@ from lib.Db.db_factory import DbFactory
 from lib.Val.virt_factory import VirtFactory
 
 
-def create_vm_base_info(inst_name, **kwargs):
+def create_vm_database_info(inst_name, **kwargs):
     """
 
     :param inst_name: VM name
@@ -25,11 +25,13 @@ def create_vm_base_info(inst_name, **kwargs):
     user = kwargs['user'] if kwargs['user'] else "root"
     passwd = str(kwargs['passwd']).replace('\\', '') if kwargs['passwd'] else ""
 
-    vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
     virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
     db_driver = DbFactory.get_db_driver("VirtHost")
 
     vm_record = virt_driver.get_vm_record(inst_name=inst_name)
+    if not vm_record:
+        return False
+
     hostname = inst_name
     sn = vm_record['uuid']
     cpu_cores = vm_record['VCPUs_max']
@@ -37,7 +39,7 @@ def create_vm_base_info(inst_name, **kwargs):
 
     disk_info = virt_driver.get_all_disk(inst_name=inst_name)
     disk_num = len(disk_info)
-    disk_size = virt_driver.get_disk_size(inst_name, 0) #only write the system disk size when create
+    disk_size = virt_driver.get_disk_size(inst_name, 0)  # only write the system disk size when create
     # for disk in disk_info:
     #     disk_size += virt_driver.get_disk_size(inst_name, disk)
 
@@ -50,6 +52,30 @@ def create_vm_base_info(inst_name, **kwargs):
     return ret
 
 
+def delete_vm_database_info(inst_name, **kwargs):
+    """
+    delete from database with VM name is inst_name
+    :param inst_name:
+    :param kwargs:
+    :return:
+    """
+    log.info("Start to delete [%s] information from databse.", inst_name)
+
+    host_name = kwargs['host']
+    user = kwargs['user'] if kwargs['user'] else "root"
+    passwd = str(kwargs['passwd']).replace('\\', '') if kwargs['passwd'] else ""
+
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+    db_driver = DbFactory.get_db_driver("VirtHost")
+
+    vm_record = virt_driver.get_vm_record(inst_name=inst_name)
+    if not vm_record:
+        return False
+    sn = vm_record['uuid']
+
+    return db_driver.delete(sn=sn)
+
+
 if __name__ == "__main__":
     from optparse import OptionParser
 
@@ -57,8 +83,19 @@ if __name__ == "__main__":
     parser.add_option("--host", dest="host", help="IP for host server")
     parser.add_option("-u", "--user", dest="user", help="User name for host server")
     parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
+    parser.add_option("--create", dest="create", help="Create VM record in database")
+    parser.add_option("--delete", dest="delete", help="Delete record from database")
 
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
-    print  create_vm_base_info(inst_name="test2", host=options.host, user=options.user, passwd=options.passwd)
 
+    if options.host is not None and (options.user is None or options.passwd is None):
+        log.fail("Please specify a user-name and passward for the given host:%s", options.host)
+        exit(1)
+
+    if options.create:
+        print create_vm_database_info(inst_name="test2", host=options.host, user=options.user, passwd=options.passwd)
+    elif options.delete:
+        print delete_vm_database_info(inst_name="test2", host=options.host, user=options.user, passwd=options.passwd)
+    else:
+        parser.print_help()

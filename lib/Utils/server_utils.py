@@ -43,7 +43,7 @@ def print_server_hardware_info(**kwargs):
     log.info("\tMemory free: %s GB", memory_info.get("size_free"))
 
     log.info("\nHost Default Storage informations:")
-    storage_info =virt_driver.get_host_storage_info()
+    storage_info = virt_driver.get_host_storage_info()
     log.info("\tStorage Size: %s GB", storage_info.get('size_total', 0))
     log.info("\tStorage Used: %s GB", storage_info.get('size_used', 0))
     log.info("\tStorage Free: %s GB", storage_info.get('size_free', 0))
@@ -66,6 +66,6 @@ def get_host_all_storage_info(**kwargs):
 
 
 if __name__ == "__main__":
-    d= get_host_all_storage_info(host="10.143.248.16", user="root", passwd="Mojiti!906")
-    for k,v in d.iteritems():
+    d = get_host_all_storage_info(host="10.143.248.16", user="root", passwd="Mojiti!906")
+    for k, v in d.iteritems():
         print k,"\t\t", v
