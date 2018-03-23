@@ -264,7 +264,7 @@ class XenVnetDriver(VnetDriver):
         elif network is not None:
             network_ref = self._get_network_ref_by_bridge(bridge_name=network)
         if network_ref is None:
-            log.error("No valide network found with params: NIC:%s, bridge:%s.", device_name, network)
+            log.error("No valid network found with params: NIC:%s, bridge:%s.", device_name, network)
             return None
 
         allows_index = handler.xenapi.VM.get_allowed_VIF_devices(vm_ref_list[0])

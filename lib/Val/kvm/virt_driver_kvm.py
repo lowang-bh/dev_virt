@@ -721,3 +721,18 @@ class QemuVirtDriver(VirtDriver):
         @param size: the disk size
         """
         raise NotImplementedError()
+
+    def get_disk_size(self, inst_name, device_num):
+        """
+        :param inst_name: VM name
+        :param device_num: the disk index number
+        :return: return size in GB, or 0 if no device found
+        """
+        raise NotImplementedError()
+
+    def get_all_disk(self, inst_name):
+        """
+        :param inst_name:
+        :return: return all the virtual disk number, eg, 1,2, etc and its name in guest, eg:hda1
+        """
+        raise NotImplementedError()
