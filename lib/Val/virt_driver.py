@@ -17,6 +17,15 @@ class VirtDriver(object):
         self.user = user
         self.passwd = passwd
 
+    @staticmethod
+    def timeout_handler(signal_num, frame):
+        """
+        :param signal_num:
+        :param frame:
+        :return:
+        """
+        raise Exception("get timeout signal.")
+
     @abc.abstractmethod
     def get_vm_list(self):
         """

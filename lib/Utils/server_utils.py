@@ -60,7 +60,7 @@ def get_host_all_storage_info(**kwargs):
     sr_list = virt_driver.get_host_all_storages()
     for sr in sr_list:
         size = virt_driver.get_host_storage_info(storage_name=sr)
-        storage_info.setdefault(sr, size['size_free'])
+        storage_info.setdefault(sr, [size['size_total'], size['size_free']])
 
     return storage_info
 

@@ -21,6 +21,15 @@ class VnetDriver(object):
         self.user = user
         self.passwd = passwd
 
+    @staticmethod
+    def timeout_handler(signal_num, frame):
+        """
+        :param signal_num:
+        :param frame:
+        :return:
+        """
+        raise Exception("Timeout signal raised")
+
     @abc.abstractmethod
     def get_network_list(self):
         """
@@ -88,7 +97,7 @@ class VnetDriver(object):
         """
         @description: Hotplug the specified VIF to the running VM
         @param vif_index: virtual interface index
-        @return: Ture if success else False
+        @return: True if success else False
         """
         raise NotImplementedError()
 
@@ -97,7 +106,7 @@ class VnetDriver(object):
         """
         @description Hot-unplug the specified VIF from the running VM
         @param vif_index: virtual interface index
-        @return: Ture if success else False
+        @return: True if success else False
         """
         raise NotImplementedError()
 
