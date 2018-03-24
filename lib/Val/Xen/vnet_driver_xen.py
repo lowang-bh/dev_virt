@@ -10,6 +10,7 @@
      host <-----    PIF    ----->network<-----  VIF----->    VM
 '''
 
+import signal
 from lib.Log.log import log
 from lib.Val.vnet_driver import VnetDriver
 from lib.Val.Xen import XenAPI
@@ -48,11 +49,17 @@ class XenVnetDriver(VnetDriver):
         else:
             log.debug("connecting to %s with user:%s,passwd:%s", "http://" + str(self.hostname), self.user, self.passwd)
             self._hypervisor_handler = XenAPI.Session("http://" + str(self.hostname))
+
+        old = signal.signal(signal.SIGALRM, self.timeout_handler)
+        signal.alarm(5)   #  connetctions timeout set to 5 secs
         try:
             self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1, 'XenVirtDriver')
         except Exception, error:
             log.exception("Exception raised:%s when get handler.", error)
             return None
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old)
 
         log.debug("Get handler ID in vnet driver: %s", id(self._hypervisor_handler))
         return self._hypervisor_handler

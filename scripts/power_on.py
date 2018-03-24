@@ -55,7 +55,7 @@ if __name__ == "__main__":
         res_dict = {}
         for vm_name in args:
             if not virt_driver.is_instance_exists(vm_name):
-                log.error("No VM exists with name [%s].", vm_name)
+                log.warn("No VM exists with name [%s].", vm_name)
                 continue
 
             res_dict.setdefault(vm_name, 0)
