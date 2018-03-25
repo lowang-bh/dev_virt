@@ -10,6 +10,7 @@ from optparse import OptionParser
 import time
 from lib.Log.log import log
 from lib.Val.virt_factory import VirtFactory
+from lib.Utils.vm_utils import reset_vm
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
@@ -37,15 +38,15 @@ if __name__ == "__main__":
     host_name = options.host
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
+    option_dic = {"host": host_name, "user": user, "passwd": passwd}
 
     if options.all:
         log.info("Start reset all VMs in server.")
         virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
         all_vms_names = virt_driver.get_vm_list()
         for vm_name in all_vms_names:
-            log.info("Start reset VM [%s].", vm_name)
+            reset_vm(vm_name, **option_dic)
             time.sleep(1)
-            virt_driver.reboot(vm_name)
         exit(0)
 
     elif options.vm is not None:
@@ -55,8 +56,7 @@ if __name__ == "__main__":
             log.fail("No VM named %s.", vm_name)
             exit(1)
 
-        log.info("Start to reset [%s]", vm_name)
-        ret = virt_driver.reboot(vm_name)
+        ret = reset_vm(vm_name, **option_dic)
         if ret:
             log.success("VM [%s] reset successfully.", vm_name)
             exit(0)

@@ -32,7 +32,7 @@ if __name__ == "__main__":
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
 
-    option_dic = {"host":options.host, "user":options.user, "passwd":options.passwd}
+    option_dic = {"host": host_name, "user": user, "passwd": passwd}
     if options.list_sr:
         log.info("Host Storage informations:")
         storage = get_host_all_storage_info(**option_dic)

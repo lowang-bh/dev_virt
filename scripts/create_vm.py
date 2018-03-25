@@ -8,8 +8,7 @@
 from optparse import OptionParser
 from lib.Log.log import log
 from lib.Val.virt_factory import VirtFactory, VM_MAC_PREFIX
-from lib.Utils.vm_utils import is_IP_available, config_vif
-from lib.Utils.db_utils import create_vm_database_info, update_memory_to_database
+from lib.Utils.vm_utils import is_IP_available, config_vif, power_on_vm, create_vm
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
@@ -70,6 +69,7 @@ if __name__ == "__main__":
             log.info(str_templ)
         else:
             log.info("No templates.")
+
     elif options.list_network:
         vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
         all_networks = vnet_driver.get_network_list()
@@ -77,6 +77,7 @@ if __name__ == "__main__":
             log.info(str(sorted(all_networks)))
         else:
             log.info("No network found.")
+
     elif options.vm_name is not None:
         if options.template is None:
             log.fail("A template must be suppulied to create a new VM.")
@@ -92,6 +93,11 @@ if __name__ == "__main__":
             log.fail("No template named: %s", template_name)
             exit(1)
 
+        mac_addr = None
+        option_dic = {"vif_ip": options.vif_ip, "vif_netmask": options.vif_netmask,
+                      "device": options.device, "host": host_name,
+                      "user": user, "passwd": passwd}
+
         if options.vif_ip is not None:  #if an IP is specify, please specify a device, vif_index
             if (not options.device and not options.network) or not options.vif_index:
                 log.fail("Please specify a device/network and an VIF for configuring the IP.")
@@ -104,40 +110,31 @@ if __name__ == "__main__":
             if network and network not in vnet_driver.get_network_list():
                 log.fail("No network named: [%s].", network)
                 exit(1)
-
-            option_dic = {"vif_ip":options.vif_ip, "vif_netmask":options.vif_netmask,
-                          "device":options.device, "host":options.host,
-                          "user":options.user, "passwd":options.passwd}
             if not is_IP_available(**option_dic):
                 log.fail("IP check failed.")
                 exit(1)
             mac_strs = ['%02x' % int(num) for num in options.vif_ip.split(".")]
             mac_addr = VM_MAC_PREFIX + ":%s:%s:%s:%s" % tuple(mac_strs)
 
-        #1. create VM
-        log.info("Start to create new instance: [%s]", new_vm_name)
-        ret = virt_driver.create_instance(new_vm_name, template_name)
+        # 1. create VM
+        ret = create_vm(new_vm_name, template_name, **option_dic)
         if not ret:
             log.fail("Failed to create VM [%s].Exiting....", new_vm_name)
             exit(1)
         log.info("New instance [%s] created successfully.", new_vm_name)
 
-        db_ret = create_vm_database_info(inst_name=new_vm_name, **option_dic)
-        if not db_ret:
-            log.fail("Failed to update to database, please check. Exiting...")
-            exit(1)
-
-        #2. config VM
+        # 2. config VM
         if options.vif_ip is not None:
             config_ret = config_vif(new_vm_name, options.vif_index, options.device, options.network, mac_addr, **option_dic)
             if not config_ret:
                 log.warn("Vif configure failed.")
             else:
-                log.info("Successfully configured the virtual interface device [%s] to VM [%s].", options.vif_index, new_vm_name)
-        #3. power on VM
-        ret = virt_driver.power_on_vm(new_vm_name)
+                log.info("Successfully configured the virtual interface device [%s] to VM [%s].",
+                         options.vif_index, new_vm_name)
+
+        # 3. power on VM
+        ret = power_on_vm(new_vm_name, **option_dic)
         if ret:
-            update_memory_to_database(inst_name=new_vm_name, **option_dic)
             log.success("Create VM [%s] and power on successfully.", new_vm_name)
             exit(0)
         else:

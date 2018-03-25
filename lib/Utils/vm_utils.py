@@ -4,10 +4,14 @@
  File Name: vm_utils.py
  Author: longhui
  Created Time: 2018-03-07 17:28:19
+ Descriptions: This is the common utils for the CLI to use, do config to VM in this utils will not check
+        the return value of update_database, except create/delete VM
 '''
+
 from lib.Utils.network_utils import IpCheck, is_IP_pingable
 from lib.Val.virt_factory import VirtFactory
 from lib.Log.log import log
+from lib.Utils.db_utils import update_vm_database_info, create_vm_database_info, delete_vm_database_info
 
 
 def is_IP_available(vif_ip=None, vif_netmask=None, device=None, **kwargs):
@@ -54,6 +58,52 @@ def is_IP_available(vif_ip=None, vif_netmask=None, device=None, **kwargs):
     return True
 
 
+def create_vm(new_vm_name, template_name, **kwargs):
+    """
+    Create new instance with name and template
+    :param new_vm_name:
+    :param template_name:
+    :param kwargs:
+    :return:
+    """
+    log.info("Start to create new instance: [%s], with template:[%s]", new_vm_name, template_name)
+    host_name = kwargs['host']
+    user = kwargs['user']
+    passwd = kwargs['passwd']
+
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+    ret = virt_driver.create_instance(new_vm_name, template_name)
+    if not ret:
+        return False
+
+    db_ret = create_vm_database_info(inst_name=new_vm_name, **kwargs)
+
+    return db_ret
+
+def delete_vm(vm_name, **kwargs):
+    """
+    :param vm_name:
+    :param kwargs:
+    :return:
+    """
+    log.info("Start to delete VM [%s].", vm_name)
+
+    host_name = kwargs['host']
+    user = kwargs['user']
+    passwd = kwargs['passwd']
+
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+    ret = virt_driver.delete_instance(vm_name)
+    if not ret:
+        return False
+
+    db_ret = delete_vm_database_info(inst_name=vm_name)
+    if not db_ret:
+        log.warn("Failed to clear the database information of VM [%s], please do it manually.", vm_name)
+
+    # No matter delete vm from DB failed or not, return True
+    return True
+
 def create_new_vif(inst_name, vif_index, device_name=None, network=None, mac_addr=None, **kwargs):
     """
     create a new virtual interface on the target VM
@@ -70,6 +120,7 @@ def create_new_vif(inst_name, vif_index, device_name=None, network=None, mac_add
 
     new_vif = vnet_driver.create_new_vif(inst_name, vif_index, device_name, network, MAC=mac_addr)
     if new_vif is not None:
+        # TODO: sync DB when success
         if VirtFactory.get_virt_driver(host_name, user, passwd).is_instance_running(inst_name):
             ret = vnet_driver.plug_vif_to_vm(inst_name, vif_index)
             if ret:
@@ -113,6 +164,7 @@ def destroy_old_vif(inst_name, vif_index, **kwargs):
         log.error("Failed to destroy the virtual interface device [%s].", vif_index)
         return False
 
+    # TODO: sync DB when success
     return True
 
 
@@ -129,6 +181,122 @@ def config_vif(inst_name, vif_index, device_name=None, network=None, mac_addr=No
         return False
 
     ret = create_new_vif(inst_name, vif_index, device_name, network, mac_addr, **kwargs)
+
+    return ret
+
+
+def config_vcpus(inst_name, vcpu_nums=None, vcpu_max=None, **kwargs):
+    """
+    :param inst_name: VM name
+    :param vcpu_nums: the current vcpu number
+    :param vcpu_max: the max vcpu  number
+    :return:
+    """
+    log.info("Start to configure the VCPU in VM [%s].", inst_name)
+    host_name = kwargs['host']
+    user = kwargs['user']
+    passwd = kwargs['passwd']
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+
+    if vcpu_nums and virt_driver.is_instance_running(inst_name=inst_name):
+        ret = virt_driver.set_vm_vcpu_live(inst_name=inst_name, vcpu_num=vcpu_nums)
+
+    elif vcpu_max and virt_driver.is_instance_halted(inst_name=inst_name):
+        ret = virt_driver.set_vm_vcpu_max(inst_name=inst_name, vcpu_num=vcpu_max)
+
+    else:
+        log.error("Only support set live cpu on a running VM  or set max cpu number on a halted VM.")
+        return False
+    # set vcpu max will change the start up vcpu when max < live cpu number
+    if ret:
+        # Don't need to check db sync ret, because there is crontab to sync it
+        update_vm_database_info(inst_name=inst_name, **kwargs)
+
+    return ret
+
+
+def power_on_vm(vm_name, **kwargs):
+    """
+    :param inst_name:
+    :param kwargs:
+    :return:
+    """
+    log.info("Start to power on VM [%s].", vm_name)
+    host_name = kwargs['host']
+    user = kwargs['user']
+    passwd = kwargs['passwd']
+
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+    if virt_driver.is_instance_running(inst_name=vm_name):
+        log.info("VM [%s] is already running.", vm_name)
+        return True
+
+    ret = virt_driver.power_on_vm(vm_name)
+
+    if ret:
+        update_vm_database_info(vm_name, **kwargs)
+
+    return ret
+
+
+def power_off_vm(vm_name, **kwargs):
+    """
+    :param inst_name:
+    :param kwargs:
+    :return:
+    """
+    log.info("Start to power off VM [%s].", vm_name)
+    host_name = kwargs['host']
+    user = kwargs['user']
+    passwd = kwargs['passwd']
+
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+    if virt_driver.is_instance_halted(inst_name=vm_name):
+        log.info("VM [%s] is already power off.", vm_name)
+        return True
+
+    ret = virt_driver.power_off_vm(vm_name)
+
+    if ret:
+        update_vm_database_info(vm_name, **kwargs)
+
+    return ret
+
+
+def reset_vm(vm_name, **kwargs):
+    """
+    :param vm_name:
+    :return:
+    """
+    log.info("Start to reset [%s]", vm_name)
+    host_name = kwargs['host']
+    user = kwargs['user']
+    passwd = kwargs['passwd']
+
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+    ret = virt_driver.reboot(vm_name)
+
+    return ret
+
+
+def add_vm_disk(inst_name, storage_name, size, **kwargs):
+    """
+    :param inst_name: VM name
+    :param storage_name: the storage repository name, in KVM, it is pool name
+    :param size: virtual disk size in GB
+    :param kwargs: login information
+    :return: True or False
+    """
+    log.info("Start to add a vdisk with size [%s]GB to VM [%s].", size, inst_name)
+    host_name = kwargs['host']
+    user = kwargs['user']
+    passwd = kwargs['passwd']
+
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+    ret = virt_driver.add_vdisk_to_vm(inst_name, storage_name, size=size)
+
+    if ret:
+        update_vm_database_info(inst_name=inst_name, **kwargs)
 
     return ret
 
@@ -233,7 +401,7 @@ def print_vm_info(inst_name, **kwargs):
     vm_record = virt_driver.get_vm_record(inst_name)
 
     log.info("VM CPU informations:")
-    log.info("Max Vcpus: %s\n", vm_record.get("VCPUs_max"))
+    log.info("Max Vcpus: %s, Current Vcpus: %s\n", vm_record.get("VCPUs_max"), vm_record.get("VCPUs_live"))
 
     log.info("VM memory informations:")
     log.info("Dynamic Memory: Max: %4s GB, Min: %4s GB", vm_record.get("memory_dynamic_max"), vm_record.get("memory_dynamic_min"))

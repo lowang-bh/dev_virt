@@ -19,7 +19,7 @@ def create_vm_database_info(inst_name, **kwargs):
     :param kwargs: host, user, passwd dict
     :return:
     """
-    log.info("Start to update [%s] information to databse.", inst_name)
+    log.info("Start to create [%s] information to databse.", inst_name)
 
     host_name = kwargs['host']
     user = kwargs['user'] if kwargs['user'] else "root"
@@ -34,7 +34,7 @@ def create_vm_database_info(inst_name, **kwargs):
 
     hostname = inst_name
     sn = vm_record['uuid']
-    cpu_cores = vm_record['VCPUs_max']
+    cpu_cores = vm_record['VCPUs_live']
     memory_size = vm_record['memory_target']
 
     disk_info = virt_driver.get_all_disk(inst_name=inst_name)
@@ -64,13 +64,65 @@ def delete_vm_database_info(inst_name):
     return db_driver.delete(hostname=inst_name)
 
 
+def update_vm_database_info(inst_name, **kwargs):
+    """
+    This function is used to sync VM information when config changed,include :cpu_cores, memory_size, disk_num
+    :param inst_name:
+    :param kwargs:
+    :return:
+    """
+    log.info("Start to update [%s] information to databse.", inst_name)
+
+    host_name = kwargs['host']
+    user = kwargs['user'] if kwargs['user'] else "root"
+    passwd = str(kwargs['passwd']).replace('\\', '') if kwargs['passwd'] else ""
+
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+    vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
+    db_driver = DbFactory.get_db_driver("VirtHost")
+
+    vm_record = virt_driver.get_vm_record(inst_name=inst_name)
+    if not vm_record:
+        return False
+
+    sn = vm_record['uuid']
+    cpu_cores = vm_record['VCPUs_live']
+    memory_size = vm_record['memory_target']
+
+    disk_info = virt_driver.get_all_disk(inst_name=inst_name)
+    disk_num = len(disk_info)
+
+    vif_dic = vnet_driver.get_all_vif_info(inst_name)
+    first_ip = vif_dic.get('0', {}).get('ip', None)
+    #second_ip is local ip
+    #second_ip = vif_dic.get('1', {}).get('ip', None)
+    # TODO: sync disk size, and VIF infor
+    #disk_size = virt_driver.get_disk_size(inst_name, 0)  # only write the system disk size when create
+    # for disk in disk_info:
+    #     disk_size += virt_driver.get_disk_size(inst_name, disk)
+    sync_data = {"cpu_cores": cpu_cores,
+                 "memory_size": memory_size,
+                 "disk_num": disk_num,
+                 "first_ip": first_ip
+                 }
+
+    try:
+        ret = db_driver.update(sn=sn, data=sync_data)
+    except Exception:
+        ret = False
+    if not ret:
+        log.warn("Update database information with ret: [%], data: %s", ret, sync_data)
+
+    return ret
+
+
 def update_memory_to_database(inst_name, **kwargs):
     """
     :param inst_name:
     :param kwargs:
     :return:
     """
-    log.info("Update %s memory information to database.", inst_name)
+    log.info("Update [%s] memory information to database.", inst_name)
     host_name = kwargs['host']
     user = kwargs['user'] if kwargs['user'] else "root"
     passwd = str(kwargs['passwd']).replace('\\', '') if kwargs['passwd'] else ""
@@ -85,6 +137,28 @@ def update_memory_to_database(inst_name, **kwargs):
     sn = vm_record['uuid']
 
     return db_driver.update(sn=sn, data={"memory_size":memory_size})
+
+
+def update_vcpu_to_database(inst_name, **kwargs):
+    """
+    :param inst_name:
+    :return:
+    """
+    log.info("Update [%s] VCPU information to database.", inst_name)
+    host_name = kwargs['host']
+    user = kwargs['user'] if kwargs['user'] else "root"
+    passwd = str(kwargs['passwd']).replace('\\', '') if kwargs['passwd'] else ""
+
+    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+    db_driver = DbFactory.get_db_driver("VirtHost")
+
+    vm_record = virt_driver.get_vm_record(inst_name=inst_name)
+    if not vm_record:
+        return False
+    cpu_cores = vm_record['VCPUs_live']
+    sn = vm_record['uuid']
+
+    return db_driver.update(sn=sn, data={"cpu_cores": cpu_cores})
 
 
 def update_vif_to_database(inst_name, *kwargs):
