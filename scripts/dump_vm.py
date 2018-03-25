@@ -45,7 +45,7 @@ if __name__ == "__main__":
         log.fail("No VM named [%s].", vm_name)
         exit(1)
 
-    option_dic = {"host":options.host, "user":options.user, "passwd":options.passwd}
+    option_dic = {"host": host_name, "user": user, "passwd": passwd}
 
     if options.list:
         print_vm_info(vm_name, **option_dic)

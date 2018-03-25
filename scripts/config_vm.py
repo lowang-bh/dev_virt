@@ -9,7 +9,7 @@
 from optparse import OptionParser
 from lib.Log.log import log
 from lib.Val.virt_factory import VirtFactory, VM_MAC_PREFIX
-from lib.Utils.vm_utils import is_IP_available, create_new_vif, destroy_old_vif, config_vif
+from lib.Utils.vm_utils import is_IP_available, create_new_vif, destroy_old_vif, config_vif, add_vm_disk, config_vcpus
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] vm_name\n
@@ -17,9 +17,10 @@ if __name__ == "__main__":
         config_vm.py vm_name --del-vif=vif_index   [--host=ip --user=user --pwd=passwd]
         config_vm.py vm_name --vif=vif_index --device=eth0 --ip=ip [--host=ip --user=user --pwd=passwd]
         config_vm.py vm_name --add-disk=size --storage=storage_name    [--host=ip --user=user --pwd=passwd]
+        config_vm.py vm_name --cpu-core=num | --cpu-max=max      [--host=ip --user=user --pwd=passwd]
         config_vm.py vm_name --list-vif            [--host=ip --user=user --pwd=passwd]
-        config_vm.py vm_name --list-pif            [--host=ip --user=user --pwd=passwd]
-        config_vm.py vm_name --list-SR             [--host=ip --user=user --pwd=passwd]
+        config_vm.py         --list-pif            [--host=ip --user=user --pwd=passwd]
+        config_vm.py         --list-SR             [--host=ip --user=user --pwd=passwd]
         """
 
     parser = OptionParser(usage=usage)
@@ -38,6 +39,10 @@ if __name__ == "__main__":
 
     parser.add_option("--add-disk", dest="disk_size", help="The disk size(GB) add to the VM")
     parser.add_option("--storage", dest="storage_name", help="The storage location where the virtual disk put")
+
+    parser.add_option("--cpu-cores", dest="cpu_cores", help="Config the VCPU cores lively")
+    parser.add_option("--cpu-max", dest="max_cores", help="Config the max VCPU cores.")
+
     parser.add_option("--list-vif", dest="list_vif", action="store_true",
                       help="List the virtual interface device in guest VM")
     parser.add_option("--list-pif", dest="list_pif", action="store_true",
@@ -58,7 +63,7 @@ if __name__ == "__main__":
 
     if not options.list_vif  and not options.list_pif and not options.list_sr and\
         (not options.vif_index and not options.del_index and not options.add_index and\
-         not options.disk_size):
+         not options.disk_size and not options.cpu_cores and not options.max_cores):
         parser.print_help()
         exit(1)
 
@@ -101,8 +106,6 @@ if __name__ == "__main__":
             log.info("No virtual interface device found.")
         exit(0)
 
-
-
     if options.add_index is not None:
         vif_index = options.add_index
         if options.device is None and options.network is None:
@@ -121,8 +124,7 @@ if __name__ == "__main__":
         mac_addr = None
 
         option_dic = {"vif_ip":options.vif_ip, "vif_netmask":options.vif_netmask,
-                      "device":options.device, "host":options.host,
-                      "user":options.user, "passwd":options.passwd}
+                      "device":options.device, "host": host_name, "user": user, "passwd": passwd}
         if options.vif_ip:
             if not is_IP_available(**option_dic):
                 log.fail("IP check failed.")
@@ -139,7 +141,7 @@ if __name__ == "__main__":
     elif options.del_index is not None:
         vif_index = options.del_index
 
-        option_dic = {"host":options.host, "user":options.user, "passwd":options.passwd}
+        option_dic = {"host": host_name, "user": user, "passwd": passwd}
         ret = destroy_old_vif(inst_name, vif_index, **option_dic)
         if ret:
             log.success("Successfully delete the virtual interface device.")
@@ -164,9 +166,9 @@ if __name__ == "__main__":
             exit(1)
 
         mac_addr = None
-        option_dic = {"vif_ip":options.vif_ip, "vif_netmask":options.vif_netmask,
-                      "device":options.device, "host":options.host,
-                      "user":options.user, "passwd":options.passwd}
+        option_dic = {"vif_ip": options.vif_ip, "vif_netmask": options.vif_netmask,
+                      "device": options.device, "host": host_name,
+                      "user": user, "passwd": passwd}
 
         if options.vif_ip is not None:
             if not is_IP_available(**option_dic):
@@ -184,7 +186,7 @@ if __name__ == "__main__":
             log.fail("New virtual interface device configured failed.")
             exit(1)
 
-    elif options.disk_size:
+    elif options.disk_size is not None:
         if not options.storage_name:
             log.fail("Please specify a storage name for the new virtual disk.")
             exit(1)
@@ -196,10 +198,32 @@ if __name__ == "__main__":
         if size >= storage_info['size_free'] - 1:
             log.fail("No enough volume on storage:[%s], at most [%s] GB is available", options.storage_name, storage_info['size_free'] - 1)
             exit(1)
-        ret = virt_driver.add_vdisk_to_vm(inst_name, storage_name=options.storage_name, size=size)
+
+        option_dic = {"host": host_name, "user": user, "passwd": passwd}
+        ret = add_vm_disk(inst_name, storage_name=options.storage_name, size=size, **option_dic)
         if ret:
             log.success("Successfully add a new disk with size [%s]GB to VM [%s].", size, inst_name)
             exit(0)
         else:
             log.fail("Failed to add a new disk with size [%s]GB to VM [%s].", size, inst_name)
+            exit(1)
+
+    elif options.cpu_cores is not None or options.max_cores is not None:
+        try:
+            cpu_cores, max_cores = None, None
+            if options.cpu_cores is not None:
+                cpu_cores = int(options.cpu_cores)
+            if options.max_cores is not None:
+                max_cores = int(options.max_cores)
+        except ValueError:
+            log.fail("Please input a integer for cpu cores.")
+            exit(1)
+
+        option_dic = {"host": host_name, "user": user, "passwd": passwd}
+        ret = config_vcpus(inst_name, vcpu_nums=cpu_cores, vcpu_max=max_cores, **option_dic)
+        if ret:
+            log.success("Config VCPU cores successfully.")
+            exit(0)
+        else:
+            log.fail("Config VCPU cores failed.")
             exit(1)

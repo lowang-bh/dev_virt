@@ -237,8 +237,12 @@ class XenVnetDriver(VnetDriver):
             log.error("No VM with name [%s].", inst_name)
             return None
 
-        guest_metrics_ref = self._hypervisor_handler.xenapi.VM.get_guest_metrics(vm_ref)
-        network_dict = self._hypervisor_handler.xenapi.VM_guest_metrics.get_networks(guest_metrics_ref)
+        network_dict = {}
+        try:
+            guest_metrics_ref = self._hypervisor_handler.xenapi.VM.get_guest_metrics(vm_ref)
+            network_dict = self._hypervisor_handler.xenapi.VM_guest_metrics.get_networks(guest_metrics_ref)
+        except Exception, error:
+            log.debug("Except in get_vif_ip: %s", error)
 
         return network_dict.get(str(vif_index)+"/ip", None)
 
@@ -285,9 +289,13 @@ class XenVnetDriver(VnetDriver):
             vifs_info.setdefault(vindex, {})
             mac = self._hypervisor_handler.xenapi.VIF.get_MAC(vif_ref)
             vifs_info[vindex]['mac'] = mac
-
-        guest_metrics_ref = self._hypervisor_handler.xenapi.VM.get_guest_metrics(vm_ref)
-        network_dict = self._hypervisor_handler.xenapi.VM_guest_metrics.get_networks(guest_metrics_ref)
+        try:
+            guest_metrics_ref = self._hypervisor_handler.xenapi.VM.get_guest_metrics(vm_ref)
+            # When vm first start up, the guest_metrics_ref is 'OpaqueRef:NULL', so no networks information
+            network_dict = self._hypervisor_handler.xenapi.VM_guest_metrics.get_networks(guest_metrics_ref)
+        except Exception, error:
+            log.debug("Exceptions when get VM_guest_metrics: %s", error)
+            network_dict = {}
         for vindex in vifs_info:
             vifs_info[vindex].setdefault('ip', network_dict.get(str(vindex)+"/ip", None))
 

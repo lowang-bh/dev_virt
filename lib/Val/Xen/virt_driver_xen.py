@@ -162,6 +162,7 @@ class XenVirtDriver(VirtDriver):
             only be called when the VM is in the Halted State.
         """
         try:
+            log.info("Try to power off vm [%s].", inst_name)
             self.power_off_vm(inst_name)
             log.info("Start destroying vm [%s].", inst_name)
 
@@ -196,7 +197,7 @@ class XenVirtDriver(VirtDriver):
 
         try:
             handler.xenapi.VM.shutdown(vm_ref)
-            time.sleep(1)
+            time.sleep(0.5)
         except Exception, error:
             log.exception("Exception raised: %s when shutdown VM [%s].", error, inst_name)
             return False
@@ -223,7 +224,7 @@ class XenVirtDriver(VirtDriver):
                     handler.xenapi.VM.unpause(vm_ref)
                 else:  #vm_state == "Halted"
                     handler.xenapi.VM.start(vm_ref, False, True)
-                time.sleep(2)
+                time.sleep(1)
             except Exception, error:
                 log.error("Raise exception:'%s' while power on vm:%s", error, inst_name)
                 return False
@@ -257,6 +258,85 @@ class XenVirtDriver(VirtDriver):
 
         return True
 
+    ### Set or GET VM VCPU number###
+    def set_vm_vcpu_live(self, inst_name, vcpu_num):
+        """
+        set the vcpu numbers for a running VM
+        :param inst_name:
+        :param vcpu_num: should be str of a int number
+        :return: True or False
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        try:
+            vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
+            cpu_max = self._hypervisor_handler.xenapi.VM.get_VCPUs_max(vm_ref)
+            if int(vcpu_num) > int(cpu_max):
+                log.warn("VCPU number exceed the max cpu number:%s, will set it to the max instead.", cpu_max)
+                vcpu_num = cpu_max
+            self._hypervisor_handler.xenapi.VM.set_VCPUs_number_live(vm_ref, str(vcpu_num))
+            return True
+        except Exception, error:
+            log.exception("Raise exceptions: [%s].", error)
+            return False
+
+    def set_vm_vcpu_max(self, inst_name, vcpu_num):
+        """
+        set the vcpu numbers for a halted VM
+        :param inst_name:
+        :param vcpu_num:
+        :return: True or False
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        vcpu_num = int(vcpu_num)
+        try:
+            vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
+            # 0 < VCPUs_at_startup <= VCPUs_max
+            cpu_at_start = self._hypervisor_handler.xenapi.VM.get_VCPUs_at_startup(vm_ref)
+            if vcpu_num < int(cpu_at_start):
+                log.warn("The max cpu number is smaller than the live number [%s] and will change live cpu to it.", cpu_at_start)
+                self._hypervisor_handler.xenapi.VM.set_VCPUs_at_startup(vm_ref, str(vcpu_num))
+
+            self._hypervisor_handler.xenapi.VM.set_VCPUs_max(vm_ref, str(vcpu_num))
+            return True
+        except Exception, error:
+            log.exception("Raise exceptions: [%s].", error)
+            return False
+
+    def get_vm_vcpu_current(self, inst_name):
+        """
+        :return: the current vcpu number or 0
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        try:
+            vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
+            cpu_max = self._hypervisor_handler.xenapi.VM.get_VCPUs_at_startup(vm_ref)
+            return int(cpu_max)
+        except Exception, error:
+            log.exception("Raise exceptions: [%s].", error)
+            return 0
+
+    def get_vm_vcpu_max(self, inst_name):
+        """
+        :param inst_name:
+        :return: max cpu number or 0
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        try:
+            vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
+            cpu_max = self._hypervisor_handler.xenapi.VM.get_VCPUs_max(vm_ref)
+            return int(cpu_max)
+        except Exception, error:
+            log.exception("Raise exceptions: [%s].", error)
+            return 0
+
     #####  VM informations api ######
     def _get_vm_ref(self, inst_name):
         """
@@ -288,7 +368,7 @@ class XenVirtDriver(VirtDriver):
 
         GB = 1024 ** 3
         vm_record['VCPUs_max'] = record.get('VCPUs_max', None)
-        vm_record['VCPUs_at_startup'] = record.get('VCPUs_at_startup', None)
+        vm_record['VCPUs_live'] = record.get('VCPUs_at_startup', None)
         vm_record['domid'] = record.get('domid', None)
         vm_record['uuid'] = record.get('uuid', None)
         vm_record['name_label'] = inst_name
@@ -305,22 +385,20 @@ class XenVirtDriver(VirtDriver):
         except Exception, error:
             vm_record['memory_actual'] = vm_record['memory_target']
 
-
         return vm_record
 
     def get_os_type(self, inst_name, short_name=True):
-        '''
+        """
         get the os type, return string
-        '''
+        """
         guest_metrics = self._get_vm_guest_metrics_record(inst_name)
         if not guest_metrics:
             return None
-        os_infor =  guest_metrics.get('os_version', {})
+        os_infor = guest_metrics.get('os_version', {})
         if short_name:
             return ".".join([os_infor.get('distro', 'Unknown'), os_infor.get('major', '0'), os_infor.get('minor', '0')])
         else:
             return os_infor.get('name', 'Unknown')
-
 
     def _get_vm_guest_metrics_record(self, inst_name):
         """
@@ -335,6 +413,20 @@ class XenVirtDriver(VirtDriver):
             vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
             guest_metrics_ref = handler.xenapi.VM.get_guest_metrics(vm_ref)
             return handler.xenapi.VM_guest_metrics.get_record(guest_metrics_ref)
+        except Exception, error:
+            log.exception("Exceptions raised:%s", error)
+            return {}
+
+    def _get_vm_metrics_record(self, inst_name):
+        """
+        :return: a dict as :{'VCPUs_number': '8', 'memory_actual': '1073741824', 'VCPUs_params': {},
+                'VCPUs_utilisation': {'0': 0.0}}
+        """
+        handler = self.get_handler()
+        try:
+            vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
+            vm_metrics_ref = handler.xenapi.VM.get_metrics(vm_ref)
+            return handler.xenapi.VM_metrics.get_record(vm_metrics_ref)
         except Exception, error:
             log.exception("Exceptions raised:%s", error)
             return {}
@@ -397,12 +489,11 @@ class XenVirtDriver(VirtDriver):
 
         vdi_ref = handler.xenapi.VBD.get_VDI(vbd_ref)
         if "NULL" not in vdi_ref:
-            disk_size =  handler.xenapi.VDI.get_virtual_size(vdi_ref)
+            disk_size = handler.xenapi.VDI.get_virtual_size(vdi_ref)
             return int(disk_size) / 1024.0 / 1024.0 / 1024.0
         else:
             log.debug("No virtual disk with device_num [%s].", device_num)
             return 0
-
 
     def add_vdisk_to_vm(self, inst_name, storage_name='Local storage', size=2):
         """
@@ -446,16 +537,25 @@ class XenVirtDriver(VirtDriver):
             vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
             vbd_record['VM'] = vm_ref
             vbd_ref = handler.xenapi.VBD.create(vbd_record)
-            time.sleep(1)
+        except Exception, error:
+            log.exception("Exception when create VBD: %s.", error)
+            return False
+
+        # only running VM support VBD plug
+        if handler.xenapi.VM.get_power_state(vm_ref) != "Running":
+            log.info("Virtual disk created, but didn't plugin.")
+            return True
+
+        try:
             log.info("Waiting for the virtual disk plug in...")
             sleep_time = 0
             while((handler.xenapi.VBD.get_device(vbd_ref) == '') and (sleep_time < 10)):
                 log.debug("wait device [%s] to plug in, sleep time %s.", handler.xenapi.VBD.get_device(vbd_ref), sleep_time)
-                handler.xenapi.VBD.plug(vbd_ref)
                 time.sleep(2)
+                handler.xenapi.VBD.plug(vbd_ref)
                 sleep_time += 2
         except Exception, error:
-            log.exception("Exception when create VBD: %s.", error)
+            log.exception("Exception when plug VBD: %s", error)
             return False
 
         return True
@@ -600,13 +700,12 @@ if __name__ == "__main__":
         passwd = ""
     log.info("test log")
     virt = XenVirtDriver(ip, user, passwd)
-    handler = virt.get_handler()
     vm_list = virt.get_vm_list()
     print vm_list
     for vm in vm_list:
-        record = virt.get_vm_record(vm)
-        if record:
-            log.info("%s %s %s", vm, record['uuid'], record['name_label'])
+        v_record = virt.get_vm_record(vm)
+        if v_record:
+            log.info("%s %s %s", vm, v_record['uuid'], v_record['name_label'])
     vm_name = "new_vm"
     if virt.is_instance_exists(vm_name):
         ret = virt.power_off_vm(vm_name)

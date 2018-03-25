@@ -321,7 +321,7 @@ class QemuVirtDriver(VirtDriver):
         except libvirtError:
             return False
 
-    def get_os_type(self, inst_name):
+    def get_os_type(self, inst_name, short_name=True):
         '''
         get the os type, return string
         '''
@@ -702,7 +702,7 @@ class QemuVirtDriver(VirtDriver):
 
         vm_record = {}
         vm_record['VCPUs_max'] = dom.maxVcpus()
-        vm_record['VCPUs_at_startup'] = None
+        vm_record['VCPUs_live'] = vm_record['VCPUs_max']
         vm_record['domid'] = dom.ID()
         vm_record['uuid'] = dom.UUIDString()
         vm_record['name_label'] = inst_name
@@ -737,3 +737,35 @@ class QemuVirtDriver(VirtDriver):
         :return: return all the virtual disk number, eg, 1,2, etc and its name in guest, eg:hda1
         """
         raise NotImplementedError()
+
+    def set_vm_vcpu_live(self, inst_name, vcpu_num):
+        """
+        set the vcpu numbers for a running VM
+        :param inst_name:
+        :param vcpu_num: should be str of a int number
+        :return: True or False
+        """
+        raise NotImplementedError()
+
+    def set_vm_vcpu_max(self, inst_name, vcpu_num):
+        """
+        set the vcpu numbers for a halted VM
+        :param inst_name:
+        :param vcpu_num:
+        :return: True or False
+        """
+        raise NotImplementedError()
+
+    def get_vm_vcpu_current(self, inst_name):
+        """
+        :return: the current vcpu number or 0
+        """
+        raise NotImplementedError()
+
+    def get_vm_vcpu_max(self, inst_name):
+        """
+        :param inst_name:
+        :return: max cpu number or 0
+        """
+        raise NotImplementedError()
+

@@ -10,7 +10,7 @@ from optparse import OptionParser
 import time
 from lib.Log.log import log
 from lib.Val.virt_factory import VirtFactory
-from lib.Utils.db_utils import delete_vm_database_info
+from lib.Utils.vm_utils import delete_vm
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     host_name = options.host
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
-    option_dic = {"host": options.host, "user": options.user, "passwd": options.passwd}
+    option_dic = {"host": host_name, "user": user, "passwd": passwd}
 
     if args:
         virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
@@ -43,15 +43,10 @@ if __name__ == "__main__":
                 continue
 
             res_dict.setdefault(vm_name, 0)
-            log.info("Start to delete VM [%s].", vm_name)
-            ret = virt_driver.delete_instance(vm_name)
+            ret = delete_vm(vm_name, **option_dic)
             if not ret:
                 log.error("VM [%s] deleted failed.", vm_name)
                 res_dict[vm_name] = 1
-
-            db_ref = delete_vm_database_info(inst_name=vm_name)
-            if not db_ref:
-                log.warn("Failed to clear the database information of VM [%s], please do it manually.", vm_name)
 
             time.sleep(0.5)
 
@@ -60,7 +55,7 @@ if __name__ == "__main__":
             log.fail("VMs %s deleted failed.", str(failed_vm_list))
             exit(1)
         else:
-            log.success("All VMs have been deleted successfully.")
+            log.success("All VMs in %s have been deleted successfully.", args)
 
     else:
         parser.print_help()

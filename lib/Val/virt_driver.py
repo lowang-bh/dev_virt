@@ -187,4 +187,39 @@ class VirtDriver(object):
         '''
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def set_vm_vcpu_live(self, inst_name, vcpu_num):
+        """
+        set the vcpu numbers for a running VM
+        :param inst_name:
+        :param vcpu_num: should be str of a int number
+        :return: True or False
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def set_vm_vcpu_max(self, inst_name, vcpu_num):
+        """
+        set the vcpu numbers for a halted VM
+        :param inst_name:
+        :param vcpu_num:
+        :return: True or False
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_vm_vcpu_current(self, inst_name):
+        """
+        :return: the current vcpu number or 0
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_vm_vcpu_max(self, inst_name):
+        """
+        :param inst_name:
+        :return: max cpu number or 0
+        """
+        raise NotImplementedError()
+
 
