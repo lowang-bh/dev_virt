@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:UTF-8 -*-
 
-import json
 import requests
 
 from lib.Log.log import log
@@ -18,8 +17,6 @@ class HostDriver(DatabaseDriver):
     def create(self, **kwargs):
         """
         write data to db
-        :param url:
-        :param data:
         :return: True or False
         """
         url = self.url
@@ -42,7 +39,9 @@ class HostDriver(DatabaseDriver):
     def delete(self, id=None, sn=None, hostname=None):
         """
         Delete a record from database
-        :param pk:
+        :param id: pk
+        :param sn:
+        :param hostname:
         :return:
         """
         if id is None and sn is None and hostname is None:
@@ -77,8 +76,10 @@ class HostDriver(DatabaseDriver):
     def update(self, id=None, sn=None, hostname=None, data=None):
         """
         update the data to a record with its primary key is id, id/sn/hostname should not be changed
-        :param id:
-        :param data:
+        :param id: PK
+        :param sn: UUID for VM, or Serial No. of Physical host
+        :param hostname: VM name or host name for physical host
+        :param data: Dict data
         :return: True or False
         """
         if id is None and sn is None and hostname is None:
@@ -109,7 +110,6 @@ class HostDriver(DatabaseDriver):
             return False
 
         return True
-
 
     def query(self, id=None, sn=None, hostname=None):
         """
@@ -205,7 +205,7 @@ if __name__ == "__main__":
         "hostname": "virtualVm1",
         "first_ip": "192.168.1.2"
         }
-    if  not virhost:
+    if not virhost:
         print "Host init failed"
         exit(1)
 
@@ -223,7 +223,7 @@ if __name__ == "__main__":
             test.create(**testdata)
             queryDic = test.query(sn=testdata['sn'], hostname=testdata['hostname'])
         deleteId = test.respond_data_list[0]['id']
-        test.update(id=deleteId, data={"hostname":"hostname", "first_ip":"10.101.10.10"})
+        test.update(id=deleteId, data={"hostname": "hostname", "first_ip": "10.101.10.10"})
         virhost.delete(id=deleteId)
         virhost.delete(id=deleteId)
         test.create(**testdata)
