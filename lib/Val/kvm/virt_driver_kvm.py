@@ -711,6 +711,8 @@ class QemuVirtDriver(VirtDriver):
         vm_record['memory_static_max'] = None
         vm_record['memory_static_min'] = None
         vm_record['memory_target'] = float("%.3f" % (dom.maxMemory() / 1024.0 / 1024.0))
+        vm_record['memory_actual'] = vm_record['memory_target']
+
         return  vm_record
 
     def add_vdisk_to_vm(self, inst_name, storage_name, size):
