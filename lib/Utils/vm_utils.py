@@ -236,9 +236,9 @@ def print_vm_info(inst_name, **kwargs):
     log.info("Max Vcpus: %s\n", vm_record.get("VCPUs_max"))
 
     log.info("VM memory informations:")
-    log.info("Dynamic Memory: Max: %-4s GB, Min: %-4s GB", vm_record.get("memory_dynamic_max"), vm_record.get("memory_dynamic_min"))
-    log.info("Static  Memory: Max: %-4s GB, Min: %-4s GB", vm_record.get("memory_static_max"), vm_record.get("memory_static_min"))
-    log.info("Current memory: %s GB\n", vm_record.get("memory_target", 0))
+    log.info("Dynamic Memory: Max: %4s GB, Min: %4s GB", vm_record.get("memory_dynamic_max"), vm_record.get("memory_dynamic_min"))
+    log.info("Static  Memory: Max: %4s GB, Min: %4s GB", vm_record.get("memory_static_max"), vm_record.get("memory_static_min"))
+    log.info("Target  Memory: %4s GB, Actual Memory: %4s GB\n", vm_record.get("memory_target", 0), vm_record['memory_actual'])
 
     log.info("VM OS informations:")
     log.info("OS type: %s\n", virt_driver.get_os_type(inst_name, short_name=False))

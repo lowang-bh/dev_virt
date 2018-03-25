@@ -296,7 +296,15 @@ class XenVirtDriver(VirtDriver):
         vm_record['memory_dynamic_min'] = float("%.3f" % (float(record.get('memory_dynamic_min', '0')) / GB))
         vm_record['memory_static_max'] = float("%.3f" % (float(record.get('memory_static_max', '0')) / GB))
         vm_record['memory_static_min'] = float("%.3f" % (float(record.get('memory_static_min', '0')) / GB))
+        #current target for memory available to this VM
         vm_record['memory_target'] = float("%.3f" % (float(record.get("memory_target", 0)) / GB))
+        try:
+            guest_metrics = handler.xenapi.VM.get_metrics(vm_ref)
+            memory_actual = handler.xenapi.VM_metrics.get_memory_actual(guest_metrics)
+            vm_record['memory_actual'] = float("%.3f" % (float(memory_actual) / GB))
+        except Exception, error:
+            vm_record['memory_actual'] = vm_record['memory_target']
+
 
         return vm_record
 
