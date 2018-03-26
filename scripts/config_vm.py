@@ -9,7 +9,8 @@
 from optparse import OptionParser
 from lib.Log.log import log
 from lib.Val.virt_factory import VirtFactory
-from lib.Utils.vm_utils import is_IP_available, create_new_vif, destroy_old_vif, config_vif, add_vm_disk, config_vcpus
+from lib.Utils.vm_utils import create_new_vif, destroy_old_vif, config_vif, add_vm_disk, config_vcpus
+from lib.Utils.server_utils import is_IP_available, get_default_storage
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] vm_name\n
@@ -181,9 +182,14 @@ if __name__ == "__main__":
             exit(1)
 
     elif options.disk_size is not None:
+        option_dic = {"host": host_name, "user": user, "passwd": passwd}
+
         if not options.storage_name:
-            log.fail("Please specify a storage name for the new virtual disk.")
-            exit(1)
+            options.storage_name = get_default_storage(**option_dic)
+            if not options.storage_name:
+                log.fail("Failed to get default SR, please specify a storage name for the new virtual disk.")
+                exit(1)
+
         size = int(options.disk_size)
         storage_info = virt_driver.get_host_storage_info(storage_name=options.storage_name)
         if not storage_info:
@@ -194,7 +200,6 @@ if __name__ == "__main__":
                      options.storage_name, storage_info['size_free'] - 1)
             exit(1)
 
-        option_dic = {"host": host_name, "user": user, "passwd": passwd}
         ret = add_vm_disk(inst_name, storage_name=options.storage_name, size=size, **option_dic)
         if ret:
             log.success("Successfully add a new disk with size [%s]GB to VM [%s].", size, inst_name)

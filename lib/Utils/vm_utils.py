@@ -8,54 +8,9 @@
         the return value of update_database, except create/delete VM
 '''
 
-from lib.Utils.network_utils import IpCheck, is_IP_pingable
 from lib.Val.virt_factory import VirtFactory, VM_MAC_PREFIX
 from lib.Log.log import log
 from lib.Utils.db_utils import update_vm_database_info, create_vm_database_info, delete_vm_database_info
-
-
-def is_IP_available(vif_ip=None, vif_netmask=None, device=None, **kwargs):
-    """
-    check if a IP and Netmask usable
-    """
-    # No ip , don't need to check
-    if not vif_ip:
-        return True
-
-    dest_metmask = ""
-    dest_gateway = None
-    if device is not None:
-        try:
-            host_name = kwargs['host']
-            user = kwargs['user'] if kwargs['user'] else "root"
-            passwd = str(kwargs['passwd']).replace('\\', '') if kwargs['passwd'] else ""
-            vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
-            device_info = vnet_driver.get_device_infor(device_name=device)
-            dest_metmask = device_info["netmask"]
-            dest_gateway = device_info['gateway']
-        except KeyError, error:
-            log.exception(str(error))
-
-    if vif_netmask:
-        if dest_metmask and dest_metmask != vif_netmask:
-            log.error("Netmask [%s] is not corresponding with the target network.", vif_netmask)
-            return False
-    else:  # get the netmask on device as the default one
-        vif_netmask = dest_metmask
-    log.debug("VIF IP is: %s, netmask is: %s", vif_ip, vif_netmask)
-    if not vif_netmask:  # No default netmask and no given
-        log.error("No netmask given, please specify one.")
-        return False
-
-    vif_gateway = dest_gateway if dest_gateway else None
-    if not IpCheck.is_valid_ipv4_parameter(vif_ip, vif_netmask, gateway=vif_gateway):
-        return False
-
-    if is_IP_pingable(vif_ip):
-        log.error("Ipaddress [%s] is already be used(Ping test).", vif_ip)
-        return False
-
-    return True
 
 
 def create_vm(new_vm_name, template_name, **kwargs):
@@ -79,6 +34,7 @@ def create_vm(new_vm_name, template_name, **kwargs):
     db_ret = create_vm_database_info(inst_name=new_vm_name, **kwargs)
 
     return db_ret
+
 
 def delete_vm(vm_name, **kwargs):
     """
@@ -104,6 +60,7 @@ def delete_vm(vm_name, **kwargs):
     # No matter delete vm from DB failed or not, return True
     return True
 
+
 def create_new_vif(inst_name, vif_index, device_name=None, network=None, ip=None, **kwargs):
     """
     create a new virtual interface on the target VM
@@ -124,7 +81,7 @@ def create_new_vif(inst_name, vif_index, device_name=None, network=None, ip=None
     else:
         mac_addr = None
 
-    log.debug("Create VIF [%s] with IP: %s,  MAC: %s.",vif_index, ip, mac_addr)
+    log.debug("Create VIF [%s] with IP: %s,  MAC: %s.", vif_index, ip, mac_addr)
     new_vif = vnet_driver.create_new_vif(inst_name, vif_index, device_name, network, MAC=mac_addr)
     if new_vif is not None:
         # TODO: sync DB when success

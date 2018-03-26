@@ -560,6 +560,42 @@ class XenVirtDriver(VirtDriver):
 
         return True
 
+    def _delete_virtual_disk_unused(self, storage_name, inst_name):
+        """
+        delete those VDI (virtual disk) which is not used by any VM; When delete a vm, the VDI is not deleted.
+        :param storage_name:
+        :param inst_name: the instance name to which virtual disk belongs. The VDI created by the api include the inst name
+        :return:
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        try:
+            sr_ref = self._hypervisor_handler.xenapi.SR.get_by_name_label(storage_name)[0]
+            all_vdis = self._hypervisor_handler.xenapi.SR.get_VDIs(sr_ref)
+            for vdi_ref in all_vdis:
+                #  If there are VBDs attached with the VDI, don't delete; Deleted VM has no VBD attached to the VDI
+                #  VDI.get_record(vdi), record['VBDs'], record['allowed_operations'], record['name_label']
+                if self._hypervisor_handler.xenapi.VDI.get_VBDs(vdi_ref):
+                    continue
+
+                if not "destroy" in self._hypervisor_handler.xenapi.VDI.get_allowed_operations(vdi_ref):
+                    continue
+                #  Delete those vdi created by the api
+                name_label = self._hypervisor_handler.xenapi.VDI.get_name_label(vdi_ref)
+                if not str(name_label).startswith(inst_name):
+                    continue
+
+                try:
+                    self._hypervisor_handler.xenapi.VDI.destroy(vdi_ref)
+                except Exception:
+                    log.warn("Destroy virtual disk [%s] failed.", vdi_ref)
+        except Exception:
+            log.exception("Except when delete VDI: %s", storage_name)
+            return False
+
+        return True
+
     ####    Host information  API  ####
     def get_host_cpu_info(self):
         """
