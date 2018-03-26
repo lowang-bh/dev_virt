@@ -119,6 +119,37 @@ def update_vm_database_info(inst_name, **kwargs):
     return ret
 
 
+def update_ip_infor_to_database(inst_name, first_ip=None, second_ip=None, host_ip=None):
+    """
+    :param inst_name:
+    :param first_ip: the ip on vif 0
+    :param second_ip: the IP on vif 1
+    :param host_ip: Host server IP
+    :return:
+    """
+    log.info("Update [%s] memory information to database.", inst_name)
+
+    sync_data = {}
+    if host_ip:
+        sync_data['vm_host_ip'] = host_ip
+    if first_ip:
+        sync_data["first_ip"] = first_ip
+    if second_ip:
+        sync_data["second_ip"] = second_ip
+    if not sync_data
+        return True
+
+    db_driver = DbFactory.get_db_driver("VirtHost")
+    try:
+        ret = db_driver.update(hostname=inst_name, data=sync_data)
+    except Exception:
+        ret = False
+    if not ret:
+        log.warn("Update IP information to database with ret: [%s], data: %s", ret, sync_data)
+
+    return ret
+
+
 def update_memory_to_database(inst_name, **kwargs):
     """
     :param inst_name:

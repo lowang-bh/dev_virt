@@ -10,7 +10,8 @@
 
 from lib.Val.virt_factory import VirtFactory, VM_MAC_PREFIX
 from lib.Log.log import log
-from lib.Utils.db_utils import update_vm_database_info, create_vm_database_info, delete_vm_database_info
+from lib.Utils.db_utils import update_vm_database_info, create_vm_database_info, delete_vm_database_info,\
+    update_ip_infor_to_database
 
 
 def create_vm(new_vm_name, template_name, **kwargs):
@@ -84,7 +85,11 @@ def create_new_vif(inst_name, vif_index, device_name=None, network=None, ip=None
     log.debug("Create VIF [%s] with IP: %s,  MAC: %s.", vif_index, ip, mac_addr)
     new_vif = vnet_driver.create_new_vif(inst_name, vif_index, device_name, network, MAC=mac_addr)
     if new_vif is not None:
-        # TODO: sync DB when success
+        if vif_index == "0":
+            update_ip_infor_to_database(inst_name, first_ip=ip)
+        elif vif_index == "1":
+            update_ip_infor_to_database(inst_name, second_ip=ip)
+
         if VirtFactory.get_virt_driver(host_name, user, passwd).is_instance_running(inst_name):
             ret = vnet_driver.plug_vif_to_vm(inst_name, vif_index)
             if ret:
