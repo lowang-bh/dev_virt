@@ -86,6 +86,10 @@ def update_vm_database_info(inst_name, **kwargs):
         return False
 
     sn = vm_record['uuid']
+    if not db_driver.query(sn=sn):
+        log.info("No record found with given VM:[%s], don't update database", inst_name)
+        return True
+
     cpu_cores = vm_record['VCPUs_live']
     memory_size = vm_record['memory_target']
 
@@ -94,24 +98,23 @@ def update_vm_database_info(inst_name, **kwargs):
 
     vif_dic = vnet_driver.get_all_vif_info(inst_name)
     first_ip = vif_dic.get('0', {}).get('ip', None)
-    #second_ip is local ip
-    #second_ip = vif_dic.get('1', {}).get('ip', None)
+    # second_ip is local ip
+    second_ip = vif_dic.get('1', {}).get('ip', None)
     # TODO: sync disk size, and VIF infor
-    #disk_size = virt_driver.get_disk_size(inst_name, 0)  # only write the system disk size when create
     # for disk in disk_info:
     #     disk_size += virt_driver.get_disk_size(inst_name, disk)
     sync_data = {"cpu_cores": cpu_cores,
                  "memory_size": memory_size,
                  "disk_num": disk_num,
-                 "first_ip": first_ip
+                 "first_ip": first_ip,
+                 "second_ip": second_ip
                  }
-
     try:
         ret = db_driver.update(sn=sn, data=sync_data)
     except Exception:
         ret = False
     if not ret:
-        log.warn("Update database information with ret: [%], data: %s", ret, sync_data)
+        log.warn("Update database information with ret: [%s], data: %s", ret, sync_data)
 
     return ret
 

@@ -8,7 +8,7 @@
 
 from optparse import OptionParser
 from lib.Log.log import log
-from lib.Val.virt_factory import VirtFactory, VM_MAC_PREFIX
+from lib.Val.virt_factory import VirtFactory
 from lib.Utils.vm_utils import is_IP_available, create_new_vif, destroy_old_vif, config_vif, add_vm_disk, config_vcpus
 
 if __name__ == "__main__":
@@ -60,9 +60,8 @@ if __name__ == "__main__":
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
 
-
-    if not options.list_vif  and not options.list_pif and not options.list_sr and\
-        (not options.vif_index and not options.del_index and not options.add_index and\
+    if not options.list_vif and not options.list_pif and not options.list_sr and\
+        (not options.vif_index and not options.del_index and not options.add_index and
          not options.disk_size and not options.cpu_cores and not options.max_cores):
         parser.print_help()
         exit(1)
@@ -121,23 +120,20 @@ if __name__ == "__main__":
             log.fail("No network named: [%s].", network)
             exit(1)
 
-        mac_addr = None
-
-        option_dic = {"vif_ip":options.vif_ip, "vif_netmask":options.vif_netmask,
-                      "device":options.device, "host": host_name, "user": user, "passwd": passwd}
+        option_dic = {"vif_ip": options.vif_ip, "vif_netmask": options.vif_netmask,
+                      "device": options.device, "host": host_name, "user": user, "passwd": passwd}
         if options.vif_ip:
             if not is_IP_available(**option_dic):
                 log.fail("IP check failed.")
                 exit(1)
-            mac_strs = ['%02x' % int(num) for num in options.vif_ip.split(".")]
-            mac_addr = VM_MAC_PREFIX + ":%s:%s:%s:%s" % tuple(mac_strs)
 
-        if create_new_vif(inst_name, vif_index, device_name, network, mac_addr, **option_dic):
+        if create_new_vif(inst_name, vif_index, device_name, network, options.vif_ip, **option_dic):
             log.success("New virtual interface device created successfully.")
             exit(0)
         else:
             log.fail("New virtual interface device created or attached failed.")
             exit(1)
+
     elif options.del_index is not None:
         vif_index = options.del_index
 
@@ -149,6 +145,7 @@ if __name__ == "__main__":
         else:
             log.fail("Failed to delete the virtual interface device")
             exit(1)
+
     elif options.vif_index is not None:
         vif_index = options.vif_index
         if options.device is None and options.network is None:
@@ -165,7 +162,6 @@ if __name__ == "__main__":
             log.fail("No network named: [%s].", network)
             exit(1)
 
-        mac_addr = None
         option_dic = {"vif_ip": options.vif_ip, "vif_netmask": options.vif_netmask,
                       "device": options.device, "host": host_name,
                       "user": user, "passwd": passwd}
@@ -174,12 +170,10 @@ if __name__ == "__main__":
             if not is_IP_available(**option_dic):
                 log.fail("IP check failed.")
                 exit(1)
-            mac_strs = ['%02x' % int(num) for num in options.vif_ip.split(".")]
-            mac_addr = VM_MAC_PREFIX + ":%s:%s:%s:%s" % tuple(mac_strs)
         else:
             log.info("No IP specified, it will delete old VIF and create a new VIF to the target network.")
 
-        if config_vif(inst_name, vif_index, device_name, network, mac_addr, **option_dic):
+        if config_vif(inst_name, vif_index, device_name, network, options.vif_ip, **option_dic):
             log.success("New virtual interface device configured successfully.")
             exit(0)
         else:
@@ -196,7 +190,8 @@ if __name__ == "__main__":
             log.fail("Fail to get infor about storage [%s]", options.storage_name)
             exit(1)
         if size >= storage_info['size_free'] - 1:
-            log.fail("No enough volume on storage:[%s], at most [%s] GB is available", options.storage_name, storage_info['size_free'] - 1)
+            log.fail("No enough volume on storage:[%s], at most [%s] GB is available",
+                     options.storage_name, storage_info['size_free'] - 1)
             exit(1)
 
         option_dic = {"host": host_name, "user": user, "passwd": passwd}
@@ -209,8 +204,8 @@ if __name__ == "__main__":
             exit(1)
 
     elif options.cpu_cores is not None or options.max_cores is not None:
+        cpu_cores, max_cores = None, None
         try:
-            cpu_cores, max_cores = None, None
             if options.cpu_cores is not None:
                 cpu_cores = int(options.cpu_cores)
             if options.max_cores is not None:

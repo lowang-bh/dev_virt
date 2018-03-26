@@ -140,7 +140,7 @@ class HostDriver(DatabaseDriver):
 
         self.resp = self.session.get(url)
         if self.resp.status_code == requests.codes.ok:
-            log.info("Query from database: [%s] with record [%s] successfully.", db_name, data)
+            log.debug("Query from database: [%s] with record [%s] successfully.", db_name, data)
         else:
             log.error("Query from database: [%s] with record [%s] failed, please check the log at '/var/log/virt.log'.",
                       db_name, data)

@@ -9,7 +9,7 @@
 '''
 
 from lib.Utils.network_utils import IpCheck, is_IP_pingable
-from lib.Val.virt_factory import VirtFactory
+from lib.Val.virt_factory import VirtFactory, VM_MAC_PREFIX
 from lib.Log.log import log
 from lib.Utils.db_utils import update_vm_database_info, create_vm_database_info, delete_vm_database_info
 
@@ -52,7 +52,7 @@ def is_IP_available(vif_ip=None, vif_netmask=None, device=None, **kwargs):
         return False
 
     if is_IP_pingable(vif_ip):
-        log.error("Ipaddress [%s] is already be used.", vif_ip)
+        log.error("Ipaddress [%s] is already be used(Ping test).", vif_ip)
         return False
 
     return True
@@ -104,7 +104,7 @@ def delete_vm(vm_name, **kwargs):
     # No matter delete vm from DB failed or not, return True
     return True
 
-def create_new_vif(inst_name, vif_index, device_name=None, network=None, mac_addr=None, **kwargs):
+def create_new_vif(inst_name, vif_index, device_name=None, network=None, ip=None, **kwargs):
     """
     create a new virtual interface on the target VM
     @param inst_name: Vm name
@@ -118,6 +118,13 @@ def create_new_vif(inst_name, vif_index, device_name=None, network=None, mac_add
     passwd = str(kwargs['passwd']).replace('\\', '') if kwargs['passwd'] else ""
     vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
 
+    if ip:
+        mac_strs = ['%02x' % int(num) for num in ip.split(".")]
+        mac_addr = VM_MAC_PREFIX + ":%s:%s:%s:%s" % tuple(mac_strs)
+    else:
+        mac_addr = None
+
+    log.debug("Create VIF [%s] with IP: %s,  MAC: %s.",vif_index, ip, mac_addr)
     new_vif = vnet_driver.create_new_vif(inst_name, vif_index, device_name, network, MAC=mac_addr)
     if new_vif is not None:
         # TODO: sync DB when success
@@ -168,7 +175,7 @@ def destroy_old_vif(inst_name, vif_index, **kwargs):
     return True
 
 
-def config_vif(inst_name, vif_index, device_name=None, network=None, mac_addr=None, **kwargs):
+def config_vif(inst_name, vif_index, device_name=None, network=None, ip=None, **kwargs):
     """
     configure a vif: first destroy old vif and then create a new vif
     @param inst_name: Vm name
@@ -180,7 +187,7 @@ def config_vif(inst_name, vif_index, device_name=None, network=None, mac_addr=No
     if not destroy_old_vif(inst_name, vif_index, **kwargs):
         return False
 
-    ret = create_new_vif(inst_name, vif_index, device_name, network, mac_addr, **kwargs)
+    ret = create_new_vif(inst_name, vif_index, device_name, network, ip, **kwargs)
 
     return ret
 
@@ -217,7 +224,7 @@ def config_vcpus(inst_name, vcpu_nums=None, vcpu_max=None, **kwargs):
 
 def power_on_vm(vm_name, **kwargs):
     """
-    :param inst_name:
+    :param vm_name:
     :param kwargs:
     :return:
     """
@@ -241,7 +248,7 @@ def power_on_vm(vm_name, **kwargs):
 
 def power_off_vm(vm_name, **kwargs):
     """
-    :param inst_name:
+    :param vm_name:
     :param kwargs:
     :return:
     """
@@ -337,7 +344,7 @@ def print_all_vifs_info(inst_name, **kwargs):
     vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
 
     vifs_info = vnet_driver.get_all_vif_info(inst_name=inst_name)
-    for vif_index in vifs_info:
+    for vif_index in sorted(vifs_info):
         log.info("\t%s\tMAC: %s, IP: %s", vif_index, vifs_info[vif_index]['mac'], vifs_info[vif_index]['ip'])
 
     return True

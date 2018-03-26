@@ -10,6 +10,7 @@ from optparse import OptionParser
 import time
 from lib.Log.log import log
 from lib.Val.virt_factory import VirtFactory
+from lib.Utils.signal_utils import timeout_func
 from lib.Utils.vm_utils import delete_vm
 
 if __name__ == "__main__":
@@ -35,6 +36,16 @@ if __name__ == "__main__":
     option_dic = {"host": host_name, "user": user, "passwd": passwd}
 
     if args:
+        #  need user to confirm the input
+        # answer = input("Are you sure to delete those VMs: %s ?(Yes/No)" % args)
+        prompt = "Are you sure to delete those VMs: %s? (Yes/No)\n" % args
+        answer = timeout_func(raw_input, 5, None, prompt)
+        if answer != "Yes":
+            log.info("Your input is not 'Yes'. Exiting...")
+            exit(0)
+        else:
+            log.info("You input 'Yes' to confirm the deletion.")
+
         virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
         res_dict = {}
         for vm_name in args:
