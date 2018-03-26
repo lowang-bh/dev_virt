@@ -8,7 +8,8 @@
 from optparse import OptionParser
 from lib.Log.log import log
 from lib.Val.virt_factory import VirtFactory
-from lib.Utils.vm_utils import is_IP_available, config_vif, power_on_vm, create_vm
+from lib.Utils.vm_utils import config_vif, power_on_vm, create_vm
+from lib.Utils.server_utils import is_IP_available
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
