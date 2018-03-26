@@ -7,7 +7,7 @@
 '''
 from optparse import OptionParser
 from lib.Log.log import log
-from lib.Val.virt_factory import VirtFactory, VM_MAC_PREFIX
+from lib.Val.virt_factory import VirtFactory
 from lib.Utils.vm_utils import is_IP_available, config_vif, power_on_vm, create_vm
 
 if __name__ == "__main__":
@@ -93,7 +93,6 @@ if __name__ == "__main__":
             log.fail("No template named: %s", template_name)
             exit(1)
 
-        mac_addr = None
         option_dic = {"vif_ip": options.vif_ip, "vif_netmask": options.vif_netmask,
                       "device": options.device, "host": host_name,
                       "user": user, "passwd": passwd}
@@ -113,8 +112,6 @@ if __name__ == "__main__":
             if not is_IP_available(**option_dic):
                 log.fail("IP check failed.")
                 exit(1)
-            mac_strs = ['%02x' % int(num) for num in options.vif_ip.split(".")]
-            mac_addr = VM_MAC_PREFIX + ":%s:%s:%s:%s" % tuple(mac_strs)
 
         # 1. create VM
         ret = create_vm(new_vm_name, template_name, **option_dic)
@@ -125,7 +122,7 @@ if __name__ == "__main__":
 
         # 2. config VM
         if options.vif_ip is not None:
-            config_ret = config_vif(new_vm_name, options.vif_index, options.device, options.network, mac_addr, **option_dic)
+            config_ret = config_vif(new_vm_name, options.vif_index, options.device, options.network, options.vif_ip, **option_dic)
             if not config_ret:
                 log.warn("Vif configure failed.")
             else:
