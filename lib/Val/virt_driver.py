@@ -222,4 +222,13 @@ class VirtDriver(object):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def get_host_name(self):
+        """
+        The name label of server.
+        :return:
+        """
+        raise NotImplementedError()
+
+
 

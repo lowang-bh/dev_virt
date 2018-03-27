@@ -769,3 +769,9 @@ class QemuVirtDriver(VirtDriver):
         """
         raise NotImplementedError()
 
+    def get_host_name(self):
+        """
+        The server name, in kvm it is hostname.
+        :return: (name_label, hostname)
+        """
+        raise NotImplementedError()

@@ -8,8 +8,7 @@
 
 from optparse import OptionParser
 from lib.Log.log import log
-from lib.Utils.vm_utils import print_vm_info, print_vm_disk_info, print_all_vifs_info
-from lib.Val.virt_factory import VirtFactory
+from lib.Utils.vm_utils import VirtHostDomain
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] vm_name\n
@@ -39,23 +38,28 @@ if __name__ == "__main__":
         parser.print_help()
         exit(1)
 
+    virthost = VirtHostDomain(host_name, user, passwd)
+    if not virthost:
+        log.fail("Can not connect to virtual driver, initial VirtHostDomain failed.")
+        exit(1)
+
+    vnet_driver = virthost.vnet_driver
+    virt_driver = virthost.virt_driver
+
     vm_name = args[0]
-    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
     if not virt_driver.is_instance_exists(vm_name):
         log.fail("No VM named [%s].", vm_name)
         exit(1)
 
-    option_dic = {"host": host_name, "user": user, "passwd": passwd}
-
     if options.list:
-        print_vm_info(vm_name, **option_dic)
+        virthost.print_vm_info(vm_name)
     elif options.list_disk:
-        print_vm_disk_info(inst_name=vm_name, **option_dic)
+        virthost.print_vm_disk_info(inst_name=vm_name)
     elif options.list_vifs:
-        print_all_vifs_info(inst_name=vm_name, **option_dic)
+        virthost.print_all_vifs_info(inst_name=vm_name)
     else:
-        print_vm_info(vm_name, **option_dic)
-        print_vm_disk_info(inst_name=vm_name, **option_dic)
-        print_all_vifs_info(inst_name=vm_name, **option_dic)
+        virthost.print_vm_info(vm_name)
+        virthost.print_vm_disk_info(inst_name=vm_name)
+        virthost.print_all_vifs_info(inst_name=vm_name)
 
     exit(0)

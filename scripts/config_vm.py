@@ -8,9 +8,7 @@
 
 from optparse import OptionParser
 from lib.Log.log import log
-from lib.Val.virt_factory import VirtFactory
-from lib.Utils.vm_utils import create_new_vif, destroy_old_vif, config_vif, add_vm_disk, config_vcpus
-from lib.Utils.server_utils import is_IP_available, get_default_storage
+from lib.Utils.vm_utils import VirtHostDomain
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] vm_name\n
@@ -67,8 +65,13 @@ if __name__ == "__main__":
         parser.print_help()
         exit(1)
 
-    vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
-    virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
+    virthost = VirtHostDomain(host_name, user, passwd)
+    if not virthost:
+        log.fail("Can not connect to virtual driver, initial VirtHostDomain failed.")
+        exit(1)
+
+    vnet_driver = virthost.vnet_driver
+    virt_driver = virthost.virt_driver
 
     if options.list_pif:
         pif_list = vnet_driver.get_all_devices()
@@ -121,14 +124,12 @@ if __name__ == "__main__":
             log.fail("No network named: [%s].", network)
             exit(1)
 
-        option_dic = {"vif_ip": options.vif_ip, "vif_netmask": options.vif_netmask,
-                      "device": options.device, "host": host_name, "user": user, "passwd": passwd}
         if options.vif_ip:
-            if not is_IP_available(**option_dic):
+            if not virthost.is_IP_available(options.vif_ip, vif_netmask=options.vif_netmask, device=options.device):
                 log.fail("IP check failed.")
                 exit(1)
 
-        if create_new_vif(inst_name, vif_index, device_name, network, options.vif_ip, **option_dic):
+        if virthost.create_new_vif(inst_name, vif_index, device_name, network, options.vif_ip):
             log.success("New virtual interface device created successfully.")
             exit(0)
         else:
@@ -138,8 +139,7 @@ if __name__ == "__main__":
     elif options.del_index is not None:
         vif_index = options.del_index
 
-        option_dic = {"host": host_name, "user": user, "passwd": passwd}
-        ret = destroy_old_vif(inst_name, vif_index, **option_dic)
+        ret = virthost.destroy_old_vif(inst_name, vif_index)
         if ret:
             log.success("Successfully delete the virtual interface device.")
             exit(0)
@@ -163,18 +163,14 @@ if __name__ == "__main__":
             log.fail("No network named: [%s].", network)
             exit(1)
 
-        option_dic = {"vif_ip": options.vif_ip, "vif_netmask": options.vif_netmask,
-                      "device": options.device, "host": host_name,
-                      "user": user, "passwd": passwd}
-
         if options.vif_ip is not None:
-            if not is_IP_available(**option_dic):
+            if not virthost.is_IP_available(options.vif_ip, options.vif_netmask, options.device):
                 log.fail("IP check failed.")
                 exit(1)
         else:
             log.info("No IP specified, it will delete old VIF and create a new VIF to the target network.")
 
-        if config_vif(inst_name, vif_index, device_name, network, options.vif_ip, **option_dic):
+        if virthost.config_vif(inst_name, vif_index, device_name, network, options.vif_ip):
             log.success("New virtual interface device configured successfully.")
             exit(0)
         else:
@@ -182,10 +178,9 @@ if __name__ == "__main__":
             exit(1)
 
     elif options.disk_size is not None:
-        option_dic = {"host": host_name, "user": user, "passwd": passwd}
 
         if not options.storage_name:
-            options.storage_name = get_default_storage(**option_dic)
+            options.storage_name = virthost.get_default_storage()
             if not options.storage_name:
                 log.fail("Failed to get default SR, please specify a storage name for the new virtual disk.")
                 exit(1)
@@ -200,7 +195,7 @@ if __name__ == "__main__":
                      options.storage_name, storage_info['size_free'] - 1)
             exit(1)
 
-        ret = add_vm_disk(inst_name, storage_name=options.storage_name, size=size, **option_dic)
+        ret = virthost.add_vm_disk(inst_name, storage_name=options.storage_name, size=size)
         if ret:
             log.success("Successfully add a new disk with size [%s]GB to VM [%s].", size, inst_name)
             exit(0)
@@ -219,8 +214,7 @@ if __name__ == "__main__":
             log.fail("Please input a integer for cpu cores.")
             exit(1)
 
-        option_dic = {"host": host_name, "user": user, "passwd": passwd}
-        ret = config_vcpus(inst_name, vcpu_nums=cpu_cores, vcpu_max=max_cores, **option_dic)
+        ret = virthost.config_vcpus(inst_name, vcpu_nums=cpu_cores, vcpu_max=max_cores)
         if ret:
             log.success("Config VCPU cores successfully.")
             exit(0)

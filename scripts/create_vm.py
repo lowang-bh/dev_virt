@@ -7,9 +7,7 @@
 '''
 from optparse import OptionParser
 from lib.Log.log import log
-from lib.Val.virt_factory import VirtFactory
-from lib.Utils.vm_utils import config_vif, power_on_vm, create_vm
-from lib.Utils.server_utils import is_IP_available
+from lib.Utils.vm_utils import VirtHostDomain
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
@@ -54,8 +52,15 @@ if __name__ == "__main__":
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
 
+    virthost = VirtHostDomain(host_name, user, passwd)
+    if not virthost:
+        log.fail("Can not connect to virtual driver, initial VirtHostDomain failed.")
+        exit(1)
+
+    vnet_driver = virthost.vnet_driver
+    virt_driver = virthost.virt_driver
+
     if options.list_vm:
-        virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
         all_vms = virt_driver.get_vm_list()
         if all_vms:
             log.info(str(sorted(all_vms)))
@@ -63,7 +68,6 @@ if __name__ == "__main__":
             log.info("No VMs.")
 
     elif options.list_templ:
-        virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
         all_templs = virt_driver.get_templates_list()
         str_templ = "All templates are:\n" + "\n".join(sorted(all_templs))
         if all_templs:
@@ -72,7 +76,6 @@ if __name__ == "__main__":
             log.info("No templates.")
 
     elif options.list_network:
-        vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
         all_networks = vnet_driver.get_network_list()
         if all_networks:
             log.info(str(sorted(all_networks)))
@@ -84,8 +87,6 @@ if __name__ == "__main__":
             log.fail("A template must be suppulied to create a new VM.")
             exit(1)
         new_vm_name, template_name = options.vm_name, options.template
-        virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
-        vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
 
         if virt_driver.is_instance_exists(new_vm_name):
             log.fail("There is already one VM named [%s]", new_vm_name)
@@ -110,12 +111,12 @@ if __name__ == "__main__":
             if network and network not in vnet_driver.get_network_list():
                 log.fail("No network named: [%s].", network)
                 exit(1)
-            if not is_IP_available(**option_dic):
+            if not virthost.is_IP_available(options.vif_ip, vif_netmask=options.vif_netmask, device=options.device):
                 log.fail("IP check failed.")
                 exit(1)
 
         # 1. create VM
-        ret = create_vm(new_vm_name, template_name, **option_dic)
+        ret = virthost.create_vm(new_vm_name, template_name)
         if not ret:
             log.fail("Failed to create VM [%s].Exiting....", new_vm_name)
             exit(1)
@@ -123,7 +124,7 @@ if __name__ == "__main__":
 
         # 2. config VM
         if options.vif_ip is not None:
-            config_ret = config_vif(new_vm_name, options.vif_index, options.device, options.network, options.vif_ip, **option_dic)
+            config_ret = virthost.config_vif(new_vm_name, options.vif_index, options.device, options.network, options.vif_ip, **option_dic)
             if not config_ret:
                 log.warn("Vif configure failed.")
             else:
@@ -131,7 +132,7 @@ if __name__ == "__main__":
                          options.vif_index, new_vm_name)
 
         # 3. power on VM
-        ret = power_on_vm(new_vm_name, **option_dic)
+        ret = virthost.power_on_vm(new_vm_name, **option_dic)
         if ret:
             log.success("Create VM [%s] and power on successfully.", new_vm_name)
             exit(0)
