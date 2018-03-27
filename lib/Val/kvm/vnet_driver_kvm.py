@@ -165,3 +165,9 @@ class QemuVnetDriver(VnetDriver):
         """
         raise NotImplementedError()
 
+    def get_host_manage_interface_infor(self):
+        """
+        The manage interface, or the default interface configured with a managed IP
+        :return:
+        """
+        raise NotImplementedError()

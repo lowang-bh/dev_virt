@@ -9,6 +9,7 @@
 from lib.Log.log import log
 from lib.Val.virt_factory import VirtFactory
 from lib.Utils.network_utils import IpCheck, is_IP_pingable
+from lib.Utils.db_utils import check_ip_used
 
 
 def print_server_hardware_info(**kwargs):
@@ -158,6 +159,10 @@ def is_IP_available(vif_ip=None, vif_netmask=None, device=None, **kwargs):
 
     if is_IP_pingable(vif_ip):
         log.error("Ipaddress [%s] is already be used(Ping test).", vif_ip)
+        return False
+
+    if check_ip_used(vif_ip):
+        log.error("Ip address [%s] already in used.(Check from database).", vif_ip)
         return False
 
     return True

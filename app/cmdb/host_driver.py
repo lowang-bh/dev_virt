@@ -83,7 +83,7 @@ class HostDbDriver(DatabaseDriver):
     def respond_data_list(self):
         """
         return the respond data list
-        :return:
+        :return: a list of records and each record is a dict
         """
         return self.respond_data.get("list", [])
 
