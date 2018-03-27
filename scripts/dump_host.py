@@ -8,7 +8,7 @@
 '''
 from optparse import OptionParser
 from lib.Log.log import log
-from lib.Utils.server_utils import print_server_hardware_info, get_host_all_storage_info
+from lib.Utils.server_utils import ServerDomain
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] vm_name\n
@@ -32,13 +32,19 @@ if __name__ == "__main__":
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
 
-    option_dic = {"host": host_name, "user": user, "passwd": passwd}
+    serverDomain = ServerDomain(host_name, user, passwd)
+    if not serverDomain:
+        log.fail("Can not connect to virtual driver, initial serverDomain failed.")
+        exit(1)
+
+    virt_driver = serverDomain.virt_driver
+
     if options.list_sr:
         log.info("Host Storage informations:")
-        storage = get_host_all_storage_info(**option_dic)
+        storage = serverDomain.get_host_all_storage_info()
         for k, v in storage.iteritems():
             log.info("%-15s: \tTotal: %8sGB, Free:%8sGB", k, v[0], v[1])
     else:
-        print_server_hardware_info(**option_dic)
+        serverDomain.print_server_hardware_info()
 
     exit(0)

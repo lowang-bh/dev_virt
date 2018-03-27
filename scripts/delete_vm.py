@@ -9,9 +9,8 @@
 from optparse import OptionParser
 import time
 from lib.Log.log import log
-from lib.Val.virt_factory import VirtFactory
 from lib.Utils.signal_utils import timeout_func
-from lib.Utils.vm_utils import delete_vm
+from lib.Utils.vm_utils import VirtHostDomain
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
@@ -33,7 +32,13 @@ if __name__ == "__main__":
     host_name = options.host
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
-    option_dic = {"host": host_name, "user": user, "passwd": passwd}
+
+    virthost = VirtHostDomain(host_name, user, passwd)
+    if not virthost:
+        log.fail("Can not connect to virtual driver, initial VirtHostDomain failed.")
+        exit(1)
+
+    virt_driver = virthost.virt_driver
 
     if args:
         #  need user to confirm the input
@@ -46,7 +51,6 @@ if __name__ == "__main__":
         else:
             log.info("You input 'Yes' to confirm the deletion.")
 
-        virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
         res_dict = {}
         for vm_name in args:
             if not virt_driver.is_instance_exists(vm_name):
@@ -54,7 +58,7 @@ if __name__ == "__main__":
                 continue
 
             res_dict.setdefault(vm_name, 0)
-            ret = delete_vm(vm_name, **option_dic)
+            ret = virthost.delete_vm(vm_name)
             if not ret:
                 log.error("VM [%s] deleted failed.", vm_name)
                 res_dict[vm_name] = 1

@@ -222,7 +222,7 @@ class XenVirtDriver(VirtDriver):
                     handler.xenapi.VM.resume(vm_ref, False, True)  # start_paused = False; force = True
                 elif vm_state == "Paused":
                     handler.xenapi.VM.unpause(vm_ref)
-                else:  #vm_state == "Halted"
+                else:  # vm_state == "Halted"
                     handler.xenapi.VM.start(vm_ref, False, True)
                 time.sleep(1)
             except Exception, error:
@@ -258,7 +258,7 @@ class XenVirtDriver(VirtDriver):
 
         return True
 
-    ### Set or GET VM VCPU number###
+    #  ## Set or GET VM VCPU number###
     def set_vm_vcpu_live(self, inst_name, vcpu_num):
         """
         set the vcpu numbers for a running VM
@@ -560,7 +560,7 @@ class XenVirtDriver(VirtDriver):
 
         return True
 
-    def _delete_virtual_disk_unused(self, storage_name, inst_name):
+    def __delete_virtual_disk_unused(self, storage_name, inst_name):
         """
         delete those VDI (virtual disk) which is not used by any VM; When delete a vm, the VDI is not deleted.
         :param storage_name:
@@ -718,6 +718,20 @@ class XenVirtDriver(VirtDriver):
             log.error("Exception when get host platform infor:%s", error)
 
         return ret_plat_dict
+
+    def get_host_name(self):
+        """
+        The name label of server.
+        :return:
+        """
+        handler = self.get_handler()
+        host_ref = handler.xenapi.host.get_all()[0]
+        name_label = handler.xenapi.host.get_name_label(host_ref)
+        host_name = handler.xenapi.host.get_hostname(host_ref)
+
+        return (name_label, host_name)
+
+
 
 
 if __name__ == "__main__":

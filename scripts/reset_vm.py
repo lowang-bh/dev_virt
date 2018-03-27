@@ -9,8 +9,7 @@
 from optparse import OptionParser
 import time
 from lib.Log.log import log
-from lib.Val.virt_factory import VirtFactory
-from lib.Utils.vm_utils import reset_vm
+from lib.Utils.vm_utils import VirtHostDomain
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
@@ -35,28 +34,33 @@ if __name__ == "__main__":
     if options.host is not None and (options.user is None or options.passwd is None):
         log.fail("Please specify a user-name and passward for the given host:%s", options.host)
         exit(1)
+
     host_name = options.host
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
-    option_dic = {"host": host_name, "user": user, "passwd": passwd}
+
+    virthost = VirtHostDomain(host_name, user, passwd)
+    if not virthost:
+        log.fail("Can not connect to virtual driver, initial VirtHostDomain failed.")
+        exit(1)
+
+    virt_driver = virthost.virt_driver
 
     if options.all:
         log.info("Start reset all VMs in server.")
-        virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
         all_vms_names = virt_driver.get_vm_list()
         for vm_name in all_vms_names:
-            reset_vm(vm_name, **option_dic)
+            virthost.reset_vm(vm_name)
             time.sleep(1)
         exit(0)
 
     elif options.vm is not None:
         vm_name = options.vm
-        virt_driver = VirtFactory.get_virt_driver(host_name, user, passwd)
         if not virt_driver.is_instance_exists(vm_name):
             log.fail("No VM named %s.", vm_name)
             exit(1)
 
-        ret = reset_vm(vm_name, **option_dic)
+        ret = virthost.reset_vm(vm_name)
         if ret:
             log.success("VM [%s] reset successfully.", vm_name)
             exit(0)
@@ -66,4 +70,3 @@ if __name__ == "__main__":
     else:
         parser.print_help()
         exit(0)
-

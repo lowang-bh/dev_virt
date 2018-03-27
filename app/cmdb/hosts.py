@@ -31,9 +31,9 @@ class HostDriver(HostDbDriver):
             log.info("Create data to database: [%s] successfully.", db_name)
             return True
         else:
-            log.error("Create data to database: [%s] failed, please check the log at '/var/log/virt.log'.", db_name)
+            log.error("Create data to database: [%s] failed, respond content: %s, please check the log "
+                      "at '/var/log/virt.log'.", db_name, self.resp.content)
             # {"msg":"执行异常！","code":400,"data":{"errors":{"sn":["具有 sn 的 hosts 已存在。"]}}}
-            log.debug(self.resp.content)
             return False
 
     def delete(self, id=None, sn=None, hostname=None):
@@ -102,16 +102,14 @@ class HostDriver(HostDbDriver):
         json_data = json.dumps(data)
 
         url = self.url + str(record_id) + "/"  # update url should be endwith "/"
-        log.debug("Patch url:%s, data: %s", url, data)
         log.debug("Patch url:%s, json data: %s", url, json_data)
         #  TODO : why json data don't take effect
-        self.resp = self.session.patch(url, data=data)
+        self.resp = self.session.patch(url, json=json_data)
         if self.resp.status_code == requests.codes.ok:
             log.info("Update to database successfully.")
             return True
         elif self.is_respond_error:
-            log.error("Update failed. Return code: %s", self.resp.status_code)
-            log.debug("Error content: %s", self.resp.content)
+            log.error("Update failed. Return code: %s, content: %s", self.resp.status_code, self.resp.content)
             return False
 
         return True
@@ -190,14 +188,14 @@ class VirtualHostDriver(HostDriver):
         db_name = self.db_name(url)
 
         log.debug("Create virtual host url: %s", url)
+        log.debug("post data: %s", post_data)
         self.resp = self.session.post(url, data=post_data)
         if self.resp.status_code == requests.codes.created or self.resp.status_code == requests.codes.ok:
             log.info("Create data to database: [%s] successfully.", db_name)
             return True
         else:
-            log.error("Create data to database: [%s] failed, Http return code: %s, please check the log at "
-                      "'/var/log/virt.log'.", db_name, self.resp.status_code)
-            log.debug(self.resp.content)
+            log.error("Create data to database: [%s] failed, Http return content: %s, please check the log at "
+                      "'/var/log/virt.log'.", db_name, self.resp.content)
             return False
 
 
