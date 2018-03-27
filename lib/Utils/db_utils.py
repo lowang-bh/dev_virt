@@ -136,7 +136,7 @@ def update_ip_infor_to_database(inst_name, first_ip=None, second_ip=None, host_i
         sync_data["first_ip"] = first_ip
     if second_ip:
         sync_data["second_ip"] = second_ip
-    if not sync_data
+    if not sync_data:
         return True
 
     db_driver = DbFactory.get_db_driver("VirtHost")
