@@ -11,7 +11,7 @@
 from lib.Val.virt_factory import VirtFactory, VM_MAC_PREFIX
 from lib.Log.log import log
 from lib.Utils.db_utils import update_vm_database_info, create_vm_database_info, delete_vm_database_info,\
-    update_ip_infor_to_database
+    update_ip_infor_to_database, delete_ip_info_from_database
 
 
 def create_vm(new_vm_name, template_name, **kwargs):
@@ -85,10 +85,8 @@ def create_new_vif(inst_name, vif_index, device_name=None, network=None, ip=None
     log.debug("Create VIF [%s] with IP: %s,  MAC: %s.", vif_index, ip, mac_addr)
     new_vif = vnet_driver.create_new_vif(inst_name, vif_index, device_name, network, MAC=mac_addr)
     if new_vif is not None:
-        if vif_index == "0":
-            update_ip_infor_to_database(inst_name, first_ip=ip)
-        elif vif_index == "1":
-            update_ip_infor_to_database(inst_name, second_ip=ip)
+
+        update_ip_infor_to_database(inst_name, vif_index=vif_index, ip=ip)
 
         if VirtFactory.get_virt_driver(host_name, user, passwd).is_instance_running(inst_name):
             ret = vnet_driver.plug_vif_to_vm(inst_name, vif_index)
@@ -133,7 +131,8 @@ def destroy_old_vif(inst_name, vif_index, **kwargs):
         log.error("Failed to destroy the virtual interface device [%s].", vif_index)
         return False
 
-    # TODO: sync DB when success
+    delete_ip_info_from_database(inst_name, vif_index)
+
     return True
 
 

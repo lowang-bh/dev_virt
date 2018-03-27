@@ -445,6 +445,33 @@ class XenVnetDriver(VnetDriver):
             return False
         return True
 
+    def get_host_manage_interface_infor(self):
+        """
+        The manage interface, or the default interface configured with a managed IP
+        :return:
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        try:
+            host_ref = self._hypervisor_handler.xenapi.host.get_all()[0]
+            pif_ref = self._hypervisor_handler.xenapi.host.get_management_interface(host_ref)
+            pif_record = self._hypervisor_handler.xenapi.PIF.get_record(pif_ref)
+        except Exception as error:
+            log.exception("Except when get host manage interface: %s", error)
+            return {}
+
+        default_infor = {}
+        default_infor.setdefault('device', pif_record.get('device', None))
+        default_infor.setdefault('IP', pif_record.get('IP', None))
+        default_infor.setdefault('DNS', pif_record.get('DNS', None))
+        default_infor.setdefault('MAC', pif_record.get('MAC', None))
+        default_infor.setdefault('gateway', pif_record.get('gateway', None))
+        default_infor.setdefault('netmask', pif_record.get('netmask', None))
+
+        return default_infor
+
+
 if __name__ == "__main__":
     vnet = XenVnetDriver("10.143.248.16","root", "Mojiti!906")
     print vnet.get_all_vifs_indexes("test2")

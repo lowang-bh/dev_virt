@@ -2,7 +2,7 @@
 # -*- coding:UTF-8 -*-
 
 import requests
-
+import json
 from lib.Log.log import log
 from app.cmdb.host_driver import HostDbDriver
 from app.cmdb.settings import HOSTs_URL
@@ -85,6 +85,7 @@ class HostDriver(HostDbDriver):
         if id is None and sn is None and hostname is None:
             log.error("Update to DB need an ID, a hostname or a SN to identify which record will be updated.")
             return False
+
         if not isinstance(data, dict):
             log.error("Data should be a dict.")
             return  False
@@ -98,8 +99,12 @@ class HostDriver(HostDbDriver):
         record_id = query_list[0]['id']
         data['modified'] = str(modified)
 
+        json_data = json.dumps(data)
+
         url = self.url + str(record_id) + "/"  # update url should be endwith "/"
-        log.debug("Patch url:%s, data:%s", url, data)
+        log.debug("Patch url:%s, data: %s", url, data)
+        log.debug("Patch url:%s, json data: %s", url, json_data)
+        #  TODO : why json data don't take effect
         self.resp = self.session.patch(url, data=data)
         if self.resp.status_code == requests.codes.ok:
             log.info("Update to database successfully.")
@@ -158,7 +163,7 @@ class VirtualHostDriver(HostDriver):
     def __init__(self, *args, **kwargs):
         super(VirtualHostDriver, self).__init__(*args, **kwargs)
 
-    def create(self, hostname, sn, cpu_cores, memory_size, disk_size, disk_num, first_ip=None):
+    def create(self, hostname, sn, cpu_cores, memory_size, disk_size, disk_num, first_ip=None, vm_host_ip=None):
         """
         overwrite the create method in Host for virtual machine
         :param hostname: Name of VM
@@ -178,6 +183,8 @@ class VirtualHostDriver(HostDriver):
         post_data.setdefault('disk_size', disk_size)
         post_data.setdefault('disk_num', disk_num)
         post_data.setdefault('first_ip', first_ip)
+        if vm_host_ip:
+            post_data['vm_host_ip'] = vm_host_ip
 
         url = self.url
         db_name = self.db_name(url)
