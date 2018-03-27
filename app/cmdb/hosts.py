@@ -4,11 +4,11 @@
 import requests
 
 from lib.Log.log import log
-from lib.Db.db_driver import DatabaseDriver
-from app.settings import HOSTs_URL
+from app.cmdb.host_driver import HostDbDriver
+from app.cmdb.settings import HOSTs_URL
 
 
-class HostDriver(DatabaseDriver):
+class HostDriver(HostDbDriver):
 
     def __init__(self, *args, **kwagrs):
         super(HostDriver, self).__init__(*args, **kwagrs)
