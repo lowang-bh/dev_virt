@@ -37,8 +37,6 @@ if __name__ == "__main__":
         log.fail("Can not connect to virtual driver, initial serverDomain failed.")
         exit(1)
 
-    virt_driver = serverDomain.virt_driver
-
     if options.list_sr:
         log.info("Host Storage informations:")
         storage = serverDomain.get_host_all_storage_info()

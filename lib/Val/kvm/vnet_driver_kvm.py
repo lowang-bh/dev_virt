@@ -17,7 +17,6 @@ class QemuVnetDriver(VnetDriver):
 
     def __init__(self, hostname=None, user=None, passwd=None):
         VnetDriver.__init__(self, hostname, user, passwd)
-        self._hypervisor_handler = None
 
         self._auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_PASSPHRASE], self._request_cred, None]
         # conn = libvirt.open(name) need root username
@@ -45,6 +44,7 @@ class QemuVnetDriver(VnetDriver):
         if self._hypervisor_handler:
             log.debug("try to close the connect to libvirt: %s", self.hostname)
             self._hypervisor_handler.close()
+            self._hypervisor_handler = None
 
     def get_handler(self):
         '''
@@ -83,6 +83,7 @@ class QemuVnetDriver(VnetDriver):
         @param network_name: the name of network created on bridge(when use linux bridge) or switch(when use openvswitch)
         @return: Ture if exist or False
         """
+        raise NotImplementedError()
 
     def get_all_devices(self):
         """

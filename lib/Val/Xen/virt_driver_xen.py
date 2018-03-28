@@ -23,7 +23,6 @@ class XenVirtDriver(VirtDriver):
 
     def __init__(self, hostname=None, user="root", passwd=""):
         VirtDriver.__init__(self, hostname, user, passwd)
-        self._hypervisor_handler = None
 
         self._hypervisor_handler = self.get_handler()
 
@@ -50,12 +49,20 @@ class XenVirtDriver(VirtDriver):
             self._hypervisor_handler = XenAPI.Session("http://" + str(self.hostname))
 
         old = signal.signal(signal.SIGALRM, self.timeout_handler)
-        signal.alarm(5)   #  connetctions timeout set to 5 secs
+        signal.alarm(4)   #  connetctions timeout set to 5 secs
         try:
             self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1, 'XenVirtDriver')
-        except Exception, error:
-            log.exception("Exception raised:%s when get handler.", error)
-            return None
+        except Exception as error:
+            log.warn("Exception raised: %s when get handler.", error)
+            log.info("Retry connecting to :%s", "https://" + str(self.hostname))
+            self._hypervisor_handler = XenAPI.Session("https://" + str(self.hostname))
+
+            signal.alarm(4)
+            try:
+                self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1, 'XenVirtDriver')
+            except Exception as errors:
+                log.exception("Exception errors:%s when get handler", errors)
+                return None
         finally:
             signal.alarm(0)
             signal.signal(signal.SIGALRM, old)
@@ -257,6 +264,73 @@ class XenVirtDriver(VirtDriver):
             return False
 
         return True
+
+    # Set VM static, dynamic memory
+    def set_vm_static_memory(self, inst_name, memory_max=None, memory_min=None):
+        """
+        :param inst_name:
+        :param memory_max: size of GB
+        :param memory_min: size of GB
+        :return:
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        if not memory_max and not memory_min:
+            log.info("No memory size given, return...")
+            return True
+
+        if  not self.is_instance_halted(inst_name=inst_name):
+            log.error("Set static memory need VM to be halted.")
+            return False
+        try:
+            vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
+            gb = 1024.0 * 1024.0 * 1024.0
+            if  memory_max:
+                memory_max = int(gb* float(memory_max))
+                self._hypervisor_handler.xenapi.VM.set_memory_static_max(vm_ref, str(memory_max))
+            if memory_min:
+                memory_min = int(gb * float(memory_min))
+                self._hypervisor_handler.xenapi.VM.set_memory_static_min(vm_ref, str(memory_min))
+
+            return True
+        except Exception as error:
+            log.exception("Exception raise when set static min memory: %s", error)
+            return False
+
+    def set_vm_dynamic_memory(self, inst_name, memory_max=None, memory_min=None):
+        """
+        :param inst_name:
+        :param max_memory:
+        :param min_memory:
+        :return:
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        if not memory_max and not memory_min:
+            log.info("No memory size given, return...")
+            return True
+
+        if not self.is_instance_halted(inst_name=inst_name):
+            log.error("Set dynamic memory need VM to be halted.")
+            return False
+        try:
+            vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
+            gb = 1024.0 * 1024.0 * 1024.0
+            if memory_max:
+                memory_max = int(gb * float(memory_max))
+                self._hypervisor_handler.xenapi.VM.set_memory_dynamic_max(vm_ref, str(memory_max))
+                print self.get_vm_record(inst_name=inst_name)
+            if memory_min:
+                memory_min = int(gb * float(memory_min))
+                self._hypervisor_handler.xenapi.VM.set_memory_dynamic_min(vm_ref, str(memory_min))
+                print self.get_vm_record(inst_name)
+
+            return True
+        except Exception as error:
+            log.exception("Exception raise when set static min memory: %s", error)
+            return False
 
     #  ## Set or GET VM VCPU number###
     def set_vm_vcpu_live(self, inst_name, vcpu_num):
@@ -735,46 +809,13 @@ class XenVirtDriver(VirtDriver):
 
 
 if __name__ == "__main__":
-    import sys
-    if len(sys.argv) != 1 and len(sys.argv) != 4:
-        print "Usage:"
-        print sys.argv[0], "[host-ip user passwd]"
-        sys.exit(1)
-    if len(sys.argv) == 4:
-        ip = sys.argv[1]
-        user = sys.argv[2]
-        passwd = str(sys.argv[3]).replace('\\', '')
-    else:
-        ip = None
-        user = "root"
-        passwd = ""
-    log.info("test log")
-    virt = XenVirtDriver(ip, user, passwd)
-    vm_list = virt.get_vm_list()
-    print vm_list
-    for vm in vm_list:
-        v_record = virt.get_vm_record(vm)
-        if v_record:
-            log.info("%s %s %s", vm, v_record['uuid'], v_record['name_label'])
-    vm_name = "new_vm"
-    if virt.is_instance_exists(vm_name):
-        ret = virt.power_off_vm(vm_name)
-        if not ret:
-            log.error("Can not power off VM[%s]", vm_name)
-        ret = virt.delete_instance(vm_name)
-        if not ret:
-            log.error("delete vm failed: %s", vm_name)
-        else:
-            log.info("delete vm successfully.")
-
-    ret = virt.create_instance(vm_name, r"CentOS 7.2 for Lain")
-    if ret:
-        ret = virt.power_on_vm(vm_name)
-        if ret:
-            log.success("Power on vm successfully.")
-        else:
-            log.fail("Power on VM failed.")
-    else:
-        log.fail("Can not create new VM.")
-    print ret
+    from optparse import OptionParser
+    parser = OptionParser()
+    parser.add_option("--host", dest="host", help="IP for host server")
+    parser.add_option("-u", "--user", dest="user", help="User name for host server")
+    parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
+    (options, args) = parser.parse_args()
+    virt = XenVirtDriver(hostname=options.host, user=options.user, passwd=options.passwd)
+    print virt.set_vm_static_memory(inst_name="test1", memory_max=2, memory_min=0.5)
+    print virt.set_vm_dynamic_memory("test1", 2, 1)
 
