@@ -375,15 +375,19 @@ class VirtHostDomain(ServerDomain):
         first_ip = vif_dic.get('0', {}).get('ip', None)
         # second_ip is local ip
         second_ip = vif_dic.get('1', {}).get('ip', None)
-
+        vm_host_ip = self.vnet_driver.get_host_manage_interface_infor()['IP']
         # TODO: sync disk size
         # for disk in disk_info:
         #     disk_size += virt_driver.get_disk_size(inst_name, disk)
+        os_info = self.virt_driver.get_os_type(inst_name, short_name=False)
+
         sync_data = {"cpu_cores": cpu_cores,
                      "memory_size": int(memory_size),
                      "disk_num": int(disk_num),
                      "first_ip": first_ip,
-                     "second_ip": second_ip
+                     "second_ip": second_ip,
+                     "vm_host_ip": vm_host_ip,
+                     "os_info": os_info
                      }
         try:
             ret = self.db_driver.update(sn=sn, data=sync_data)
@@ -507,4 +511,4 @@ if __name__ == "__main__":
     print dom.get_default_device()
     print dom.get_host_all_storage_info()
     print dom.print_server_hardware_info()
-    print dom.update_database_info(inst_name="t2-dev27")
+    print dom.update_database_info(inst_name="test1")

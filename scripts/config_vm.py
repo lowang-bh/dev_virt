@@ -111,21 +111,26 @@ if __name__ == "__main__":
 
     if options.add_index is not None:
         vif_index = options.add_index
-        if options.device is None and options.network is None:
-            log.fail("Please specify a NIC or network for the new created virtual interface.")
-            exit(1)
+
         device_name = options.device
-        if device_name and device_name not in vnet_driver.get_all_devices():
+        if device_name is not None and device_name not in vnet_driver.get_all_devices():
             log.fail("Invalid device name:[%s].", device_name)
             exit(1)
 
         network = options.network
-        if network and network not in vnet_driver.get_network_list():
+        if network is not None and network not in vnet_driver.get_network_list():
             log.fail("No network named: [%s].", network)
             exit(1)
 
-        if options.vif_ip:
-            if not virthost.is_IP_available(options.vif_ip, vif_netmask=options.vif_netmask, device=options.device):
+        if options.device is None and options.network is None:
+            device_name = virthost.get_default_device()
+            if not device_name:
+                log.fail("Failed to get default device. "
+                         "Please specify a NIC or network for the new created virtual interface.")
+                exit(1)
+
+        if options.vif_ip is not None:
+            if not virthost.is_IP_available(options.vif_ip, vif_netmask=options.vif_netmask, device=device_name):
                 log.fail("IP check failed.")
                 exit(1)
 
@@ -149,22 +154,26 @@ if __name__ == "__main__":
 
     elif options.vif_index is not None:
         vif_index = options.vif_index
-        if options.device is None and options.network is None:
-            log.fail("Please specify a NIC or bridge for the new configured virtual interface.")
-            exit(1)
 
         device_name = options.device
-        if device_name and device_name not in vnet_driver.get_all_devices():
+        if device_name is not None and device_name not in vnet_driver.get_all_devices():
             log.fail("Invalid device name:[%s].", device_name)
             exit(1)
 
         network = options.network
-        if network and network not in vnet_driver.get_network_list():
+        if network is not None and network not in vnet_driver.get_network_list():
             log.fail("No network named: [%s].", network)
             exit(1)
 
+        if options.device is None and options.network is None:
+            device_name = virthost.get_default_device()
+            if not device_name:
+                log.fail("Failed to get default device. "
+                         "Please specify a NIC or network for the new created virtual interface.")
+                exit(1)
+
         if options.vif_ip is not None:
-            if not virthost.is_IP_available(options.vif_ip, options.vif_netmask, options.device):
+            if not virthost.is_IP_available(options.vif_ip, options.vif_netmask, device_name):
                 log.fail("IP check failed.")
                 exit(1)
         else:
@@ -180,7 +189,7 @@ if __name__ == "__main__":
     elif options.disk_size is not None:
 
         if not options.storage_name:
-            options.storage_name = virthost.get_default_storage()
+            options.storage_name = virthost.get_max_free_size_storage()
             if not options.storage_name:
                 log.fail("Failed to get default SR, please specify a storage name for the new virtual disk.")
                 exit(1)

@@ -100,17 +100,25 @@ if __name__ == "__main__":
                       "user": user, "passwd": passwd}
 
         if options.vif_ip is not None:  #if an IP is specify, please specify a device, vif_index
-            if (not options.device and not options.network) or not options.vif_index:
-                log.fail("Please specify a device/network and an VIF for configuring the IP.")
+            if not options.vif_index:
+                log.fail("Please specify an VIF for configuring the IP.")
                 exit(1)
             device_name = options.device
-            if device_name and device_name not in vnet_driver.get_all_devices():
+            if device_name is not None and device_name not in vnet_driver.get_all_devices():
                 log.fail("Invalid device name:[%s].", device_name)
                 exit(1)
             network = options.network
-            if network and network not in vnet_driver.get_network_list():
+            if network is not None and network not in vnet_driver.get_network_list():
                 log.fail("No network named: [%s].", network)
                 exit(1)
+
+            if options.device is None and options.network is None:
+                options.device = virthost.get_default_device()
+                if not options.device:
+                    log.fail("Failed to get default device. "
+                             "Please specify a NIC or network for the new created virtual interface.")
+                    exit(1)
+
             if not virthost.is_IP_available(options.vif_ip, vif_netmask=options.vif_netmask, device=options.device):
                 log.fail("IP check failed.")
                 exit(1)
@@ -124,7 +132,7 @@ if __name__ == "__main__":
 
         # 2. config VM
         if options.vif_ip is not None:
-            config_ret = virthost.config_vif(new_vm_name, options.vif_index, options.device, options.network, options.vif_ip, **option_dic)
+            config_ret = virthost.config_vif(new_vm_name, options.vif_index, options.device, options.network, options.vif_ip)
             if not config_ret:
                 log.warn("Vif configure failed.")
             else:
@@ -132,7 +140,7 @@ if __name__ == "__main__":
                          options.vif_index, new_vm_name)
 
         # 3. power on VM
-        ret = virthost.power_on_vm(new_vm_name, **option_dic)
+        ret = virthost.power_on_vm(new_vm_name)
         if ret:
             log.success("Create VM [%s] and power on successfully.", new_vm_name)
             exit(0)

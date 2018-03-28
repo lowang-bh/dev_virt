@@ -508,7 +508,7 @@ class XenVirtDriver(VirtDriver):
             guest_metrics_ref = handler.xenapi.VM.get_guest_metrics(vm_ref)
             return handler.xenapi.VM_guest_metrics.get_record(guest_metrics_ref)
         except Exception, error:
-            log.exception("Exceptions raised:%s", error)
+            log.debug("Exceptions raised when get vm guest metrics:%s", error)
             return {}
 
     def _get_vm_metrics_record(self, inst_name):

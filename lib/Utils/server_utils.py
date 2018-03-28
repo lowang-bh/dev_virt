@@ -86,8 +86,14 @@ class ServerDomain(object):
         get the host's default network/Interface which has configured an IP;
         :return: Interface name on host, or None
         """
-        log.info("Get the host default network with IP configured.")
+        log.info("Get the host manage interface as the default device.")
 
+        device_info = self.vnet_driver.get_host_manage_interface_infor()
+        device_name = device_info.get('device', None)
+        if device_name:
+            return device_name
+
+        log.info("Get the host default network with IP configured.")
         devices = self.vnet_driver.get_all_devices()
         for device_name in devices:
             # 'IP': '' or an ip,
@@ -99,7 +105,7 @@ class ServerDomain(object):
             log.error("No device found with an IP configured.")
             return None
 
-    def get_default_storage(self):
+    def get_max_free_size_storage(self):
         """
         get the default storage repository which has the largest volume for user
         :return: the storage name
@@ -265,7 +271,7 @@ if __name__ == "__main__":
 
     print host.virt_driver.get_host_all_storages()
 
-    print host.get_default_storage()
+    print host.get_max_free_size_storage()
 
     print host.get_default_device()
     print host.print_server_hardware_info()
