@@ -28,7 +28,8 @@ if __name__ == "__main__":
     parser.add_option("-t", "--templ", dest="template",
                       help="Template used to create a new VM.")
 
-    parser.add_option("--memory", dest="memory_size", help="Config the memory size in GB.")
+    parser.add_option("--memory", dest="memory_size", help="Config the max(both static and dynamic) memory size in GB.")
+    parser.add_option("--min-mem", dest="min_memory", help="Config the min(both static and dynamic) memory size in GB.")
     parser.add_option("--cpu-max", dest="max_cores", help="Config the max VCPU cores.")
 
     parser.add_option("--vif", dest="vif_index", help="Configure on a virtual interface device")
@@ -98,20 +99,20 @@ if __name__ == "__main__":
             log.fail("No template named: %s", template_name)
             exit(1)
 
+        max_cores, memory_size, min_memory = None, None, None
         try:
-            max_cores, memory_size = None, None
             if options.max_cores is not None:
                 max_cores = int(options.max_cores)
             if options.memory_size is not None:
                 memory_size = float(options.memory_size)
+            if options.min_memory is not None:
+                min_memory = float(options.min_memory)
         except ValueError:
             log.fail("Please input a integer for cpu cores.")
             exit(1)
-
-
-        option_dic = {"vif_ip": options.vif_ip, "vif_netmask": options.vif_netmask,
-                      "device": options.device, "host": host_name,
-                      "user": user, "passwd": passwd}
+        if memory_size and min_memory and memory_size < min_memory:
+            log.fail("Invalid input memory params, max memory should large than min memory.")
+            exit(1)
 
         if options.vif_ip is not None:  #if an IP is specify, please specify a device, vif_index
             if not options.vif_index:
@@ -152,6 +153,9 @@ if __name__ == "__main__":
         ret = virthost.config_memory(new_vm_name, static_max=memory_size, dynamic_max=memory_size)
         if not ret:
             log.warning("Configure memory size failed, keep same as before...")
+        ret = virthost.config_memory(new_vm_name, static_min=min_memory, dynamic_min=min_memory)
+        if not ret:
+            log.warn("Config min memory size failed, keep same as before...")
 
         # 3. config VM
         if options.vif_ip is not None:
