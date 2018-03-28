@@ -161,6 +161,27 @@ class VirtHostDomain(ServerDomain):
 
         return ret
 
+    def config_memory(self, inst_name, static_max=None, static_min=None, dynamic_max=None, dynamic_min=None):
+        """
+        Memory limits must satisfy: static_min <= dynamic_min <= dynamic_max <= static_max
+        :param inst_name:
+        :param static_max:
+        :param static_min:
+        :param dynamic_max:
+        :param dynamic_min:
+        :return:
+        """
+        log.info("Start to config the memory in VM[%s]", inst_name)
+        if static_max or static_min:
+            ret = self.virt_driver.set_vm_static_memory(inst_name, memory_max=static_max, memory_min=static_min)
+            if not ret:
+                return False
+        if dynamic_max or dynamic_min:
+            ret = self.virt_driver.set_vm_dynamic_memory(inst_name, memory_max=dynamic_max, memory_min=dynamic_min)
+            if not ret:
+                return False
+        return True
+
     def power_on_vm(self, vm_name):
         """
         :param vm_name:
