@@ -836,6 +836,6 @@ if __name__ == "__main__":
     parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
     (options, args) = parser.parse_args()
     virt = XenVirtDriver(hostname=options.host, user=options.user, passwd=options.passwd)
-    print virt.set_vm_static_memory(inst_name="test1", memory_max=2, memory_min=0.5)
-    print virt.set_vm_dynamic_memory("test1", 1, 0.5)
+    print virt.set_vm_static_memory(inst_name="test2", memory_max=1, memory_min=1)
+    print virt.set_vm_dynamic_memory("test2", 1, 1)
 
