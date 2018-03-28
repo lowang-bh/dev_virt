@@ -41,6 +41,7 @@ if __name__ == "__main__":
 
     parser.add_option("--cpu-cores", dest="cpu_cores", help="Config the VCPU cores lively")
     parser.add_option("--cpu-max", dest="max_cores", help="Config the max VCPU cores.")
+    parser.add_option("--memory", dest="memory_size", help="Config the memory size in GB.")
 
     parser.add_option("--list-vif", dest="list_vif", action="store_true",
                       help="List the virtual interface device in guest VM")
@@ -61,7 +62,8 @@ if __name__ == "__main__":
 
     if not options.list_vif and not options.list_pif and not options.list_sr and\
         (not options.vif_index and not options.del_index and not options.add_index and
-         not options.disk_size and not options.cpu_cores and not options.max_cores):
+         not options.disk_size and not options.cpu_cores and not options.max_cores and
+        not options.memory_size):
         parser.print_help()
         exit(1)
 
@@ -229,4 +231,25 @@ if __name__ == "__main__":
             exit(0)
         else:
             log.fail("Config VCPU cores failed.")
+            exit(1)
+
+    elif options.memory_size is not None:
+        try:
+            memory_size = float(options.memory_size)
+        except ValueError:
+            log.fail("Please input a valid number for memory.")
+            exit(1)
+
+        if virt_driver.is_instance_running(inst_name):
+            ret = virthost.config_memory_lively(inst_name, memory_size)
+        elif virt_driver.is_instance_halted(inst_name):
+            ret = virthost.config_memory(inst_name, static_max=memory_size, dynamic_max=memory_size)
+        else:
+            log.fail("The VM is not support configuring the memory in current state.")
+            exit(1)
+        if ret:
+            log.success("Memory set successfully.")
+            exit(0)
+        else:
+            log.fail("Memory set failed.")
             exit(1)

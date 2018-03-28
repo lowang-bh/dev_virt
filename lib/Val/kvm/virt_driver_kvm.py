@@ -774,3 +774,28 @@ class QemuVirtDriver(VirtDriver):
         :return: (name_label, hostname)
         """
         raise NotImplementedError()
+
+    def set_vm_static_memory(self, inst_name, memory_max, memory_min):
+        """
+        :param inst_name:
+        :param memory_max: size of GB
+        :param memory_min: size of GB
+        :return:
+        """
+        raise NotImplementedError()
+
+    def set_vm_dynamic_memory(self, inst_name, memory_max, memory_min):
+        """
+        :param inst_name:
+        :param max_memory:
+        :param min_memory:
+        :return:
+        """
+        raise NotImplementedError()
+
+    def set_vm_memory_live(self, inst_name, memory_target):
+        """
+        :param memory_target: Memory in GB
+        :return:
+        """
+        raise NotImplementedError()

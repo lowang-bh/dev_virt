@@ -12,8 +12,8 @@ from lib.Utils.vm_utils import VirtHostDomain
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
         create_vm.py -c new_vm_name -t template
-        create_vm.py -c new_vm_name -t template [--host=ip --user=user --pwd=passwd]
-        create_vm.py -c new_vm_name -t template [--vif=vif_index --device=eth0 --ip=ip] [--host=ip --user=user --pwd=passwd]
+        create_vm.py -c new_vm_name -t template [--memory=size --cpu-max=cores] [--host=ip --user=user --pwd=passwd]
+        create_vm.py -c new_vm_name -t template [--vif=vif_index --ip=ip [--device=eth0]] [--host=ip --user=user --pwd=passwd]
         create_vm.py --list-vm       [--host=ip --user=user --pwd=passwd]
         create_vm.py --list-templ    [--host=ip --user=user --pwd=passwd]
         create_vm.py --list-network  [--host=ip --user=user --pwd=passwd]
@@ -27,6 +27,9 @@ if __name__ == "__main__":
                       help="Create a new VM with a template.")
     parser.add_option("-t", "--templ", dest="template",
                       help="Template used to create a new VM.")
+
+    parser.add_option("--memory", dest="memory_size", help="Config the memory size in GB.")
+    parser.add_option("--cpu-max", dest="max_cores", help="Config the max VCPU cores.")
 
     parser.add_option("--vif", dest="vif_index", help="Configure on a virtual interface device")
     parser.add_option("--device", dest="device", help="The target physic NIC name with an associated network vif attach(ed) to")
@@ -95,6 +98,17 @@ if __name__ == "__main__":
             log.fail("No template named: %s", template_name)
             exit(1)
 
+        try:
+            max_cores, memory_size = None, None
+            if options.max_cores is not None:
+                max_cores = int(options.max_cores)
+            if options.memory_size is not None:
+                memory_size = float(options.memory_size)
+        except ValueError:
+            log.fail("Please input a integer for cpu cores.")
+            exit(1)
+
+
         option_dic = {"vif_ip": options.vif_ip, "vif_netmask": options.vif_netmask,
                       "device": options.device, "host": host_name,
                       "user": user, "passwd": passwd}
@@ -130,7 +144,16 @@ if __name__ == "__main__":
             exit(1)
         log.info("New instance [%s] created successfully.", new_vm_name)
 
-        # 2. config VM
+        # 2. config cpu cores and memory
+        ret = virthost.config_vcpus(new_vm_name, vcpu_max=max_cores)
+        if not ret:
+            log.warn("Config VCPU cores failed, keep same as before...")
+
+        ret = virthost.config_memory(new_vm_name, static_max=memory_size, dynamic_max=memory_size)
+        if not ret:
+            log.warning("Configure memory size failed, keep same as before...")
+
+        # 3. config VM
         if options.vif_ip is not None:
             config_ret = virthost.config_vif(new_vm_name, options.vif_index, options.device, options.network, options.vif_ip)
             if not config_ret:
@@ -139,7 +162,7 @@ if __name__ == "__main__":
                 log.info("Successfully configured the virtual interface device [%s] to VM [%s].",
                          options.vif_index, new_vm_name)
 
-        # 3. power on VM
+        # 4. power on VM
         ret = virthost.power_on_vm(new_vm_name)
         if ret:
             log.success("Create VM [%s] and power on successfully.", new_vm_name)

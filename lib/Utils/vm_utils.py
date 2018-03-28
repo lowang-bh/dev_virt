@@ -143,6 +143,9 @@ class VirtHostDomain(ServerDomain):
         :param vcpu_max: the max vcpu  number
         :return:
         """
+        if not vcpu_max and not vcpu_nums:
+            return True
+
         log.info("Start to configure the VCPU in VM [%s].", inst_name)
 
         if vcpu_nums and self.virt_driver.is_instance_running(inst_name=inst_name):
@@ -181,6 +184,16 @@ class VirtHostDomain(ServerDomain):
             if not ret:
                 return False
         return True
+
+    def config_memory_lively(self, inst_name, target_memory):
+        """
+        :param inst_name:
+        :param target_memory:
+        :return:
+        """
+        log.info("Start to config the memory for a running VM.")
+
+        return self.virt_driver.set_vm_memory_live(inst_name, target_memory)
 
     def power_on_vm(self, vm_name):
         """
@@ -312,10 +325,10 @@ class VirtHostDomain(ServerDomain):
         log.info("Max Vcpus: %s, Current Vcpus: %s\n", vm_record.get("VCPUs_max"), vm_record.get("VCPUs_live"))
 
         log.info("VM memory informations:")
-        log.info("Dynamic Memory: Max: %4s GB, Min: %4s GB", vm_record.get("memory_dynamic_max"),
-                 vm_record.get("memory_dynamic_min"))
         log.info("Static  Memory: Max: %4s GB, Min: %4s GB", vm_record.get("memory_static_max"),
                  vm_record.get("memory_static_min"))
+        log.info("Dynamic Memory: Max: %4s GB, Min: %4s GB", vm_record.get("memory_dynamic_max"),
+                 vm_record.get("memory_dynamic_min"))
         log.info("Target  Memory: %4s GB, Actual Memory: %4s GB\n", vm_record.get("memory_target", 0),
                  vm_record['memory_actual'])
 
@@ -532,4 +545,5 @@ if __name__ == "__main__":
     print dom.get_default_device()
     print dom.get_host_all_storage_info()
     print dom.print_server_hardware_info()
-    print dom.update_database_info(inst_name="test1")
+    print dom.update_database_info(inst_name="test2")
+    print dom.config_memory("test1", dynamic_min=2, dynamic_max=2)
