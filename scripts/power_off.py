@@ -36,7 +36,6 @@ if __name__ == "__main__":
     host_name = options.host
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
-    option_dic = {"host": host_name, "user": user, "passwd": passwd}
 
     virthost = VirtHostDomain(host_name, user, passwd)
     if not virthost:

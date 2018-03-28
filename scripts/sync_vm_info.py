@@ -4,7 +4,6 @@
 
 from optparse import OptionParser
 from lib.Log.log import log
-from lib.Val.virt_factory import VirtFactory
 from lib.Utils.vm_utils import VirtHostDomain
 from lib.Utils.server_utils import ServerDomain
 
