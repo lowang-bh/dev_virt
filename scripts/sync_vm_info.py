@@ -57,7 +57,6 @@ if __name__ == "__main__":
         server.update_database_info()
         virt_host = VirtHostDomain(host_name, user, passwd)
         for vm_name in virt_host.virt_driver.get_vm_list():
-            # TODO sync IP
             virt_host.create_database_info(inst_name=vm_name)
             virt_host.update_database_info(inst_name=vm_name)
 
