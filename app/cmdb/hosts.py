@@ -73,7 +73,7 @@ class HostDriver(HostDbDriver):
 
         return True
 
-    def update(self, id=None, sn=None, hostname=None, data=None):
+    def update(self, id=None, sn=None, hostname=None, data=None, json_data=None):
         """
         update the data to a record with its primary key is id, id/sn/hostname should not be changed
         :param id: PK
@@ -86,9 +86,16 @@ class HostDriver(HostDbDriver):
             log.error("Update to DB need an ID, a hostname or a SN to identify which record will be updated.")
             return False
 
-        if not isinstance(data, dict):
-            log.error("Data should be a dict.")
-            return  False
+        if data:
+            if not isinstance(data, dict):
+                log.error("Data should be a dict.")
+                return  False
+        elif json_data:
+            if not isinstance(json_data, dict):
+                log.error("Json data should be a dict")
+                return False
+        else:
+            return True
 
         query_list = self.query(id=id, sn=sn, hostname=hostname)
         if not query_list:
@@ -97,14 +104,18 @@ class HostDriver(HostDbDriver):
 
         modified = query_list[0]['modified']
         record_id = query_list[0]['id']
-        data['modified'] = str(modified)
-
-        json_data = json.dumps(data)
-
         url = self.url + str(record_id) + "/"  # update url should be endwith "/"
-        log.debug("Patch url:%s, json data: %s", url, json_data)
-        #  TODO : why json data don't take effect
-        self.resp = self.session.patch(url, json=json_data)
+
+        if data:
+            data['modified'] = str(modified)
+            log.debug("Patch url:%s, data: %s", url, data)
+            self.resp = self.session.patch(url, data=data) # When dict value is None, pass in data will not set db null
+        elif json_data:
+            json_data['modified'] = str(modified)
+            json_data = json.dumps(json_data)
+            log.debug("Patch url:%s, json data: %s", url, json_data)
+            self.resp = self.session.patch(url, json=json_data) # when dict value is none, json value is null, set db null
+
         if self.resp.status_code == requests.codes.ok:
             log.info("Update to database successfully.")
             return True

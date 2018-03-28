@@ -321,15 +321,35 @@ class XenVirtDriver(VirtDriver):
             if memory_max:
                 memory_max = int(gb * float(memory_max))
                 self._hypervisor_handler.xenapi.VM.set_memory_dynamic_max(vm_ref, str(memory_max))
-                print self.get_vm_record(inst_name=inst_name)
             if memory_min:
                 memory_min = int(gb * float(memory_min))
                 self._hypervisor_handler.xenapi.VM.set_memory_dynamic_min(vm_ref, str(memory_min))
-                print self.get_vm_record(inst_name)
 
             return True
         except Exception as error:
             log.exception("Exception raise when set static min memory: %s", error)
+            return False
+
+    def set_vm_memory_live(self, inst_name, memory_target):
+        """
+        :param memory_target: Memory in GB
+        :return:
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        if not self.is_instance_running(inst_name=inst_name):
+            log.error("Set live memory need VM to be running.")
+            return False
+        try:
+            vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
+            gb = 1024.0 * 1024.0 * 1024.0
+            memory_size = int(gb * float(memory_target))
+            self._hypervisor_handler.xenapi.VM.set_memory_target_live(vm_ref, str(memory_size))
+
+            return True
+        except Exception as error:
+            log.exception("Exception raise when set live memory: %s", error)
             return False
 
     #  ## Set or GET VM VCPU number###
@@ -817,5 +837,5 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     virt = XenVirtDriver(hostname=options.host, user=options.user, passwd=options.passwd)
     print virt.set_vm_static_memory(inst_name="test1", memory_max=2, memory_min=0.5)
-    print virt.set_vm_dynamic_memory("test1", 2, 1)
+    print virt.set_vm_dynamic_memory("test1", 1, 0.5)
 

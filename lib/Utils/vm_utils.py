@@ -449,7 +449,7 @@ class VirtHostDomain(ServerDomain):
             return True
 
         try:
-            ret = self.db_driver.update(hostname=inst_name, data=sync_data)
+            ret = self.db_driver.update(hostname=inst_name, json_data=sync_data)
         except Exception as error:
             log.warn("Delete ip information raise error: %s", error)
             ret = False
