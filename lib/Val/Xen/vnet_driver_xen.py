@@ -24,7 +24,6 @@ class XenVnetDriver(VnetDriver):
 
     def __init__(self, hostname=None, user="root", passwd=""):
         VnetDriver.__init__(self, hostname, user, passwd)
-        self._hypervisor_handler = None
 
         self._hypervisor_handler = self.get_handler()
 
@@ -51,12 +50,20 @@ class XenVnetDriver(VnetDriver):
             self._hypervisor_handler = XenAPI.Session("http://" + str(self.hostname))
 
         old = signal.signal(signal.SIGALRM, self.timeout_handler)
-        signal.alarm(5)   #  connetctions timeout set to 5 secs
+        signal.alarm(4)   #  connetctions timeout set to 5 secs
         try:
             self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1, 'XenVirtDriver')
         except Exception, error:
-            log.exception("Exception raised:%s when get handler.", error)
-            return None
+            log.warn("Exception raised: %s when get handler.", error)
+            log.info("Retry connecting to :%s", "https://" + str(self.hostname))
+            self._hypervisor_handler = XenAPI.Session("https://" + str(self.hostname))
+
+            signal.alarm(4)
+            try:
+                self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1, 'XenVirtDriver')
+            except Exception as errors:
+                log.exception("Exception errors:%s when get handler", errors)
+                return None
         finally:
             signal.alarm(0)
             signal.signal(signal.SIGALRM, old)

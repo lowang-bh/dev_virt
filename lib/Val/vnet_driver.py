@@ -20,6 +20,12 @@ class VnetDriver(object):
         self.hostname = hostname
         self.user = user
         self.passwd = passwd
+        self._hypervisor_handler = None
+
+    def __nonzero__(self):
+        if self._hypervisor_handler is None:
+            return False
+        return True
 
     @staticmethod
     def timeout_handler(signal_num, frame):

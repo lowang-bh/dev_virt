@@ -24,15 +24,18 @@ class HostDbDriver(DatabaseDriver):
 
         login_data = {'username': self.user, 'password': self.passwd}
 
-        self.session = requests.Session()
+        try:
+            self.session = requests.Session()
+            login_res = self.session.post(self.login_url, data=login_data)
+            res_content = json.loads(login_res.content)
 
-        login_res = self.session.post(self.login_url, data=login_data)
-        res_content = json.loads(login_res.content)
-
-        if res_content['status'] == 1:  # the success check depend on the login html
-            log.debug("login db_host [%s] with username [%s] success.", self.db_host, self.user)
-        else:
-            log.error("Login db_host [%s] with username [%s] failed.", self.db_host, self.user)
+            if res_content['status'] == 1:  # the success check depend on the login html
+                log.debug("login db_host [%s] with username [%s] success.", self.db_host, self.user)
+            else:
+                log.error("Login db_host [%s] with username [%s] failed.", self.db_host, self.user)
+                self.session = None
+        except requests.exceptions as error:
+            log.exception("Exception when init session: %s", error)
             self.session = None
 
     def close(self):

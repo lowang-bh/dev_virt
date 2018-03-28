@@ -53,7 +53,6 @@ class QemuVirtDriver(VirtDriver):
 
     def __init__(self, hostname=None, user=None, passwd=None):
         VirtDriver.__init__(self, hostname, user, passwd)
-        self._hypervisor_handler = None
 
         self._auth = [[libvirt.VIR_CRED_AUTHNAME, libvirt.VIR_CRED_PASSPHRASE], self._request_cred, None]
         # conn = libvirt.open(name) need root username
