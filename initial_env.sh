@@ -55,7 +55,7 @@ pip install six
 pip install ipaddress
 pip install requests
 #sed -i "/PYTHONPATH/s/$/:\/root\/python27\/dev_xen" python27/bin/activate
-sed -i '/^export PATH/a\export PYTHONPATH=$PYTHONPATH:/root/python27/dev_xen' python27/bin/activate
+sed -i "/^export PATH/a\export PYTHONPATH=\$PYTHONPATH:$CURDIR" python27/bin/activate
 
 echo "Env setup successfully."
 
