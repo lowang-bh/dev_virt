@@ -174,13 +174,52 @@ class VirtHostDomain(ServerDomain):
         :param dynamic_min:
         :return:
         """
-        log.info("Start to config the memory in VM[%s]", inst_name)
         if static_max or static_min:
+            log.info("Start to config the static memory in VM [%s]", inst_name)
             ret = self.virt_driver.set_vm_static_memory(inst_name, memory_max=static_max, memory_min=static_min)
             if not ret:
                 return False
         if dynamic_max or dynamic_min:
+            log.info("Start to config the dynamic memory in VM [%s]", inst_name)
             ret = self.virt_driver.set_vm_dynamic_memory(inst_name, memory_max=dynamic_max, memory_min=dynamic_min)
+            if not ret:
+                return False
+        return True
+
+    def config_max_memory(self, inst_name, static_max=None, dynamic_max=None):
+        """
+        Memory limits must satisfy: static_min <= dynamic_min <= dynamic_max <= static_max
+        :param inst_name:
+        :param static_max:
+        :param dynamic_max:
+        :return:
+        """
+        log.info("Start to config the max memory to VM [%s]", inst_name)
+        if static_max:
+            ret = self.virt_driver.set_vm_static_memory(inst_name, memory_max=static_max)
+            if not ret:
+                return False
+        if dynamic_max:
+            ret = self.virt_driver.set_vm_dynamic_memory(inst_name, memory_max=dynamic_max)
+            if not ret:
+                return False
+        return True
+
+    def config_min_memory(self, inst_name, static_min=None, dynamic_min=None):
+        """
+        Memory limits must satisfy: static_min <= dynamic_min <= dynamic_max <= static_max
+        :param inst_name:
+        :param static_min:
+        :param dynamic_min:
+        :return:
+        """
+        log.info("Start to config the minimum memory to VM [%s]", inst_name)
+        if static_min:
+            ret = self.virt_driver.set_vm_static_memory(inst_name, memory_min=static_min)
+            if not ret:
+                return False
+        if dynamic_min:
+            ret = self.virt_driver.set_vm_dynamic_memory(inst_name, memory_min=dynamic_min)
             if not ret:
                 return False
         return True
@@ -364,7 +403,8 @@ class VirtHostDomain(ServerDomain):
 
         vm_host_ip = self.vnet_driver.get_host_manage_interface_infor()['IP']
 
-        ret = self.db_driver.create(hostname, sn, cpu_cores, int(memory_size), int(disk_size), disk_num, vm_host_ip=vm_host_ip)
+        ret = self.db_driver.create(hostname, sn, cpu_cores, int(memory_size), int(disk_size), disk_num,
+                                    vm_host_ip=vm_host_ip)
         if ret:
             log.info("Create record to database successfully.")
         else:

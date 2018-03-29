@@ -176,12 +176,13 @@ class ServerDomain(object):
         if not IpCheck.is_valid_ipv4_parameter(vif_ip, vif_netmask, gateway=vif_gateway):
             return False
 
-        if is_IP_pingable(vif_ip):
-            log.error("Ipaddress [%s] is already be used(Ping test).", vif_ip)
-            return False
-
+        #  First check it from database
         if self.check_ip_used(vif_ip):
             log.error("Ip address [%s] already in used.(Check from database).", vif_ip)
+            return False
+        # This ping test take a second, put it at last.
+        if is_IP_pingable(vif_ip):
+            log.error("Ipaddress [%s] is already be used(Ping test).", vif_ip)
             return False
 
         return True
