@@ -231,9 +231,10 @@ class XenVnetDriver(VnetDriver):
 
     def get_vif_ip(self, inst_name, vif_index):
         """
+        Note: in Xenserver the device index is not same as the eth index in guest internal.eg: 0,3 will be eth0, eth1
         :param inst_name:
-        :param vif_index:
-        :return:
+        :param vif_index: device index, not the eth index in guest internal
+        :return: None or IP
         """
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
@@ -246,17 +247,25 @@ class XenVnetDriver(VnetDriver):
 
         network_dict = {}
         try:
+            all_vifs = self.get_all_vifs_indexes(inst_name)
             guest_metrics_ref = self._hypervisor_handler.xenapi.VM.get_guest_metrics(vm_ref)
             network_dict = self._hypervisor_handler.xenapi.VM_guest_metrics.get_networks(guest_metrics_ref)
         except Exception, error:
             log.debug("Except in get_vif_ip: %s", error)
 
-        return network_dict.get(str(vif_index)+"/ip", None)
+        try:
+            vif_key = all_vifs.index(str(vif_index))
+        except ValueError:
+            log.error("Vif index does not exist.")
+            return None
+
+        return network_dict.get(str(vif_key)+"/ip", None)
 
 
     def get_vif_info(self, inst_name, vif_index):
         """
         return a dict of vif information, MAC, IP, etc
+        Note: in Xenserver the device index is not same as the eth index in guest internal.eg: 0,3 will be eth0, eth1
         :param inst_name:
         :param vif_index:
         :return:
@@ -303,8 +312,9 @@ class XenVnetDriver(VnetDriver):
         except Exception, error:
             log.debug("Exceptions when get VM_guest_metrics: %s", error)
             network_dict = {}
-        for vindex in vifs_info:
-            vifs_info[vindex].setdefault('ip', network_dict.get(str(vindex)+"/ip", None))
+
+        for vkey, vindex in enumerate(vifs_info.keys()):
+            vifs_info[vindex].setdefault('ip', network_dict.get(str(vkey)+"/ip", None))
 
         return vifs_info
 
@@ -487,10 +497,12 @@ if __name__ == "__main__":
     print vnet.get_vif_ip("test2", 2)
     print vnet.get_vif_ip("test2", 3)
 
-    print vnet.get_vif_info("test2", 0)
-    print vnet.get_vif_info("test2", 1)
-    print vnet.get_vif_info("test2", 2)
-    print vnet.get_vif_info("test2", 3)
+    print "test3"
+    print vnet.get_all_vifs_indexes("test3")
+    print vnet.get_vif_info("test3", 0)
+    print vnet.get_vif_info("test3", 1)
+    print vnet.get_vif_info("test3", 2)
+    print vnet.get_vif_info("test3", 3)
 
 
-    print vnet.get_all_vif_info("test2")
+    print vnet.get_all_vif_info("test3")
