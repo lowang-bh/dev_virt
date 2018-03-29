@@ -254,7 +254,7 @@ class XenVnetDriver(VnetDriver):
             log.debug("Except in get_vif_ip: %s", error)
 
         try:
-            vif_key = all_vifs.index(str(vif_index))
+            vif_key = sorted(all_vifs).index(str(vif_index))
         except ValueError:
             log.error("Vif index does not exist.")
             return None
@@ -313,7 +313,7 @@ class XenVnetDriver(VnetDriver):
             log.debug("Exceptions when get VM_guest_metrics: %s", error)
             network_dict = {}
 
-        for vkey, vindex in enumerate(vifs_info.keys()):
+        for vkey, vindex in enumerate(sorted(vifs_info.keys())):
             vifs_info[vindex].setdefault('ip', network_dict.get(str(vkey)+"/ip", None))
 
         return vifs_info
