@@ -150,10 +150,10 @@ if __name__ == "__main__":
         if not ret:
             log.warn("Config VCPU cores failed, keep same as before...")
 
-        ret = virthost.config_memory(new_vm_name, static_max=memory_size, dynamic_max=memory_size)
+        ret = virthost.config_max_memory(new_vm_name, static_max=memory_size, dynamic_max=memory_size)
         if not ret:
             log.warning("Configure memory size failed, keep same as before...")
-        ret = virthost.config_memory(new_vm_name, static_min=min_memory, dynamic_min=min_memory)
+        ret = virthost.config_min_memory(new_vm_name, static_min=min_memory, dynamic_min=min_memory)
         if not ret:
             log.warn("Config min memory size failed, keep same as before...")
 

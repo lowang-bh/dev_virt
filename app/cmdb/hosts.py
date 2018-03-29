@@ -136,9 +136,9 @@ class HostDriver(HostDbDriver):
         url = self.url
         db_name = self.db_name(url)
 
-        data = {}
+        data = {'pagesize': 'max'}
         url += "?"
-        select_item = []
+        select_item = ["pagesize=max"]
         if id:
             data['id'] = id
             select_item.append("id=%s" % id)
