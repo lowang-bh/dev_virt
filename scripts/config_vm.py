@@ -41,7 +41,9 @@ if __name__ == "__main__":
 
     parser.add_option("--cpu-cores", dest="cpu_cores", help="Config the VCPU cores lively")
     parser.add_option("--cpu-max", dest="max_cores", help="Config the max VCPU cores.")
-    parser.add_option("--memory", dest="memory_size", help="Config the memory size in GB.")
+    parser.add_option("--memory", dest="memory_size", help="Config the target memory size in GB.")
+    parser.add_option("--min-mem", dest="min_memory", help="Config the min static memory size in GB.")
+    parser.add_option("--max-mem", dest="max_memory", help="Config the max static memory size in GB.")
 
     parser.add_option("--list-vif", dest="list_vif", action="store_true",
                       help="List the virtual interface device in guest VM")
@@ -63,7 +65,7 @@ if __name__ == "__main__":
     if not options.list_vif and not options.list_pif and not options.list_sr and\
         (not options.vif_index and not options.del_index and not options.add_index and
          not options.disk_size and not options.cpu_cores and not options.max_cores and
-        not options.memory_size):
+        not options.memory_size and not options.min_memory and not options.max_memory):
         parser.print_help()
         exit(1)
 
@@ -233,20 +235,48 @@ if __name__ == "__main__":
             log.fail("Config VCPU cores failed.")
             exit(1)
 
-    elif options.memory_size is not None:
+    elif options.memory_size is not None or options.min_memory is not None or options.max_memory is not None:
+        memory_size, min_memory, max_memory = None, None, None
         try:
-            memory_size = float(options.memory_size)
+            if options.memory_size is not None:
+                memory_size = float(options.memory_size)
+            if options.min_memory is not None:
+                min_memory = float(options.min_memory)
+            if options.max_memory is not None:
+                max_memory = float(options.max_memory)
         except ValueError:
             log.fail("Please input a valid number for memory.")
             exit(1)
 
-        if virt_driver.is_instance_running(inst_name):
-            ret = virthost.config_memory_lively(inst_name, memory_size)
-        elif virt_driver.is_instance_halted(inst_name):
-            ret = virthost.config_memory(inst_name, static_max=memory_size, dynamic_max=memory_size)
-        else:
-            log.fail("The VM is not support configuring the memory in current state.")
+        if memory_size and min_memory and memory_size < min_memory:
+            log.fail("Invalid input memory params, memory size should be larger than min memory.")
             exit(1)
+        if memory_size and max_memory and memory_size > max_memory:
+            log.fail("Invalid input memory params, memory size should be smaller than max memory.")
+            exit(1)
+        if max_memory and min_memory and min_memory > max_memory:
+            log.fail("Invalid input memory params, min_memory should be smaller than max memory.")
+            exit(1)
+
+        log.debug("memory_size:%s, min_memory:%s, max_memory:%s", memory_size, min_memory, max_memory)
+        if max_memory:
+            ret = virthost.config_max_memory(inst_name, static_max=max_memory)
+            if not ret:
+                log.warning("Configure max memory size failed, keep same as before...")
+        if min_memory:
+            ret = virthost.config_min_memory(inst_name, static_min=min_memory)
+            if not ret:
+                log.warn("Config min memory size failed, keep same as before...")
+
+        if memory_size:
+            if virt_driver.is_instance_running(inst_name):
+                ret = virthost.config_memory_lively(inst_name, memory_size)
+            elif virt_driver.is_instance_halted(inst_name):
+                ret = virthost.config_memory(inst_name, dynamic_min=memory_size, dynamic_max=memory_size)
+            else:
+                log.fail("The VM is not support configuring the memory in current state.")
+                exit(1)
+        # only check the target memory configuration
         if ret:
             log.success("Memory set successfully.")
             exit(0)

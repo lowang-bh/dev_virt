@@ -698,7 +698,7 @@ class QemuVirtDriver(VirtDriver):
             dom = handler.lookupByName(inst_name)
         except libvirtError:
             return {}
-
+        #  dom.info() consist of the state, max memory,memory, cpus and cpu time for the domain.
         vm_record = {}
         vm_record['VCPUs_max'] = dom.maxVcpus()
         vm_record['VCPUs_live'] = vm_record['VCPUs_max']

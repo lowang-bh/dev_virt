@@ -194,12 +194,14 @@ class VirtHostDomain(ServerDomain):
         :param dynamic_max:
         :return:
         """
-        log.info("Start to config the max memory to VM [%s]", inst_name)
+        log.debug("config max memory in VM [%s]: static max:%s, dynamic max:%s",inst_name, static_max, dynamic_max)
         if static_max:
+            log.info("Start to config the static max memory to VM [%s]", inst_name)
             ret = self.virt_driver.set_vm_static_memory(inst_name, memory_max=static_max)
             if not ret:
                 return False
         if dynamic_max:
+            log.info("Start to config the dynamic max memory to VM [%s]", inst_name)
             ret = self.virt_driver.set_vm_dynamic_memory(inst_name, memory_max=dynamic_max)
             if not ret:
                 return False
@@ -213,12 +215,13 @@ class VirtHostDomain(ServerDomain):
         :param dynamic_min:
         :return:
         """
-        log.info("Start to config the minimum memory to VM [%s]", inst_name)
         if static_min:
+            log.info("Start to config the static minimum memory to VM [%s]", inst_name)
             ret = self.virt_driver.set_vm_static_memory(inst_name, memory_min=static_min)
             if not ret:
                 return False
         if dynamic_min:
+            log.info("Start to config the dynamic minimum memory to VM [%s]", inst_name)
             ret = self.virt_driver.set_vm_dynamic_memory(inst_name, memory_min=dynamic_min)
             if not ret:
                 return False
