@@ -446,21 +446,24 @@ class VirtHostDomain(ServerDomain):
         memory_size = vm_record['memory_target']
 
         disk_info = self.virt_driver.get_all_disk(inst_name=inst_name)
-        disk_num = len(disk_info)
+        disk_size, disk_num = 0, 0
+        for disk in disk_info:
+            size = self.virt_driver.get_disk_size(inst_name, disk)
+            disk_size += size
+            if size >= 1: disk_num += 1 # exclude those cd
 
         vif_dic = self.vnet_driver.get_all_vif_info(inst_name)
         first_ip = vif_dic.get('0', {}).get('ip', None)
         # second_ip is local ip
         second_ip = vif_dic.get('1', {}).get('ip', None)
         vm_host_ip = self.vnet_driver.get_host_manage_interface_infor()['IP']
-        # TODO: sync disk size
-        # for disk in disk_info:
-        #     disk_size += virt_driver.get_disk_size(inst_name, disk)
+
         os_info = self.virt_driver.get_os_type(inst_name, short_name=False)
 
         sync_data = {"cpu_cores": cpu_cores,
                      "memory_size": int(memory_size),
                      "disk_num": int(disk_num),
+                     "disk_size": int(disk_size),
                      "first_ip": first_ip,
                      "second_ip": second_ip,
                      "vm_host_ip": vm_host_ip,
