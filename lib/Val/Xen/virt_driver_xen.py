@@ -308,20 +308,22 @@ class XenVirtDriver(VirtDriver):
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
 
-        if not memory_max and not memory_min:
-            log.info("No memory size given, return...")
-            return True
-
         # both a running or halted vm, set dynamic memory is supported. but it take a few while when vm is running
         try:
             vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
             gb = 1024.0 * 1024.0 * 1024.0
-            if memory_max:
+            if memory_max and memory_min:
+                memory_max = int(gb * float(memory_max))
+                memory_min = int(gb * float(memory_min))
+                self._hypervisor_handler.xenapi.VM.set_memory_dynamic_range(vm_ref, str(memory_min), str(memory_max))
+            elif memory_max:
                 memory_max = int(gb * float(memory_max))
                 self._hypervisor_handler.xenapi.VM.set_memory_dynamic_max(vm_ref, str(memory_max))
-            if memory_min:
+            elif memory_min:
                 memory_min = int(gb * float(memory_min))
                 self._hypervisor_handler.xenapi.VM.set_memory_dynamic_min(vm_ref, str(memory_min))
+            else:
+                log.info("No memory size given, return...")
 
             return True
         except Exception as error:
