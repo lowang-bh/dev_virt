@@ -240,7 +240,9 @@ class ServerDomain(object):
             return True
 
         cpu_cores = self.virt_driver.get_host_cpu_info().get('cpu_cores')
-        memory_size = self.virt_driver.get_host_mem_info().get('size_total')
+        memory_info = self.virt_driver.get_host_mem_info()
+        memory_size = memory_info.get('size_total')
+        free_memory = memory_info.get('size_free')
 
         disk_num = len(filter(lambda x: int(x[0]) > 10, self.get_host_all_storage_info().values()))
         default_storage = self.virt_driver.get_host_storage_info()  # only write the system disk size
@@ -250,6 +252,7 @@ class ServerDomain(object):
         # TODO: try to add free memory record in DB
         sync_data = {"cpu_cores": cpu_cores,
                      "memory_size": int(memory_size),
+                     "free_memory": int(free_memory),
                      "disk_num": int(disk_num),
                      "disk_size": int(disk_size),
                      "first_ip": first_ip
