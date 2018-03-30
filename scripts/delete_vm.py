@@ -15,13 +15,14 @@ from lib.Utils.vm_utils import VirtHostDomain
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
 
-        delete_vm.py vm1 vm2 [--host=ip --user=user --pwd=passwd]
+        delete_vm.py  --vm=vm_name [--host=ip --user=user --pwd=passwd]
         """
 
     parser = OptionParser(usage=usage)
     parser.add_option("--host", dest="host", help="IP for host server")
     parser.add_option("-u", "--user", dest="user", help="User name for host server")
     parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
+    parser.add_option("--vm", dest="vm", help="Delete an unused VM in server, the disk will not be deleted")
 
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
@@ -40,7 +41,11 @@ if __name__ == "__main__":
 
     virt_driver = virthost.virt_driver
 
-    if args:
+    if options.vm:
+        vm_name = options.vm
+        if not virt_driver.is_instance_exists(vm_name):
+            log.fail("No VM named %s.", vm_name)
+            exit(1)
         #  need user to confirm the input
         # answer = input("Are you sure to delete those VMs: %s ?(Yes/No)" % args)
         prompt = "Are you sure to delete those VMs: %s? (Yes/No)\n" % args
@@ -51,26 +56,13 @@ if __name__ == "__main__":
         else:
             log.info("You input 'Yes' to confirm the deletion.")
 
-        res_dict = {}
-        for vm_name in args:
-            if not virt_driver.is_instance_exists(vm_name):
-                log.warn("No VM exists with name [%s].", vm_name)
-                continue
-
-            res_dict.setdefault(vm_name, 0)
-            ret = virthost.delete_vm(vm_name)
-            if not ret:
-                log.error("VM [%s] deleted failed.", vm_name)
-                res_dict[vm_name] = 1
-
-            time.sleep(0.5)
-
-        failed_vm_list = [item[0] for item in filter(lambda x:x[1] == 1, res_dict.items())]
-        if failed_vm_list:
-            log.fail("VMs %s deleted failed.", str(failed_vm_list))
+        ret = virthost.delete_vm(vm_name)
+        if not ret:
+            log.fail("VM [%s] deleted failed.", vm_name)
             exit(1)
         else:
-            log.success("All VMs in %s have been deleted successfully.", args)
+            log.success("VM [%s] has been deleted successfully.", vm_name)
+            exit(0)
 
     else:
         parser.print_help()

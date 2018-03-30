@@ -13,6 +13,7 @@ if __name__ == "__main__":
         Sync the information about the host and all VMs to database.
         
         sync_vm_info.py             [--host=ip --user=user --pwd=passwd]
+        sync_vm_info.py --update    [--host=ip --user=user --pwd=passwd]
         sync_vm_info.py --vm=vmname [--host=ip --user=user --pwd=passwd]
         """
 
@@ -20,6 +21,7 @@ if __name__ == "__main__":
     parser.add_option("--host", dest="host", help="IP for host server")
     parser.add_option("-u", "--user", dest="user", help="User name for host server")
     parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
+    parser.add_option("--update", dest="update", action="store_true", help="Update the server's infor to database")
     parser.add_option("--vm", dest="vm_name", help="Sync the VM's infor to database")
 
     (options, args) = parser.parse_args()
@@ -47,6 +49,17 @@ if __name__ == "__main__":
             exit(0)
         else:
             log.fail("Sync VM [%s] information failed.", options.vm_name)
+            exit(1)
+    elif options.update:
+        server = ServerDomain(host_name, user, passwd)
+        if not server:
+            log.fail("Can not connect to virtual driver, initial HostDomain failed.")
+            exit(1)
+        server.update_database_info()
+        virt_host = VirtHostDomain(host_name, user, passwd)
+        for vm_name in  virt_host.virt_driver.get_vm_list():
+            virt_host.update_database_info(inst_name=vm_name)
+
     else:
         server = ServerDomain(host_name, user, passwd)
         if not server:
