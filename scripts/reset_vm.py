@@ -25,8 +25,7 @@ if __name__ == "__main__":
 
     parser.add_option("--all", dest="all", action="store_true",
                       help="Reset all VMs in this server")
-    parser.add_option("--vm", dest="vm",
-                      help="Reset VM in server")
+    parser.add_option("--vm", dest="vm", help="Reset VM in server")
 
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))

@@ -247,6 +247,7 @@ class ServerDomain(object):
         disk_size = default_storage.get('size_total')
 
         first_ip = self.vnet_driver.get_host_manage_interface_infor().get('IP')
+        # TODO: try to add free memory record in DB
         sync_data = {"cpu_cores": cpu_cores,
                      "memory_size": int(memory_size),
                      "disk_num": int(disk_num),
