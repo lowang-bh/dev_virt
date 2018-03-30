@@ -280,7 +280,7 @@ class XenVirtDriver(VirtDriver):
             log.info("No memory size given, return...")
             return True
 
-        if  not self.is_instance_halted(inst_name=inst_name):
+        if not self.is_instance_halted(inst_name=inst_name):
             log.error("Set static memory need VM to be halted.")
             return False
         try:
@@ -312,9 +312,7 @@ class XenVirtDriver(VirtDriver):
             log.info("No memory size given, return...")
             return True
 
-        if not self.is_instance_halted(inst_name=inst_name):
-            log.error("Set dynamic memory need VM to be halted.")
-            return False
+        # both a running or halted vm, set dynamic memory is supported. but it take a few while when vm is running
         try:
             vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
             gb = 1024.0 * 1024.0 * 1024.0
@@ -332,7 +330,7 @@ class XenVirtDriver(VirtDriver):
 
     def set_vm_memory_live(self, inst_name, memory_target):
         """
-        :param memory_target: Memory in GB
+        :param memory_target: Memory in GB, set dynamic_max and dynamic_min to the target size
         :return:
         """
         if self._hypervisor_handler is None:
@@ -345,7 +343,9 @@ class XenVirtDriver(VirtDriver):
             vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
             gb = 1024.0 * 1024.0 * 1024.0
             memory_size = int(gb * float(memory_target))
-            self._hypervisor_handler.xenapi.VM.set_memory_target_live(vm_ref, str(memory_size))
+            # set_memory_target_live has been deprecated
+            # self._hypervisor_handler.xenapi.VM.set_memory_target_live(vm_ref, str(memory_size))
+            self._hypervisor_handler.xenapi.VM.set_memory_dynamic_range(vm_ref, str(memory_size), str(memory_size))
 
             return True
         except Exception as error:
