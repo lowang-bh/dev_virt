@@ -232,7 +232,7 @@ class ServerDomain(object):
         :return:
         """
         server_name = self.server_name
-        log.info("Start to update [%s] information to databse.", server_name)
+        log.info("Start to update [%s] information to database.", server_name)
 
         sn = self.virt_driver.get_host_plat_info().get('serial_number')
         if not self.db_driver.query(sn=sn, hostname=server_name):
@@ -246,16 +246,19 @@ class ServerDomain(object):
 
         disk_num = len(filter(lambda x: int(x[0]) > 10, self.get_host_all_storage_info().values()))
         default_storage = self.virt_driver.get_host_storage_info()  # only write the system disk size
+        # TODO: caculate the all disk size
         disk_size = default_storage.get('size_total')
+        disk_free = default_storage.get('size_free')
 
         first_ip = self.vnet_driver.get_host_manage_interface_infor().get('IP')
-        # TODO: try to add free memory record in DB
         sync_data = {"cpu_cores": cpu_cores,
                      "memory_size": int(memory_size),
                      "free_memory": int(free_memory),
                      "disk_num": int(disk_num),
                      "disk_size": int(disk_size),
-                     "first_ip": first_ip
+                     "disk_free": int(disk_free),
+                     "first_ip": first_ip,
+                     'vm_host_ip': first_ip  # as for server, take the manage ip as vm host ip
                      }
         try:
             ret = self.db_driver.update(sn=sn, hostname=server_name, data=sync_data)
@@ -270,7 +273,7 @@ class ServerDomain(object):
 
 if __name__ == "__main__":
     host = ServerDomain(host_name="10.143.248.16", user="root", passwd="Mojiti!906")
-    storage =host.get_host_all_storage_info()
+    storage = host.get_host_all_storage_info()
     for k, v in storage.iteritems():
         print k, "\t\t", v
 
