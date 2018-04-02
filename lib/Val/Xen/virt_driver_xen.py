@@ -301,8 +301,8 @@ class XenVirtDriver(VirtDriver):
     def set_vm_dynamic_memory(self, inst_name, memory_max=None, memory_min=None):
         """
         :param inst_name:
-        :param max_memory:
-        :param min_memory:
+        :param memory_max:
+        :param memory_min:
         :return:
         """
         if self._hypervisor_handler is None:

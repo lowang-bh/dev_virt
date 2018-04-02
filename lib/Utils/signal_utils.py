@@ -7,10 +7,13 @@
 """
 
 import signal
+import functools
+from lib.Log.log import log
 
 
 class TimeoutError(Exception):
     pass
+
 
 def timeout_handler(signal_num, frame):
     """
@@ -44,3 +47,35 @@ def timeout_func(func, timeout_duration=1, default_ret=None, *args, **kwargs):
 
     return result
 
+
+def timeout_decrator(time_wait=3, default_ret=None):
+    def decrator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            old = signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(time_wait)
+            try:
+                return func(*args, **kwargs)
+            except TimeoutError as error:
+                log.warn(error)
+                return default_ret
+            finally:
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, old)
+        return wrapper
+    return decrator
+
+
+@timeout_decrator()
+def test_wrapper(timeout=1):
+    print("In test wrapper..")
+    print("name:%s" % test_wrapper.__name__)
+    import time
+    time.sleep(timeout)
+    return True
+
+
+if __name__ == "__main__":
+    for time in [1, 2, 3, 4]:
+        res = test_wrapper(time)
+        print "time=%s, value=%s"  % (time, res)
