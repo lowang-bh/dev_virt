@@ -286,4 +286,3 @@ if __name__ == "__main__":
     print host.check_ip_used("192.168.1.100")
     print host.create_database_info()
     print host.update_database_info()
-    print host.delete_database_info()
