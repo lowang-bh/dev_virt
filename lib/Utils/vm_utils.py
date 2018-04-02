@@ -584,6 +584,8 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
     dom= VirtHostDomain(host_name=options.host, user=options.user, passwd=options.passwd)
+    if not dom:
+        exit(1)
     print dom.get_all_disk_info(inst_name="test2")
     print dom.get_all_vifs_info(inst_name="test2")
     print dom.get_default_device()
