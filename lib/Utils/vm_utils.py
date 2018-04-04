@@ -594,4 +594,4 @@ if __name__ == "__main__":
     print dom.get_host_all_storage_info()
     print dom.print_server_hardware_info()
     print dom.update_database_info(inst_name="test2")
-    print dom.config_memory("test1", dynamic_min=2, dynamic_max=2)
+    print dom.config_memory("test2", dynamic_min=2, dynamic_max=2)

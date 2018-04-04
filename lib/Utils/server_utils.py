@@ -20,7 +20,7 @@ class ServerDomain(object):
         self.db_driver = DbFactory.get_db_driver("Host")
 
     def __nonzero__(self):
-        if self.virt_driver and self.vnet_driver:
+        if self.virt_driver and self.vnet_driver and self.db_driver:
             return True
         else:
             return False

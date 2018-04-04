@@ -34,7 +34,10 @@ class HostDbDriver(DatabaseDriver):
             else:
                 log.error("Login db_host [%s] with username [%s] failed.", self.db_host, self.user)
                 self.session = None
-        except requests.exceptions as error:
+        except requests.exceptions.ConnectionError as connerror:
+            log.exception("Connection exception: %s", connerror)
+            self.session = None
+        except Exception as error:
             log.exception("Exception when init session: %s", error)
             self.session = None
 
