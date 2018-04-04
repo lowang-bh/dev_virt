@@ -19,6 +19,7 @@ if __name__ == "__main__":
         config_vm.py vm_name --cpu-core=num | --cpu-max=max      [--host=ip --user=user --pwd=passwd]
         config_vm.py vm_name --list-vif            [--host=ip --user=user --pwd=passwd]
         config_vm.py         --list-pif            [--host=ip --user=user --pwd=passwd]
+        config_vm.py         --list-network        [--host=ip --user=user --pwd=passwd]
         config_vm.py         --list-SR             [--host=ip --user=user --pwd=passwd]
         """
 
@@ -49,6 +50,8 @@ if __name__ == "__main__":
                       help="List the virtual interface device in guest VM")
     parser.add_option("--list-pif", dest="list_pif", action="store_true",
                       help="List the interface device in the host")
+    parser.add_option("--list-network", dest="list_network", action="store_true",
+                      help="List the bridge/switch network in the host")
     parser.add_option("--list-SR", dest="list_sr", action="store_true",
                       help="List the storage repository infor in the host")
 
@@ -62,10 +65,10 @@ if __name__ == "__main__":
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
 
-    if not options.list_vif and not options.list_pif and not options.list_sr and\
+    if not options.list_vif and not options.list_pif and not options.list_sr and not options.list_network and\
         (not options.vif_index and not options.del_index and not options.add_index and
          not options.disk_size and not options.cpu_cores and not options.max_cores and
-        not options.memory_size and not options.min_memory and not options.max_memory):
+         not options.memory_size and not options.min_memory and not options.max_memory):
         parser.print_help()
         exit(1)
 
@@ -94,6 +97,13 @@ if __name__ == "__main__":
             storage = virt_driver.get_host_storage_info(storage_name=sr_name)
             log.info(infor_formate, sr_name, storage["size_free"])
         exit(0)
+
+    if options.list_network:
+        all_networks = vnet_driver.get_network_list()
+        if all_networks:
+            log.info(str(sorted(all_networks)))
+        else:
+            log.info("No network found.")
 
     if not args:
         log.error("Please specify a VM name to config.")

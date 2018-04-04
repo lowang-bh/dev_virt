@@ -503,9 +503,14 @@ class VirtHostDomain(ServerDomain):
         if not sync_data:
             return True
 
+        vm_record = self.virt_driver.get_vm_record(inst_name=inst_name)
+        if not vm_record:
+            return False
+        sn = vm_record['uuid']
+
         try:
             #  json_data = json.dumps(sync_data)
-            ret = self.db_driver.update(hostname=inst_name, data=sync_data)
+            ret = self.db_driver.update(sn=sn, data=sync_data)  # use sn in case of the same hostname in DB
         except Exception as error:
             log.exception("update IP information raise error: %s", error)
             ret = False
@@ -532,8 +537,13 @@ class VirtHostDomain(ServerDomain):
             log.info("No IP with vif index [%s] in database, return.", vif_index)
             return True
 
+        vm_record = self.virt_driver.get_vm_record(inst_name=inst_name)
+        if not vm_record:
+            return False
+        sn = vm_record['uuid']
+
         try:
-            ret = self.db_driver.update(hostname=inst_name, json_data=sync_data)
+            ret = self.db_driver.update(sn=sn, json_data=sync_data)   # use sn in case of the same hostname in DB
         except Exception as error:
             log.warn("Delete ip information raise error: %s", error)
             ret = False

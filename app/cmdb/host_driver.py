@@ -30,9 +30,9 @@ class HostDbDriver(DatabaseDriver):
             res_content = json.loads(login_res.content)
 
             if res_content['status'] == 1:  # the success check depend on the login html
-                log.debug("login db_host [%s] with username [%s] success.", self.db_host, self.user)
+                log.debug("Login url [%s] check with username [%s] success.", self.db_host, self.user)
             else:
-                log.error("Login db_host [%s] with username [%s] failed.", self.db_host, self.user)
+                log.error("Login url [%s] check with username [%s] failed.", self.db_host, self.user)
                 self.session = None
         except requests.exceptions.ConnectionError as connerror:
             log.exception("Connection exception: %s", connerror)
