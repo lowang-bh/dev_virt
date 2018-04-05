@@ -13,7 +13,7 @@ from lib.Val.Xen.virt_driver_xen import XenVirtDriver
 class XenVirtDriverTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.virt_driver = XenVirtDriver(hostname="10.143.248.13", user="root", passwd="Mojiti!906")
+        self.virt_driver = XenVirtDriver(hostname="192.168.1.2", user="root", passwd="123456")
         self.vms = ['t2-dev16', 't2-jenkins-lain2', 't2-dev24', 't2-dev23', 't2-dev25', 't2-dev26', 't2-dev22']
 
     def tearDown(self):

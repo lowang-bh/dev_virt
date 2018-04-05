@@ -490,7 +490,7 @@ class XenVnetDriver(VnetDriver):
 
 
 if __name__ == "__main__":
-    vnet = XenVnetDriver("10.143.248.16","root", "Mojiti!906")
+    vnet = XenVnetDriver("1192.168.1.2","root", "123456")
     print vnet.get_all_vifs_indexes("test2")
     print vnet.get_vif_ip("test2", 0)
     print vnet.get_vif_ip("test2", 1)

@@ -272,7 +272,7 @@ class ServerDomain(object):
 
 
 if __name__ == "__main__":
-    host = ServerDomain(host_name="10.143.248.16", user="root", passwd="Mojiti!906")
+    host = ServerDomain(host_name="192.168.1.2", user="root", passwd="123456")
     storage = host.get_host_all_storage_info()
     for k, v in storage.iteritems():
         print k, "\t\t", v
