@@ -76,8 +76,7 @@ ReadME
   - `--max-mem=MAX_MEMORY`  Config the max static memory size in GB.
 
      <b>There are static memory and dynamic memory. The static memory can be set only when VM is power off, and dynamic memory
-  can be set when VM is running or stop. min_static_memory <= min_dynamic_memory <= max_dynamic_memory <= max_static_memory.
-  The max_static_memory will affect the upper limit when set the dynamic memory lively when VM is running.<b>
+  can be set when VM is running or stop. Memory limits must satisfy: *min_static_memory <= min_dynamic_memory <= max_dynamic_memory <= max_static_memory*. The max_static_memory will affect the upper limit when set the dynamic memory lively when VM is running.<b>
 
 
   - `--memory will set the min dynamic memory and max dynamic memory to the target one, when VM power on, it runs at that memory size`
@@ -93,7 +92,7 @@ ReadME
   - `--list-network`        List the bridge/switch network in the host
   - `--list-SR`             List the storage repository information in the host
 
-##### 1). <b>**Config a VM's interface, add a VIF, delete a VIF, config a VIF(will delete old one if exist, otherwise create it newly), and the --ip, --device, --network is same as that when create vm**<b>
+##### 1). <b>**Config a VM's interface, add a VIF, delete a VIF, config a VIF(will delete old one if exist, otherwise create it newly), and the *--ip*, *--device*, *--network* is same as that when create vm**<b>
   - `--add-vif=ADD_INDEX`   Add a virtual interface device to guest VM
   - `--del-vif=DEL_INDEX`   Delete a virtual interface device from guest VM
   - `--vif=VIF_INDEX`      Configure on a virtual interface device
@@ -108,7 +107,7 @@ ReadME
     
     > config_vm.py "test1" --memory=1
 
-##### 4).Add new disk to VM, the storage_name is choosed from --list-SR
+##### 4).Add new disk to VM, the storage_name is choosed from *--list-SR*
   - `--add-disk=DISK_SIZE`  The disk size(GB) add to the VM
   - `--storage=STORAGE_NAME` The storage location where the virtual disk put
     > config_vm.py "test1"--add-disk=2 --storage=data2
