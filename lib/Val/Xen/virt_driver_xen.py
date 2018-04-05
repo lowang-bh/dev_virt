@@ -499,7 +499,7 @@ class XenVirtDriver(VirtDriver):
     def _get_vm_guest_metrics_record(self, inst_name):
         """
         return a dict with networks, os_version, uuid, memory, etc as keys
-        'network':{'0/ip': '10.143.248.80', '0/ipv6/0': 'fe80::b8d9:89ff:fef3:b252'}
+        'network':{'0/ip': '192.168.1.80', '0/ipv6/0': 'fe80::b8d9:89ff:fef3:b252'}
         'os_version': {'distro': 'centos',  'major': '7',  'minor': '1',
                        'name': 'CentOS Linux release 7.1.1503 (Core)',
                        'uname': '3.10.0-229.4.2.el7.x86_64'},
