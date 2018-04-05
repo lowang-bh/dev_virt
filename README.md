@@ -66,7 +66,7 @@ ReadME
   - `--cpu-max=MAX_CORES`   Config the max VCPU cores.
     > create_vm.py -c "test2" -t "CentOS 7.2 template" --cpu-max=2
 
-    The max cpu cores can be configured when VM is power off only, and it affect the upper numbers when set the cpu cores lively
+    The max cpu cores can be configured when VM is power off only, and it affect the upper limit when set the cpu cores lively
 
 #####  4). <b>**Create a new VM with memory size:**<b>
   - `--memory=MEMORY_SIZE`  Config the target memory size in GB.
