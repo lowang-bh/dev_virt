@@ -676,6 +676,12 @@ class QemuVirtDriver(VirtDriver):
 
         return ret_plat_dict
 
+    def get_host_os(self, short_name):
+        """
+        :return: the host system information
+        """
+        raise NotImplementedError()
+
     def get_templates_list(self):
         """
         :description get all the templates on host

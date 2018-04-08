@@ -829,7 +829,24 @@ class XenVirtDriver(VirtDriver):
 
         return (name_label, host_name)
 
+    def get_host_os(self, short_name=True):
+        """
+        :return: the host system information
+        """
+        handler = self.get_handler()
+        system_info = {}
+        try:
+            host_ref = handler.xenapi.host.get_all()[0]
+            record = handler.xenapi.host.get_software_version(host_ref)
+            system_info['product_version'] = record.get('product_version', 'unknown')
+            if short_name:
+                return " ".join([record.get('product_brand', 'Unknown'), record.get('product_version', 'Unknown')])
+            else:
+                return record.get('xs:main', 'Unknown')
+        except Exception, error:
+            log.error("Exception when get host os infor:%s", error)
 
+        return None
 
 
 if __name__ == "__main__":

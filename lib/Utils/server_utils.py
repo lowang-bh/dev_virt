@@ -257,6 +257,8 @@ class ServerDomain(object):
         # disk_free = default_storage.get('size_free')
 
         first_ip = self.vnet_driver.get_host_manage_interface_infor().get('IP')
+        os_info = self.virt_driver.get_host_os()
+
         sync_data = {"cpu_cores": cpu_cores,
                      "memory_size": int(memory_size),
                      "free_memory": int(free_memory),
@@ -265,6 +267,7 @@ class ServerDomain(object):
                      "disk_free": int(disk_free),
                      "first_ip": first_ip,
                      'vm_host_ip': first_ip,  # as for server, take the manage ip as vm host ip
+                     'os_info': os_info,
                      'power_state': "ON"
                      }
         comment = "Update server by virtualization API with data: %s" % sync_data
@@ -275,7 +278,7 @@ class ServerDomain(object):
             log.exception("Exception raise when update vm database: %s", error)
             ret = False
         if not ret:
-            log.warn("Update database information with ret: [%s], data: %s", ret, sync_data)
+            log.warn("Update database information with ret: [%s], data: %s", ret, sync_data['comment'])
 
         return ret
 
