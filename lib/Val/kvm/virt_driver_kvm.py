@@ -721,7 +721,8 @@ class QemuVirtDriver(VirtDriver):
         vm_record['memory_actual'] = vm_record['memory_target']
         stats = dom.info()
         vm_record['running'] = stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_RUNNING
-        vm_record['halted'] = stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTDOWN
+        vm_record['halted'] = stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTDOWN or \
+                              stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTOFF
 
         return  vm_record
 

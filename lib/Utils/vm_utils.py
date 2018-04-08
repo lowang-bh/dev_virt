@@ -455,8 +455,9 @@ class VirtHostDomain(ServerDomain):
         disk_size, disk_num = 0, 0
         for disk in disk_info:
             size = self.virt_driver.get_disk_size(inst_name, disk)
-            disk_size += size
-            if size >= 1: disk_num += 1 # exclude those cd
+            if size >= 1:
+                disk_size += size
+                disk_num += 1 # exclude those cd
 
         vif_dic = self.vnet_driver.get_all_vif_info(inst_name)
         first_ip = vif_dic.get('0', {}).get('ip', None)
