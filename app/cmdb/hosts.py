@@ -23,6 +23,8 @@ class HostDriver(HostDbDriver):
         db_name = self.db_name(url)
         data = kwargs
         data.setdefault("machine_type", "物理机")
+        data.setdefault("ip_static", True)
+        data.setdefault("os_deploy", True)
 
         log.debug("Create url: %s, with data:%s", url, data)
         self.resp = self.session.post(url, data=data)
@@ -108,7 +110,7 @@ class HostDriver(HostDbDriver):
 
         if data:
             data['modified'] = str(modified)
-            log.debug("Patch url:%s, data: %s", url, data)
+            log.debug("Patch url:%s, data: %s", url, data.get('comment', data))
             self.resp = self.session.patch(url, data=data) # When dict value is None, pass in data will not set db null
         elif json_data:
             json_data['modified'] = str(modified)
