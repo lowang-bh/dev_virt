@@ -258,8 +258,11 @@ class ServerDomain(object):
                      "disk_size": int(disk_size),
                      "disk_free": int(disk_free),
                      "first_ip": first_ip,
-                     'vm_host_ip': first_ip  # as for server, take the manage ip as vm host ip
+                     'vm_host_ip': first_ip,  # as for server, take the manage ip as vm host ip
+                     'power_state': "ON"
                      }
+        comment = "Update server by virtualization API with data: %s" % sync_data
+        sync_data['comment'] = comment
         try:
             ret = self.db_driver.update(sn=sn, hostname=server_name, data=sync_data)
         except Exception as error:

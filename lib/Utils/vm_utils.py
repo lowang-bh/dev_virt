@@ -444,6 +444,12 @@ class VirtHostDomain(ServerDomain):
 
         cpu_cores = vm_record['VCPUs_live']
         memory_size = vm_record['memory_target']
+        if vm_record['running']:
+            power_state = "ON"
+        elif vm_record['halted']:
+            power_state = "OFF"
+        else:
+            power_state = "unknown"
 
         disk_info = self.virt_driver.get_all_disk(inst_name=inst_name)
         disk_size, disk_num = 0, 0
@@ -467,15 +473,18 @@ class VirtHostDomain(ServerDomain):
                      "first_ip": first_ip,
                      "second_ip": second_ip,
                      "vm_host_ip": vm_host_ip,
-                     "os_info": os_info
+                     "os_info": os_info,
+                     "power_state": power_state
                      }
+        comment = "Update VM by virtualization API with data: %s" % sync_data
+        sync_data['comment'] = comment
         try:
             ret = self.db_driver.update(sn=sn, data=sync_data)
         except Exception as error:
             log.debug("Exception raise when update vm database: %s", error)
             ret = False
         if not ret:
-            log.warn("Update database information with ret: [%s], data: %s", ret, sync_data)
+            log.warn("Update database information with ret: [%s], data: %s", ret, sync_data['comment'])
 
         return ret
 
@@ -604,4 +613,4 @@ if __name__ == "__main__":
     print dom.get_host_all_storage_info()
     print dom.print_server_hardware_info()
     print dom.update_database_info(inst_name="test2")
-    print dom.config_memory("test2", dynamic_min=2, dynamic_max=2)
+    # print dom.config_memory("test2", dynamic_min=2, dynamic_max=2)

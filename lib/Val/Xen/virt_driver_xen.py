@@ -480,6 +480,8 @@ class XenVirtDriver(VirtDriver):
             vm_record['memory_actual'] = float("%.3f" % (float(memory_actual) / GB))
         except Exception, error:
             vm_record['memory_actual'] = vm_record['memory_target']
+        vm_record['running'] = record['power_state'] == 'Running'
+        vm_record['halted'] = record['power_state'] == 'Halted'
 
         return vm_record
 
@@ -838,6 +840,7 @@ if __name__ == "__main__":
     parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
     (options, args) = parser.parse_args()
     virt = XenVirtDriver(hostname=options.host, user=options.user, passwd=options.passwd)
-    print virt.set_vm_static_memory(inst_name="test2", memory_max=1, memory_min=1)
-    print virt.set_vm_dynamic_memory("test2", 1, 1)
+    # print virt.set_vm_static_memory(inst_name="test2", memory_max=1, memory_min=1)
+    # print virt.set_vm_dynamic_memory("test2", 1, 1)
+    print  virt.is_instance_running("test_vm")
 
