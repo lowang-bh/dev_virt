@@ -687,7 +687,15 @@ class QemuVirtDriver(VirtDriver):
         '''
         @param inst_name: instance name
         '''
-        raise NotImplementedError()
+        domain = self._get_domain_handler(inst_name)
+        if not domain:
+            log.debug("%s does not exist", inst_name)
+            return False
+
+        stats = domain.info()
+        if stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTDOWN:
+            return True
+        return False
 
     def get_vm_record(self, inst_name):
         """
@@ -711,6 +719,9 @@ class QemuVirtDriver(VirtDriver):
         vm_record['memory_static_min'] = None
         vm_record['memory_target'] = float("%.3f" % (dom.maxMemory() / 1024.0 / 1024.0))
         vm_record['memory_actual'] = vm_record['memory_target']
+        stats = dom.info()
+        vm_record['running'] = stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_RUNNING
+        vm_record['halted'] = stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTDOWN
 
         return  vm_record
 
