@@ -244,11 +244,17 @@ class ServerDomain(object):
         memory_size = memory_info.get('size_total')
         free_memory = memory_info.get('size_free')
 
-        disk_num = len(filter(lambda x: int(x[0]) > 10, self.get_host_all_storage_info().values()))
-        default_storage = self.virt_driver.get_host_storage_info()  # only write the system disk size
-        # TODO: caculate the all disk size
-        disk_size = default_storage.get('size_total')
-        disk_free = default_storage.get('size_free')
+        storage_info = self.get_host_all_storage_info()
+        disk_size, disk_free, disk_num = 0, 0, 0
+        # disk_num = len(filter(lambda x: int(x[0]) > 10, self.get_host_all_storage_info().values()))
+        for sr, disk in storage_info.iteritems():
+            if int(disk[0]) > 10:
+                disk_num +=1
+                disk_size += disk[0]
+                disk_free += disk[1]
+        # default_storage = self.virt_driver.get_host_storage_info()  # only write the system disk size
+        # disk_size = default_storage.get('size_total')
+        # disk_free = default_storage.get('size_free')
 
         first_ip = self.vnet_driver.get_host_manage_interface_infor().get('IP')
         sync_data = {"cpu_cores": cpu_cores,
