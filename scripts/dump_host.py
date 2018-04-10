@@ -21,6 +21,8 @@ if __name__ == "__main__":
     parser.add_option("-u", "--user", dest="user", help="User name for host server")
     parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
     parser.add_option("--list-sr", dest="list_sr", action="store_true", help="List all the storage information")
+    parser.add_option("--list-pif", dest="list_pif", action="store_true", help="List all the interface information")
+    parser.add_option("--list-bond", dest="list_bond", action="store_true", help="List all the bond information")
 
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
@@ -42,6 +44,10 @@ if __name__ == "__main__":
         storage = serverDomain.get_host_all_storage_info()
         for k, v in storage.iteritems():
             log.info("%-15s: \tTotal: %8sGB, Free:%8sGB", k, v[0], v[1])
+    elif options.list_pif:
+        serverDomain.print_all_interface()
+    elif options.list_bond:
+        serverDomain.print_bond_inforation()
     else:
         serverDomain.print_server_hardware_info()
 

@@ -172,3 +172,10 @@ class QemuVnetDriver(VnetDriver):
         :return:
         """
         raise NotImplementedError()
+
+    def get_host_bond_info(self):
+        """
+        :return: return the bond information
+        """
+        raise NotImplementedError()
+

@@ -150,4 +150,10 @@ class VnetDriver(object):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def get_host_bond_info(self):
+        """
+        :return: return the bond information
+        """
+        raise NotImplementedError()
 

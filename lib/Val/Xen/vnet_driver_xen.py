@@ -149,12 +149,43 @@ class XenVnetDriver(VnetDriver):
             if not pif_ref:
                 log.error("Can not get device infor with given device name:%s.", device_name)
                 return {}
-            return self._hypervisor_handler.xenapi.PIF.get_record(pif_ref)
+            pif_record = self._hypervisor_handler.xenapi.PIF.get_record(pif_ref)
         elif pif_ref is not None:
-            return self._hypervisor_handler.xenapi.PIF.get_record(pif_ref)
+            pif_record = self._hypervisor_handler.xenapi.PIF.get_record(pif_ref)
         else:
             log.error("Please specify a device name to get device infor.")
             return {}
+
+        default_infor = {}
+        default_infor.setdefault('device', pif_record.get('device', None))
+        default_infor.setdefault('IP', pif_record.get('IP', None))
+        default_infor.setdefault('DNS', pif_record.get('DNS', None))
+        default_infor.setdefault('MAC', pif_record.get('MAC', None))
+        default_infor.setdefault('gateway', pif_record.get('gateway', None))
+        default_infor.setdefault('netmask', pif_record.get('netmask', None))
+        return default_infor
+
+    def get_host_bond_info(self):
+        """
+        :return: return the bond information: bondName:device_dict
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        bond_dict = {}
+        try:
+            bond_list = self._hypervisor_handler.xenapi.Bond.get_all()
+            for bond_ref in bond_list:
+                bond_info = self._hypervisor_handler.xenapi.Bond.get_record(bond_ref)
+                master_ref = bond_info.get('master')
+                master_name = self.get_device_infor(pif_ref=master_ref).get('device', None)
+                bond_dict[master_name] = []
+                for pif_ref in bond_info.get('slaves', []):
+                    bond_dict[master_name].append(self.get_device_infor(pif_ref=pif_ref))
+        except Exception:
+            log.error("Cann't get bond infor in host.")
+
+        return bond_dict
 
     def _get_network_ref_by_device(self, device_name):
         """

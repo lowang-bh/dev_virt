@@ -69,6 +69,31 @@ class ServerDomain(object):
         log.info("\tStorage Used: %s GB", storage_info.get('size_used', 0))
         log.info("\tStorage Free: %s GB", storage_info.get('size_free', 0))
 
+    def print_all_interface(self):
+        """
+        :return:
+        """
+        log.info("All PIFs information with index number and MAC, IP:")
+
+        all_pifs = self.vnet_driver.get_all_devices()
+        for pif_index, pif_name in enumerate(sorted(all_pifs)):
+            pif_infor = self.vnet_driver.get_device_infor(device_name=pif_name)
+            log.info("%s\t%s\tMAC: %s, IP: %s", pif_index, pif_name, pif_infor.get('MAC'), pif_infor.get('IP'))
+
+        return True
+
+    def print_bond_inforation(self):
+        """
+        :return:
+        """
+        log.info("All bond information with index number and MAC, IP:")
+        all_bondinfo = self.vnet_driver.get_host_bond_info()
+        for bond_name in sorted(all_bondinfo.keys()):
+            log.info("\tBond Device: %s",  bond_name)
+            for device_infor in all_bondinfo[bond_name]:
+                log.info("%s\tMAC: %s, IP: %s", device_infor['device'], device_infor.get('MAC'), device_infor.get('IP'))
+        return True
+
     def get_host_all_storage_info(self):
         """
         :return:
