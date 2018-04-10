@@ -49,8 +49,8 @@ if [[ $mymac == 00:66* ]];then
         echo "IPADDR=$MyIP" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "GATEWAY=$MyGW" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "BROADCAST=$MyBC" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
-        echo "DNS1=10.106.170.107" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
-        echo "DNS2=10.106.170.108" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
+        echo "DNS1=8.8.8.8" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
+        echo "DNS2=192.168.10.10" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         touch /root/.IPCONFIGED$myeth
     else
         echo "Already configed $myeth"
