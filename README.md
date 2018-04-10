@@ -97,7 +97,7 @@ ReadME
   - `--del-vif=DEL_INDEX`   Delete a virtual interface device from guest VM
   - `--vif=VIF_INDEX`      Configure on a virtual interface device
 
-    > config_vm.py "test1"  --vif=0 --ip=10.143.248.251 --device=eth0
+    > config_vm.py "test1"  --vif=0 --ip=192.168.1.200 --device=eth0
 
     > config_vm.py "test1"  --add-vif=1 --dev=eth1 --ip=192.168.1.200 --netmask=255.255.255.0
 

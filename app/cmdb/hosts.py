@@ -241,7 +241,7 @@ if __name__ == "__main__":
             test.create(**testdata)
             queryDic = test.query(sn=testdata['sn'], hostname=testdata['hostname'])
         deleteId = test.respond_data_list[0]['id']
-        test.update(id=deleteId, data={"hostname": "hostname", "first_ip": "10.101.10.10"})
+        test.update(id=deleteId, data={"hostname": "hostname", "first_ip": "192.168.10.10"})
         virhost.delete(id=deleteId)
         virhost.delete(id=deleteId)
         test.create(**testdata)
