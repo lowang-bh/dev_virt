@@ -859,5 +859,4 @@ if __name__ == "__main__":
     virt = XenVirtDriver(hostname=options.host, user=options.user, passwd=options.passwd)
     # print virt.set_vm_static_memory(inst_name="test2", memory_max=1, memory_min=1)
     # print virt.set_vm_dynamic_memory("test2", 1, 1)
-    print  virt.is_instance_running("test_vm")
-
+    print virt.get_host_os()

@@ -15,7 +15,7 @@ from app.cmdb.settings import DB_HOST, LOGOUT_URL, LOGIN_URL
 
 
 class HostDbDriver(DatabaseDriver):
-    def __init__(self, user="admin", passwd="access"):
+    def __init__(self, user="admin", passwd="admin"):
         super(HostDbDriver, self).__init__(user, passwd)
         self.db_host = DB_HOST
         self.login_url = LOGIN_URL

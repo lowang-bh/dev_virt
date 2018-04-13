@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     serverDomain = ServerDomain(host_name, user, passwd)
     if not serverDomain:
-        log.fail("Can not connect to virtual driver, initial serverDomain failed.")
+        log.fail("Can not connect to virtual driver or DB driver, initial serverDomain failed.")
         exit(1)
 
     if options.list_sr:
