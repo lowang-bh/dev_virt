@@ -39,7 +39,7 @@ if __name__ == "__main__":
     if options.vm_name:
         virt_host = VirtHostDomain(host_name, user, passwd)
         if not virt_host:
-            log.fail("Can not connect to virtual driver, initial VirtHostDomain failed.")
+            log.fail("Can not connect to virtual driver or DB driver, initial VirtHostDomain failed.")
             exit(1)
         if not virt_host.virt_driver.is_instance_exists(options.vm_name):
             log.fail("VM [%s] doesn't exist. Exiting...", options.vm_name)
@@ -53,7 +53,7 @@ if __name__ == "__main__":
     elif options.update:
         server = ServerDomain(host_name, user, passwd)
         if not server:
-            log.fail("Can not connect to virtual driver, initial HostDomain failed.")
+            log.fail("Can not connect to virtual driver or DB driver, initial HostDomain failed.")
             exit(1)
         server.update_database_info()
         virt_host = VirtHostDomain(host_name, user, passwd)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     else:
         server = ServerDomain(host_name, user, passwd)
         if not server:
-            log.fail("Can not connect to virtual driver, initial HostDomain failed.")
+            log.fail("Can not connect to virtual driver or DB driver, initial HostDomain failed.")
             exit(1)
         server.create_database_info()
         server.update_database_info()

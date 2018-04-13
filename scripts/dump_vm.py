@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     virthost = VirtHostDomain(host_name, user, passwd)
     if not virthost:
-        log.fail("Can not connect to virtual driver, initial VirtHostDomain failed.")
+        log.fail("Can not connect to virtual driver or DB driver, initial VirtHostDomain failed.")
         exit(1)
 
     vnet_driver = virthost.vnet_driver

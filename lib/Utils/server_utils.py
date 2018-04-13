@@ -23,6 +23,10 @@ class ServerDomain(object):
         if self.virt_driver and self.vnet_driver and self.db_driver:
             return True
         else:
+            if not self.virt_driver or not self.vnet_driver:
+                log.error("Can not connect to virtual driver.")
+            if not self.db_driver:
+                log.error("Can not connect to DB driver.")
             return False
 
     @property
