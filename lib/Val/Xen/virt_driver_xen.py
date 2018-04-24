@@ -820,7 +820,7 @@ class XenVirtDriver(VirtDriver):
     def get_host_name(self):
         """
         The name label of server.
-        :return:
+        :return: (name_label, hostname)
         """
         handler = self.get_handler()
         host_ref = handler.xenapi.host.get_all()[0]

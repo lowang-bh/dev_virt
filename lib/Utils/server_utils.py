@@ -82,7 +82,11 @@ class ServerDomain(object):
         all_pifs = self.vnet_driver.get_all_devices()
         for pif_index, pif_name in enumerate(sorted(all_pifs)):
             pif_infor = self.vnet_driver.get_device_infor(device_name=pif_name)
-            log.info("%s\t%s\tMAC: %s, IP: %s", pif_index, pif_name, pif_infor.get('MAC'), pif_infor.get('IP'))
+            bridge_name = self.vnet_driver.get_bridge_name(device_name=pif_name)
+            mac = pif_infor.get('MAC')
+            ip = pif_infor.get('IP')
+            ip = ip if ip else None
+            log.info("%s\t%s\tMAC: %s, IP: %15s, Bridge: %s", pif_index, pif_name, mac, ip, bridge_name)
 
         return True
 
@@ -233,7 +237,7 @@ class ServerDomain(object):
 
         disk_num = len(filter(lambda x: int(x[0]) > 10, self.get_host_all_storage_info().values()))
         default_storage = self.virt_driver.get_host_storage_info()  # only write the system disk size
-        disk_size = default_storage.get('size_total')
+        disk_size = default_storage.get('size_total', 0)
 
         first_ip = self.vnet_driver.get_host_manage_interface_infor().get('IP')
 

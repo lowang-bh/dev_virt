@@ -59,7 +59,7 @@ class VirtHostDomain(ServerDomain):
         @param inst_name: Vm name
         @param device_name: vswitch (with the host-device attached) which the vif attach to
         @param vif_index: vif index
-        @param network
+        @param network: bridge name
         @param ip
         """
         log.info("Start to add a new virtual interface device with index:[%s] to VM [%s]", vif_index, inst_name)
@@ -122,9 +122,9 @@ class VirtHostDomain(ServerDomain):
         """
         configure a vif: first destroy old vif and then create a new vif
         @param inst_name: Vm name
-        @param device_name: vswitch (with the host-device attached) which the vif attach to
+        @param device_name: the host-device name with a bridge/switch bonded which the vif attach to
         @param vif_index: vif index
-        @param network:
+        @param network: bridge name which the vif will connect to
         @param ip:
         """
         log.info("Start to configure the interface device [%s] in VM [%s].", vif_index, inst_name)
@@ -322,7 +322,9 @@ class VirtHostDomain(ServerDomain):
 
         vifs_info = self.vnet_driver.get_all_vif_info(inst_name=inst_name)
         for vif_index in sorted(vifs_info):
-            log.info("\t%s\tMAC: %s, IP: %s", vif_index, vifs_info[vif_index]['mac'], vifs_info[vif_index]['ip'])
+            bridge_name = self.vnet_driver.get_vif_network_name(inst_name=inst_name, vif_index=vif_index)
+            mac, ip = vifs_info[vif_index]['mac'], vifs_info[vif_index]['ip']
+            log.info("\t%s\tMAC: %s, IP: %15s, Bridge: %s", vif_index, mac, ip, bridge_name)
 
         return True
 

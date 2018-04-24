@@ -217,6 +217,33 @@ class XenVnetDriver(VnetDriver):
         log.error("No network found with bridge name [%s].", bridge_name)
         return None
 
+    def _get_bridge_name_by_networkref(self, network_ref):
+        """
+        :param network_ref:
+        :return: a bridge name or ""
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+        try:
+            return self._hypervisor_handler.xenapi.network.get_bridge(network_ref)
+        except Exception as error:
+            log.exception("Raise exception when get bridge name: %s", error)
+            return ""
+
+    def get_bridge_name(self, device_name):
+        """
+        :param device_name:
+        :return:
+        """
+        network_ref = self._get_network_ref_by_device(device_name=device_name)
+        if not network_ref:
+            return "unKnown"
+        bridge_name = self._get_bridge_name_by_networkref(network_ref)
+        if bridge_name:
+            return bridge_name
+        else:
+            return "unKnown"
+
     def _create_new_network(self, bridge_name):
         """
         create a new network
@@ -291,6 +318,27 @@ class XenVnetDriver(VnetDriver):
             return None
 
         return network_dict.get(str(vif_key)+"/ip", None)
+
+    def get_vif_network_name(self, inst_name, vif_index):
+        """
+        :param inst_name:
+        :param vif_index:
+        :return: the bridge name which the vif attached to
+        """
+        vif_ref = self._get_vif_by_index(inst_name=inst_name, vif_index=vif_index)
+        if not vif_ref:
+            return None
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        try:
+            network_ref = self._hypervisor_handler.xenapi.VIF.get_network(vif_ref)
+        except Exception as error:
+            log.exception("Raise exception when get network reference: %s", error)
+            return None
+
+        bridge_name = self._get_bridge_name_by_networkref(network_ref)
+        return bridge_name if bridge_name else None
 
 
     def get_vif_info(self, inst_name, vif_index):
@@ -521,19 +569,20 @@ class XenVnetDriver(VnetDriver):
 
 
 if __name__ == "__main__":
-    vnet = XenVnetDriver("1192.168.1.2","root", "123456")
+    from optparse import OptionParser
+    parser = OptionParser()
+    parser.add_option("--host", dest="host", help="IP for host server")
+    parser.add_option("-u", "--user", dest="user", help="User name for host server")
+    parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
+    (options, args) = parser.parse_args()
+    vnet = XenVnetDriver(hostname=options.host, user=options.user, passwd=options.passwd)
+    if not vnet:
+        exit(1)
     print vnet.get_all_vifs_indexes("test2")
     print vnet.get_vif_ip("test2", 0)
     print vnet.get_vif_ip("test2", 1)
     print vnet.get_vif_ip("test2", 2)
     print vnet.get_vif_ip("test2", 3)
 
-    print "test3"
-    print vnet.get_all_vifs_indexes("test3")
-    print vnet.get_vif_info("test3", 0)
-    print vnet.get_vif_info("test3", 1)
-    print vnet.get_vif_info("test3", 2)
-    print vnet.get_vif_info("test3", 3)
-
-
-    print vnet.get_all_vif_info("test3")
+    print vnet.get_all_vif_info("test2")
+    print vnet.get_bridge_name("eth0")

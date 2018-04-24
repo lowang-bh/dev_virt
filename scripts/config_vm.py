@@ -83,7 +83,7 @@ if __name__ == "__main__":
     if options.list_pif:
         pif_list = vnet_driver.get_all_devices()
         if pif_list:
-            log.info("All device on the host: %s", sorted(pif_list))
+            virthost.print_all_interface()
         else:
             log.info("No device found on the host.")
         exit(0)
@@ -104,6 +104,7 @@ if __name__ == "__main__":
             log.info(str(sorted(all_networks)))
         else:
             log.info("No network found.")
+        exit(0)
 
     if not args:
         log.error("Please specify a VM name to config.")
@@ -118,7 +119,7 @@ if __name__ == "__main__":
     if options.list_vif:
         vif_list = vnet_driver.get_all_vifs_indexes(inst_name)
         if vif_list:
-            log.info("All virtual interface device: %s", sorted(vif_list))
+            virthost.print_all_vifs_info(inst_name)
         else:
             log.info("No virtual interface device found.")
         exit(0)

@@ -179,3 +179,18 @@ class QemuVnetDriver(VnetDriver):
         """
         raise NotImplementedError()
 
+    def get_vif_network_name(self, inst_name, vif_index):
+        """
+        :param inst_name:
+        :param vif_index:
+        :return: the bridge name which the vif attached to
+        """
+        raise NotImplementedError()
+
+    def get_bridge_name(self, device_name):
+        """
+        :param device_name:
+        :return:
+        """
+        raise NotImplementedError()
+
