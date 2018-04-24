@@ -7,7 +7,7 @@
 #              If the mac start with "00:66", then use this method to setup
 #              the IP when system start up
 #########################################################################
-set -eu
+set -u
 
 if [[ $# == 1 ]];then
     myeth=$1
@@ -18,11 +18,11 @@ fi
 mymac=`ifconfig $myeth | awk '/HWaddr\ / {print $5}'`
 
 if [[ x$mymac == x"" ]];then
-    echo "No HWaddr find, try another pattern"
+    echo "No HWaddr find on $myeth, try another pattern"
     mymac=`ifconfig $myeth | awk '/ether\ / {print $2}'`
 
     if [[ x$mymac == x"" ]];then
-        echo "Can not match Hwaddr or ether, exiting..."
+        echo "Can not match Hwaddr or ether on $myeth, exiting..."
         exit 1
     fi
 fi
@@ -45,13 +45,17 @@ if [[ $mymac == 00:66* ]];then
 
     MyGW=`echo $MyIP | awk -F. '{print $1"."$2"."$3".1"}'`
     MyBC=`echo $MyIP | awk -F. '{print $1"."$2"."$3".255"}'`
-    if [[ ! -f /root/.IPCONFIGED$myeth ]];then
+    grep_res=$(grep "IPADDR=" /etc/sysconfig/network-scripts/ifcfg-$myeth 2> /dev/null)
+    if [[ $grep_res != IPADDR=* && -f /etc/sysconfig/network-scripts/ifcfg-$myeth ]];then
+        echo "write ip to /etc/sysconfig/network-scripts/ifcfg-$myeth"
         echo "IPADDR=$MyIP" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "GATEWAY=$MyGW" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "BROADCAST=$MyBC" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "DNS1=8.8.8.8" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "DNS2=192.168.10.10" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
-        touch /root/.IPCONFIGED$myeth
+    elif [[ $grep_res == IPADDR=* ]];then
+        echo "origin IP on $myeth:$grep_res, set to new: $MyIP"
+        sed -i "s/^IPADDR=.*$/IPADDR=$MyIP/" /etc/sysconfig/network-scripts/ifcfg-$myeth
     else
         echo "Already configed $myeth"
     fi

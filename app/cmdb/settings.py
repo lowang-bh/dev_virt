@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
 
-DB_HOST = "http://127.0.0.1:8000"
+import os
+# DB_HOST = "http://127.0.0.1:8000"
+db_host = os.getenv("DB_HOST", "127.0.0.1:8000")
+DB_HOST = "http://%s" % (db_host)
+
 LOGIN_URL = DB_HOST + '/user/logincheck'
 LOGOUT_URL = DB_HOST + '/user/logout'
 
