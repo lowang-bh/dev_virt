@@ -7,6 +7,7 @@
 '''
 
 import libvirt
+import signal
 from lib.Val.vnet_driver import VnetDriver
 from lib.Log.log import log
 
@@ -26,10 +27,7 @@ class QemuVnetDriver(VnetDriver):
         self._hypervisor_root_handler = None
 
         log.debug("Try to connect to libvirt in host: %s", self.hostname)
-        if self.hostname is None:
-            self._hypervisor_handler = libvirt.open(DEFAULT_HV)
-        else:
-            self._hypervisor_handler = libvirt.openAuth("{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system'), self._auth, 0)
+        self._hypervisor_handler = self.get_handler()
 
     def _request_cred(self, credentials, user_data):
         for credential in credentials:
@@ -44,7 +42,7 @@ class QemuVnetDriver(VnetDriver):
         if self._hypervisor_handler:
             log.debug("try to close the connect to libvirt: %s", self.hostname)
             self._hypervisor_handler.close()
-            self._hypervisor_handler = None
+        self._hypervisor_handler = None
 
     def get_handler(self):
         '''
@@ -53,10 +51,28 @@ class QemuVnetDriver(VnetDriver):
         if self._hypervisor_handler:
             return self._hypervisor_handler
 
-        if self.hostname is None:
-            self._hypervisor_handler = libvirt.open(DEFAULT_HV)
-        else:
-            self._hypervisor_handler = libvirt.openAuth("{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system'), self._auth, 0)
+        old = signal.signal(signal.SIGALRM, self.timeout_handler)
+        signal.alarm(4)   #  connetctions timeout set to 4 secs
+
+        try:
+            if self.hostname is None:
+                url = DEFAULT_HV
+                self._hypervisor_handler = libvirt.open(url)
+            else:
+                url = "{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system')
+                self._hypervisor_handler = libvirt.openAuth(url, self._auth, 0)
+        except Exception as error:
+            log.warn("Can not connect to url: %s, error: %s. Retrying...", url, error)
+            signal.alarm(4)
+            try:
+                url = "{0}{1}{2}".format('qemu+tls://', self.hostname, '/system')
+                self._hypervisor_handler = libvirt.openAuth(url, self._auth, 0)
+            except Exception as error:
+                log.error("Can not connect to url: %s, error: %s ", url, error)
+                return None
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old)
 
         if not self._hypervisor_handler:
             return None
