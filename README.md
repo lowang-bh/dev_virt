@@ -19,8 +19,12 @@ ReadME
     4). set up the DB_HOST, eg: example.com or 127.0.0.1:8000 for localhost test
 
         export DB_HOST=127.0.0.1:8000
+        
+    5). setup the platform env: Xen for xenserver or QEMU for KVM platform, the default is Xen
 
-    5). Log server is available to write the debug and exception infor to /var/log/virt.log. Remember to use sudo when
+        export PLATFORM=QEMU
+
+    6). Log server is available to write the debug and exception infor to /var/log/virt.log. Remember to use sudo when
         start the log server in case of no permission to the directory /var/log
 
         sudo nohup python /Users/wang/mygit/dev_xen/lib/Log/logging_server.py &
@@ -46,7 +50,7 @@ ReadME
 #####  1). <b>**Create a new VM with a template:**<b>
   - `-c VM_NAME, --create=VM_NAME`                        Create a new VM with a template.
   - `-t TEMPLATE, --templ=TEMPLATE`                       Template used to create a new VM.
-    
+
     > create_vm.py -c "test_vm" -t "CentOS 7.2 for Lain"
 
 #####  2). <b>**Create a new VM with a given IP: if a IP specified**<b>
@@ -65,7 +69,7 @@ ReadME
 
 #####  3). <b>**Create a new VM with given max cpu cores:**<b>
   - `--cpu-max=MAX_CORES`   Config the max VCPU cores.
-    
+
     > create_vm.py -c "test2" -t "CentOS 7.2 template" --cpu-max=2
 
     The max cpu cores can be configured when VM is power off only, and it affect the upper limit when set the cpu cores lively
@@ -103,12 +107,12 @@ ReadME
 
 ##### 2). <b>**config a VM' cpu when it is running**<b>
   - `--cpu-cores=CPU_CORES` Config the VCPU cores lively
-      
+
       > config_vm.py "test1" --cpu-core=4
 
 ##### 3). <b>**config a VM' memory when it is running**<b>
   - `--memory=MEMORY_SIZE`  Config the target memory size in GB.
-    
+
     > config_vm.py "test1" --memory=1
 
 ##### 4).Add new disk to VM, the storage_name is choosed from *--list-SR*
