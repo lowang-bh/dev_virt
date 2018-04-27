@@ -19,7 +19,7 @@ ReadME
     4). set up the DB_HOST, eg: example.com or 127.0.0.1:8000 for localhost test
 
         export DB_HOST=127.0.0.1:8000
-        
+
     5). setup the platform env: Xen for xenserver or QEMU for KVM platform, the default is Xen
 
         export PLATFORM=QEMU
