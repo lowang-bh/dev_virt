@@ -403,8 +403,7 @@ class QemuVirtDriver(VirtDriver):
 
     def get_mac_address(self, inst_name, eth_index):
         """
-
-        :param eth_if:
+        :param eth_index: index of virtual interface
         :return:
         """
         domain = self._get_domain_handler(domain_name=inst_name)
