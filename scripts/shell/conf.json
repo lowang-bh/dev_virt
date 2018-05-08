@@ -37,7 +37,7 @@
     "comment": "power off vm(s)"
   },
 
-  "reboot_vm": {
+  "reset_vm": {
     "vmname": "",
     "comment": "reboot vm"
   },
