@@ -1,0 +1,50 @@
+{
+  "common_conf": {
+    "db_conf": "cmdb)url",
+    "virtplatform_path": "path_to_your_workdir",
+    "hostip": "",
+    "user": "",
+    "passwd": "",
+    "comment": "common variable here"
+  },
+
+  "create_vm": {
+    "vmname": "",
+    "template": "centos7",
+    "device": "bond0",
+    "vmip": "",
+    "vmnetmask": "255.255.255.0",
+    "vif": "0",
+    "comment": "create vm"
+  },
+
+  "delete_vm": {
+    "vmname": "",
+    "comment": "delete vm"
+  },
+
+  "dump_host": {
+    "comment": "print xenserver info"
+  },
+
+  "power_on": {
+    "vmname": "",
+    "comment": "power on vm(s)"
+  },
+
+  "power_off": {
+    "vmname": "",
+    "comment": "power off vm(s)"
+  },
+
+  "reboot_vm": {
+    "vmname": "",
+    "comment": "reboot vm"
+  },
+
+  "dump_vm": {
+    "vmname": "",
+    "comment": "print vm info"
+  }
+
+}
