@@ -10,7 +10,7 @@ export PYTHONPATH=$PYTHONPATH:$VIRTPLATFORM_PATH
 HOST=$(jq .common_conf.hostip $JSON|sed 's/"//g')
 USER=$(jq .common_conf.user $JSON|sed 's/"//g')
 PASSWD=$(jq .common_conf.passwd $JSON|sed 's/"//g')
-VMNAME=$(jq .reboot_vm.vmname $JSON|sed 's/"//g')
+VMNAME=$(jq .reset_vm.vmname $JSON|sed 's/"//g')
 
-echo "python ../reboot_vm.py --host=$HOST -u $USER -p ****** --vm=$VMNAME"
-python ../reboot_vm.py --host=$HOST -u $USER -p $PASSWD --vm=$VMNAME
+echo "python ../reset_vm.py --host=$HOST -u $USER -p ****** --vm=$VMNAME"
+python ../reset_vm.py --host=$HOST -u $USER -p $PASSWD --vm=$VMNAME
