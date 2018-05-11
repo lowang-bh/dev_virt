@@ -4,7 +4,7 @@
 # Author: longhui
 # Created Time: 2018-03-08 15:40:59
 # Description: The script is to set the ip on eth0 through its mac address.
-#              If the mac start with "00:66", then use this method to setup
+#              If the mac start with "52:54", then use this method to setup
 #              the IP when system start up
 #########################################################################
 set -u
@@ -34,14 +34,18 @@ GetMacNum()
 	echo $num
 }
 
-if [[ $mymac == 00:66* ]];then
+if [[ $mymac == 52:54:* ]];then
     echo "start to config IP based on MAC."
     num1st=`GetMacNum $mymac 3`
     num2ed=`GetMacNum $mymac 4`
     num3rd=`GetMacNum $mymac 5`
     num4th=`GetMacNum $mymac 6`
 
-    MyIP=$num1st.$num2ed.$num3rd.$num4th
+    if [[ $num1st -eq 10 || $num1st -eq 172 ]];then
+    	MyIP=$num1st.$num2ed.$num3rd.$num4th
+    else
+	    MyIP=192.$num2ed.$num3rd.$num4th
+    fi
 
     MyGW=`echo $MyIP | awk -F. '{print $1"."$2"."$3".1"}'`
     MyBC=`echo $MyIP | awk -F. '{print $1"."$2"."$3".255"}'`
@@ -83,3 +87,4 @@ if [[ $mymac == 00:66* ]];then
 else
     echo "No MAC match the default pattern, exiting"
 fi
+
