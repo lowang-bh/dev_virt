@@ -11,13 +11,14 @@
 # that this script will be executed during boot.
 
 touch /var/lock/subsys/local
-if [[ -f /root/set_ip.sh ]];then
-    ALLETHS=`ifconfig |/bin/egrep eth[0-9] |awk  '{print $1}'|tr -d ":"`
+SetIPScript=/root/.config_ip.sh
+if [[ -f $SetIPScript ]];then
+    ALLETHS=`ifconfig |/bin/egrep "eth[0-9]|ens" |awk  '{print $1}'|tr -d ":"`
     echo "All eths are: $ALLETHS"
     for myeth in $ALLETHS
     do
-        /root/set_ip.sh $myeth
+        $SetIPScript $myeth
     done
 else
-    echo "No set_ip.sh found."
+    echo "No $SetIPScript found."
 fi
