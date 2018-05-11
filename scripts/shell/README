@@ -1,0 +1,13 @@
+为方便输入，把所有参数都放到了conf.json配置文件中，shell脚本从conf.json文件中获取参数。
+common_conf中放通用参数,其他分别对应操作类型
+
+注意：请确保scripts/shell/conf.json位于.gitignore文件中，以避免密码泄露
+
+0: 需要先安装jq工具
+centos:
+yum install jq -y
+macos:
+brew install jq
+
+1: 按需求修改conf.json配置文件
+2: 执行对应的shell脚本，无需再添加参数
