@@ -62,7 +62,7 @@ class QemuVnetDriver(VnetDriver):
                 url = "{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system')
                 self._hypervisor_handler = libvirt.openAuth(url, self._auth, 0)
         except Exception as error:
-            log.warn("Can not connect to url: %s, error: %s. Retrying...", url, error)
+            log.debug("Can not connect to url: %s, error: %s. Retrying...", url, error)
             signal.alarm(4)
             try:
                 url = "{0}{1}{2}".format('qemu+tls://', self.hostname, '/system')
@@ -92,27 +92,53 @@ class QemuVnetDriver(VnetDriver):
         """
         @return: return all the switch/bridge names on host
         """
-        raise NotImplementedError()
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        bridge_name_list = []
+        for netdom in self._hypervisor_handler.listAllNetworks():
+            bridge_name_list.append(netdom.bridgeName())
+
+        return bridge_name_list
 
     def is_network_exist(self, network_name):
         """
         @param network_name: the name of network created on bridge(when use linux bridge) or switch(when use openvswitch)
         @return: Ture if exist or False
         """
-        raise NotImplementedError()
+        all_bridges = self.get_network_list()
+        if network_name in all_bridges:
+            return True
+        else:
+            return False
 
     def get_all_devices(self):
         """
         @return: return list of all the interfaces device names in host
         """
-        raise NotImplementedError()
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+        try:
+            return [pif.name() for pif in self._hypervisor_handler.listAllInterfaces()]
+        except libvirt.libvirtError as error:
+            log.error("Exceptions raised when get all devices: %s", error)
+            return []
 
-    def get_device_infor(self, device_name=None):
+    def get_device_infor(self, device_name=None, pif_ref=None):
         """
         @param device_name: name of interface in host
         @return: return a dict with key: DNS,IP,MTU,MAC,netmask,gateway,network, etc.
         """
         raise NotImplementedError()
+
+        default_infor = {}
+        default_infor.setdefault('device', pif_record.get('device', None))
+        default_infor.setdefault('IP', pif_record.get('IP', None))
+        default_infor.setdefault('DNS', pif_record.get('DNS', None))
+        default_infor.setdefault('MAC', pif_record.get('MAC', None))
+        default_infor.setdefault('gateway', pif_record.get('gateway', None))
+        default_infor.setdefault('netmask', pif_record.get('netmask', None))
+        return default_infor
 
     def get_all_vifs_indexes(self, inst_name):
         """

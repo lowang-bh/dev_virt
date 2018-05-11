@@ -103,7 +103,7 @@ ReadME
 
     > config_vm.py "test1"  --vif=0 --ip=192.168.1.200 --device=eth0
 
-    > config_vm.py "test1"  --add-vif=1 --dev=eth1 --ip=192.168.1.200 --netmask=255.255.255.0
+    > config_vm.py "test1"  --add-vif=1 --device=eth1 --ip=192.168.1.200 --netmask=255.255.255.0
 
 ##### 2). <b>**config a VM' cpu when it is running**<b>
   - `--cpu-cores=CPU_CORES` Config the VCPU cores lively
