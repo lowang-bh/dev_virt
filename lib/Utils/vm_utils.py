@@ -462,9 +462,16 @@ class VirtHostDomain(ServerDomain):
                 disk_num += 1 # exclude those cd
 
         vif_dic = self.vnet_driver.get_all_vif_info(inst_name)
-        first_ip = vif_dic.get('0', {}).get('ip', None)
+        #first_ip = vif_dic.get('0', {}).get('ip', None)
+        key_list = sorted(vif_dic)
+        # get the first and second ip by device index
+        first_ip, second_ip = None, None
+        if key_list:
+            first_ip = vif_dic.get(key_list[0], {}).get('ip', None)
+        if len(key_list) >=2 :
+            second_ip = vif_dic.get(key_list[1], {}).get('ip', None)
         # second_ip is local ip
-        second_ip = vif_dic.get('1', {}).get('ip', None)
+        #second_ip = vif_dic.get('1', {}).get('ip', None)
         vm_host_ip = self.vnet_driver.get_host_manage_interface_infor()['IP']
 
         os_info = self.virt_driver.get_os_type(inst_name, short_name=False)
