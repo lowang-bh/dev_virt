@@ -393,7 +393,8 @@ class XenVnetDriver(VnetDriver):
             network_dict = {}
 
         for vkey, vindex in enumerate(sorted(vifs_info.keys())):
-            vifs_info[vindex].setdefault('ip', network_dict.get(str(vkey)+"/ip", None))
+            vifs_info[vindex].setdefault('ip', network_dict.get(str(vindex)+"/ip", None))
+        log.debug("All vif infor: %s", vifs_info)
 
         return vifs_info
 
