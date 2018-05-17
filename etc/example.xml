@@ -1,9 +1,9 @@
 <servers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="file:///H:/xml/sim_server.xsd">
 
-	<SERVER serverIp="10.143.248.17" user="root" passwd="123456">
+	<SERVER serverIp="192.168.1.10" user="root" passwd="123456">
         <VM vmname="createViaXml" cpucores="2" cpumax="4" memory="2" maxMemory="4">
-            <IP vifIndex="0" ip="10.143.248.240" network="xenbr1" />
-            <DISK> size="2" storage="Local storage" </DISK>
+            <IP vifIndex="0" ip="192.168.1.240" network="xenbr1" />
+            <DISK size="2" storage="Local storage" />
         </VM>
   </SERVER>
 </servers>
