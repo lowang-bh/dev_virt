@@ -23,6 +23,7 @@ if __name__ == "__main__":
     parser.add_option("--list-sr", dest="list_sr", action="store_true", help="List all the storage information")
     parser.add_option("--list-pif", dest="list_pif", action="store_true", help="List all the interface information")
     parser.add_option("--list-bond", dest="list_bond", action="store_true", help="List all the bond information")
+    parser.add_option("--list-vm", dest="list_vm", action="store_true", help="List all the vms")
 
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
@@ -48,6 +49,8 @@ if __name__ == "__main__":
         serverDomain.print_all_interface()
     elif options.list_bond:
         serverDomain.print_bond_inforation()
+    elif options.list_vm:
+        serverDomain.print_all_vms()
     else:
         serverDomain.print_server_hardware_info()
 
