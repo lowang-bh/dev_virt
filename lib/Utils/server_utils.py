@@ -192,11 +192,6 @@ class ServerDomain(object):
         dest_gateway = None
         if device is not None:
             try:
-                # host_name = kwargs['host']
-                # user = kwargs['user'] if kwargs['user'] else "root"
-                # passwd = str(kwargs['passwd']).replace('\\', '') if kwargs['passwd'] else ""
-                # vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
-
                 device_info = self.vnet_driver.get_device_infor(device_name=device)
                 dest_metmask = device_info["netmask"]
                 dest_gateway = device_info['gateway']
