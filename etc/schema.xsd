@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xsd:schema attributeFormDefault="unqualified" elementFormDefault="qualified" version="1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+    <!--Base class for all Elements-->
+    <!--<xsd:complexType name="ELEMType">-->
+        <!--&lt;!&ndash;Everything must have a unique name, called a Value&ndash;&gt;-->
+        <!--<xsd:attribute name="Value" type="xsd:string" use="required"/>-->
+    <!--</xsd:complexType>-->
+    <xsd:element name="servers">
+        <xsd:complexType>
+            <!--A server may contain an unlimited number of VMs-->
+            <xsd:sequence>
+                <xsd:element name="SERVER" type="ServerType" maxOccurs="unbounded"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+
+    <xsd:complexType name="ServerType">
+        <xsd:complexContent>
+            <!--A server may contain an unlimited number of VMs, inorder to limit the VMs number, set it 16-->
+            <xsd:sequence>
+                <xsd:element name="VM" type="VMType" maxOccurs="16"/>
+            </xsd:sequence>
+            <xsd:attribute name="serverIp" type="xsd:string" use="required"/>
+            <xsd:attribute name="user" type="xsd:string" use="required"/>
+            <xsd:attribute name="passwd" type="xsd:string" use="required"/>
+        </xsd:complexContent>
+    </xsd:complexType>
+    <!--Server Type Definition-->
+
+    <xsd:complexType name="VMType">
+        <!--An VM may contain max 16 VIF and 16 Virtual disk, due to there is already one boot disk, so max disk is 15 -->
+        <xsd:complexContent>
+            <xsd:sequence>
+                <xsd:element maxOccurs="16" name="IP" type="IPType"/>
+                <xsd:element maxOccurs="15" name="DISK"  type="DiskType"/>
+            </xsd:sequence>
+            <xsd:attribute name="vmname" type="xsd:string" use="required"/>
+            <xsd:attribute name="cpucores" type="xsd:string" use="optional"/>
+            <xsd:attribute name="cpumax" type="xsd:string" use="optional"/>
+            <xsd:attribute name="memory" type="xsd:string" use="optional"/>
+            <xsd:attribute name="minMemory" type="xsd:string" use="optional"/>
+            <xsd:attribute name="maxMemory" type="xsd:string" use="optional"/>
+        </xsd:complexContent>
+    </xsd:complexType>
+    <!--IP Type Definition-->
+    <xsd:complexType name="IPType">
+        <xsd:complexContent>
+            <xsd:attribute name="vifIndex" type="xsd:string" use="required"/>
+            <xsd:attribute name="ip" type="xsd:string" use="required"/>
+            <xsd:attribute name="netmask"  type="xsd:string"  use="optional" />
+            <xsd:attribute name="network"  type="xsd:string"  use="optional" />
+        </xsd:complexContent>
+    </xsd:complexType>
+
+    <!--Disk Type Definition-->
+    <xsd:complexType name="DiskType">
+        <xsd:complexContent>
+            <xsd:attribute name="size" type="xsd:string" use="required"/>
+            <xsd:attribute name="storage"  type="xsd:string"  use="optional" />
+        </xsd:complexContent>
+    </xsd:complexType>
+
+
+</xsd:schema>

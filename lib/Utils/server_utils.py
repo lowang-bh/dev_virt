@@ -102,6 +102,15 @@ class ServerDomain(object):
                 log.info("%s\tMAC: %s, IP: %s", device_infor['device'], device_infor.get('MAC'), device_infor.get('IP'))
         return True
 
+    def print_all_vms(self):
+        """
+        :return:
+        """
+        log.info("All VMs in server: %s", self.server_name)
+        vms = self.virt_driver.get_vm_list()
+        log.info(vms)
+        return True
+
     def get_host_all_storage_info(self):
         """
         :return:
