@@ -787,6 +787,13 @@ class QemuVirtDriver(VirtDriver):
         """
         raise NotImplementedError()
 
+    def allowed_set_vcpu_live(self, inst_name):
+        """
+        :param inst_name:
+        :return: True if allowed to set vcpu lively, else False
+        """
+        raise NotImplementedError()
+
     def set_vm_vcpu_live(self, inst_name, vcpu_num):
         """
         set the vcpu numbers for a running VM

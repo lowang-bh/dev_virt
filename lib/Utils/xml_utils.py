@@ -7,7 +7,7 @@
 """
 from lxml import etree
 from lib.Log.log import log
-
+from xml.etree.ElementTree import ElementTree
 
 def validate(schemaFile, xmlFile):
     try:
@@ -23,3 +23,53 @@ def validate(schemaFile, xmlFile):
         return False
 
     return True
+
+
+def parse_xml(xml_file):
+    """
+    parse the example xml
+    :param xml_file:
+    :return:[{'passwd': '123456', 'host': '192.168.1.10', 'user': 'root', 'vms': []}]
+    """
+    tree = ElementTree()
+    tree.parse(xml_file)
+    servers = tree.findall('SERVER')
+    server_list=[]
+    for server in servers:
+        host = server.attrib['serverIp']
+        user = server.attrib['user']
+        passwd = server.attrib['passwd']
+        server_dict = {'host':host, 'user':user, 'passwd':passwd, 'vms':[]}
+        server_list.append(server_dict)
+        for vm in list(server):
+            vmname = vm.attrib['vmname']
+            vmdict = {'vmname':vmname, 'cpucores':None, 'cpumax':None, 'memory':None, 'minMemory':None, 'maxMemory':None, 'ips':[], 'disks':[]}
+            vmdict.update(vm.attrib)
+            server_dict['vms'].append(vmdict)
+            #parse IP
+            ips = vm.findall('IP')
+            disks = vm.findall('DISK')
+            for ip in ips:
+                ipdict = {'vifIndex': None, 'network': None, 'ip': None, 'netmask': None}
+                ipdict.update(ip.attrib)
+                vmdict['ips'].append(ipdict)
+            for disk in disks:
+                diskdict = {'size':None, 'storage':None}
+                diskdict.update(disk.attrib)
+                vmdict['disks'].append(diskdict)
+            log.debug("ips for vm %s is:%s", vmname,  vmdict['ips'])
+            log.debug("disk for vm %s is %s", vmname, vmdict['disks'])
+
+    return server_list
+
+
+if __name__ == "__main__":
+    servers = parse_xml("/Users/wang/mygit/dev_xen/etc/example.xml")
+    print servers
+    for server in servers:
+        for key,value in server.items():
+            if key != "vms":
+                print key, value
+            else:
+                for vmdic in value:
+                    print vmdic

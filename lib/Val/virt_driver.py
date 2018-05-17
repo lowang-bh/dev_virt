@@ -271,4 +271,11 @@ class VirtDriver(object):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def allowed_set_vcpu_live(self, inst_name):
+        """
+        :param inst_name:
+        :return: True if allowed to set vcpu lively, else False
+        """
+        raise NotImplementedError()
 

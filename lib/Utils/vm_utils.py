@@ -136,6 +136,13 @@ class VirtHostDomain(ServerDomain):
 
         return ret
 
+    def allowed_set_vcpu_live(self, inst_name):
+        """
+        :param inst_name:
+        :return:
+        """
+        return self.virt_driver.allowed_set_vcpu_live(inst_name)
+
     def config_vcpus(self, inst_name, vcpu_nums=None, vcpu_max=None):
         """
         :param inst_name: VM name

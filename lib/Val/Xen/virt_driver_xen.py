@@ -355,6 +355,23 @@ class XenVirtDriver(VirtDriver):
             return False
 
     #  ## Set or GET VM VCPU number###
+    def allowed_set_vcpu_live(self, inst_name):
+        """
+        :param inst_name:
+        :return: True if allowed to set vcpu lively, else False
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+        try:
+            vm_ref = self._hypervisor_handler.xenapi.get_by_name_label(inst_name)[0]
+            record = self._hypervisor_handler.xenapi.VM.get_record(vm_ref)
+            if "changing_VCPUs_live" in record['allowed_operations']:
+                return True
+            else:
+                return False
+        except Exception:
+            return False
+
     def set_vm_vcpu_live(self, inst_name, vcpu_num):
         """
         set the vcpu numbers for a running VM
