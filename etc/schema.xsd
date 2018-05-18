@@ -45,7 +45,9 @@
         <xsd:attribute name="vifIndex" type="xsd:string" use="required"/>
         <xsd:attribute name="ip" type="xsd:string" use="required"/>
         <xsd:attribute name="netmask"  type="xsd:string"  use="optional" />
+        <xsd:attribute name="device"  type="xsd:string"  use="optional" />
         <xsd:attribute name="network"  type="xsd:string"  use="optional" />
+        <xsd:attribute name="bridge"  type="xsd:string"  use="optional" />
     </xsd:complexType>
 
     <!--Disk Type Definition-->

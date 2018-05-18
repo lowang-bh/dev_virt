@@ -33,7 +33,9 @@ if __name__ == "__main__":
     parser.add_option("--vif", dest="vif_index", help="Configure on a virtual interface device")
 
     parser.add_option("--device", dest="device", help="The target physic NIC name with an associated network vif attach(ed) to")
-    parser.add_option("--network", dest="network", help="The target bridge/switch network which vif connect(ed) to")
+    parser.add_option("--network", dest="network", help="The target network which vif connect(ed) to")
+    parser.add_option("--bridge",  dest="bridge",  help="The target bridge which vif connect(ed) to")
+
     parser.add_option("--ip", dest="vif_ip", help="The ip assigned to the virtual interface")
     parser.add_option("--netmask", dest="vif_netmask", help="The netmask for the target virtual interface")
 
@@ -51,7 +53,9 @@ if __name__ == "__main__":
     parser.add_option("--list-pif", dest="list_pif", action="store_true",
                       help="List the interface device in the host")
     parser.add_option("--list-network", dest="list_network", action="store_true",
-                      help="List the bridge/switch network in the host")
+                      help="List the network in the host(in Xenserver, it is same as bridge)")
+    parser.add_option("--list-bridge", dest="list_bridge", action="store_true",
+                      help="List the bridge/switch names in the host")
     parser.add_option("--list-SR", dest="list_sr", action="store_true",
                       help="List the storage repository infor in the host")
 
@@ -65,7 +69,8 @@ if __name__ == "__main__":
     user = options.user if options.user else "root"
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
 
-    if not options.list_vif and not options.list_pif and not options.list_sr and not options.list_network and\
+    if not options.list_vif and not options.list_pif and not options.list_sr and not options.list_network and \
+        not options.list_bridge and \
         (not options.vif_index and not options.del_index and not options.add_index and
          not options.disk_size and not options.cpu_cores and not options.max_cores and
          not options.memory_size and not options.min_memory and not options.max_memory):
@@ -99,11 +104,19 @@ if __name__ == "__main__":
         exit(0)
 
     if options.list_network:
-        all_networks = vnet_driver.get_network_list()
+        all_networks = virthost.get_network_list()
         if all_networks:
             log.info(str(sorted(all_networks)))
         else:
             log.info("No network found.")
+        exit(0)
+
+    if options.list_bridge:
+        all_bridges = virthost.get_bridge_list()
+        if all_bridges:
+            log.info(str(sorted(all_bridges)))
+        else:
+            log.info("No bridges found.")
         exit(0)
 
     if not args:
@@ -124,37 +137,49 @@ if __name__ == "__main__":
             log.info("No virtual interface device found.")
         exit(0)
 
-    if options.add_index is not None:
-        vif_index = options.add_index
-
+    if options.add_index is not None or options.vif_index is not None:
         device_name = options.device
-        if device_name is not None and device_name not in vnet_driver.get_all_devices():
+        if device_name is not None and device_name not in virthost.get_all_devices():
             log.fail("Invalid device name:[%s].", device_name)
             exit(1)
 
         network = options.network
-        if network is not None and network not in vnet_driver.get_network_list():
+        if network is not None and network not in virthost.get_network_list():
             log.fail("No network named: [%s].", network)
             exit(1)
 
-        if options.device is None and options.network is None:
+        bridge = options.bridge
+        if bridge is not None and bridge not in virthost.get_bridge_list():
+            log.fail("No bridge named: [%s].", bridge)
+            exit(1)
+
+        if options.device is None and options.network is None and options.bridge is None:
             device_name = virthost.get_default_device()
             if not device_name:
                 log.fail("Failed to get default device. "
-                         "Please specify a NIC or network for the new created virtual interface.")
+                         "Please specify a NIC or network/bridge for the new created virtual interface.")
                 exit(1)
 
         if options.vif_ip is not None:
-            if not virthost.is_IP_available(options.vif_ip, vif_netmask=options.vif_netmask, device=device_name):
+            if not virthost.is_IP_available(options.vif_ip, options.vif_netmask, device_name, network, bridge):
                 log.fail("IP check failed.")
                 exit(1)
-
-        if virthost.create_new_vif(inst_name, vif_index, device_name, network, options.vif_ip):
-            log.success("New virtual interface device created successfully.")
-            exit(0)
-        else:
-            log.fail("New virtual interface device created or attached failed.")
-            exit(1)
+        if options.add_index:
+            vif_index = options.add_index
+            if virthost.create_new_vif(inst_name, vif_index, device_name, network, bridge, options.vif_ip):
+                log.success("New virtual interface device created successfully.")
+                exit(0)
+            else:
+                log.fail("New virtual interface device created or attached failed.")
+                exit(1)
+        elif options.vif_index:
+            vif_index = options.vif_index
+            if virthost.config_vif(inst_name, vif_index, device_name, network, bridge, options.vif_ip):
+                log.success("New virtual interface device configured successfully.")
+                exit(0)
+            else:
+                log.fail("New virtual interface device configured failed.")
+                exit(1)
 
     elif options.del_index is not None:
         vif_index = options.del_index
@@ -165,40 +190,6 @@ if __name__ == "__main__":
             exit(0)
         else:
             log.fail("Failed to delete the virtual interface device")
-            exit(1)
-
-    elif options.vif_index is not None:
-        vif_index = options.vif_index
-
-        device_name = options.device
-        if device_name is not None and device_name not in vnet_driver.get_all_devices():
-            log.fail("Invalid device name:[%s].", device_name)
-            exit(1)
-
-        network = options.network
-        if network is not None and network not in vnet_driver.get_network_list():
-            log.fail("No network named: [%s].", network)
-            exit(1)
-
-        if options.device is None and options.network is None:
-            device_name = virthost.get_default_device()
-            if not device_name:
-                log.fail("Failed to get default device. "
-                         "Please specify a NIC or network for the new created virtual interface.")
-                exit(1)
-
-        if options.vif_ip is not None:
-            if not virthost.is_IP_available(options.vif_ip, options.vif_netmask, device_name):
-                log.fail("IP check failed.")
-                exit(1)
-        else:
-            log.info("No IP specified, it will delete old VIF and create a new VIF to the target network.")
-
-        if virthost.config_vif(inst_name, vif_index, device_name, network, options.vif_ip):
-            log.success("New virtual interface device configured successfully.")
-            exit(0)
-        else:
-            log.fail("New virtual interface device configured failed.")
             exit(1)
 
     elif options.disk_size is not None:

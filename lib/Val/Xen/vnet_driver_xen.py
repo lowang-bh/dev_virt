@@ -83,7 +83,7 @@ class XenVnetDriver(VnetDriver):
         except Exception, error:
             log.debug(error)
 
-    def get_network_list(self):
+    def get_bridge_list(self):
         """
         return all the switch/bridge/network on host
         """
@@ -96,16 +96,29 @@ class XenVnetDriver(VnetDriver):
 
         return switch_names_list
 
+    def get_network_list(self):
+        """
+        :return: all the bridge names
+        """
+        return self.get_bridge_list()
+
     def is_network_exist(self, network_name):
         """
-        @param network_name: the network name of bridge(when use linux bridge) or switch(when use openvswitch)
+        @param network_name: the bridge name of bridge(when use linux bridge) or switch(when use openvswitch)
         @return: True if exist or False
         """
-        all_switches = self.get_network_list()
+        all_switches = self.get_bridge_list()
         if network_name in all_switches:
             return True
         else:
             return False
+
+    def is_bridge_exist(self, bridge_name):
+        """
+        :param bridge_name:
+        :return:
+        """
+        return self.is_network_exist(network_name=bridge_name)
 
     def _get_PIF_by_device(self, device_name):
         """
@@ -419,7 +432,7 @@ class XenVnetDriver(VnetDriver):
         log.debug("No virtual interface with given index:[%s].", vif_index)
         return None
 
-    def create_new_vif(self, inst_name, vif_index, device_name=None, network=None, MAC=None):
+    def create_new_vif(self, inst_name, vif_index, device_name=None, network=None, bridge=None, MAC=None):
         """
         @param inst_name: name of the guest VM
         @param device_name: device name on the host which the network belong to

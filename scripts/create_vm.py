@@ -35,7 +35,9 @@ if __name__ == "__main__":
 
     parser.add_option("--vif", dest="vif_index", help="Configure on a virtual interface device")
     parser.add_option("--device", dest="device", help="The target physic NIC name with an associated network vif attach(ed) to")
-    parser.add_option("--network", dest="network", help="The target bridge/switch network which vif connect(ed) to")
+    parser.add_option("--network", dest="network", help="The target network(in xen, it is same as bridge) which vif connect(ed) to")
+    parser.add_option("--bridge",  dest="bridge",  help="The target bridge which vif connect(ed) to")
+
     parser.add_option("--ip", dest="vif_ip", help="The ip assigned to the virtual interface")
     parser.add_option("--netmask", dest="vif_netmask", help="The netmask for the target virtual interface")
 
@@ -44,7 +46,9 @@ if __name__ == "__main__":
     parser.add_option("--list-templ", dest="list_templ", action="store_true",
                       help="List all the templates in the server.")
     parser.add_option("--list-network", dest="list_network", action="store_true",
-                      help="List the bridge/switch network in the host")
+                      help="List the network in the host(in Xenserver, it is same as bridge)")
+    parser.add_option("--list-bridge", dest="list_bridge", action="store_true",
+                      help="List the bridge/switch names in the host")
 
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
@@ -81,11 +85,18 @@ if __name__ == "__main__":
             log.info("No templates.")
 
     elif options.list_network:
-        all_networks = vnet_driver.get_network_list()
+        all_networks = virthost.get_network_list()
         if all_networks:
             log.info(str(sorted(all_networks)))
         else:
             log.info("No network found.")
+
+    elif options.list_bridge:
+        all_bridges = virthost.get_bridge_list()
+        if all_bridges:
+            log.info(str(sorted(all_bridges)))
+        else:
+            log.info("No bridges found.")
 
     elif options.vm_name is not None:
         if options.template is None:
@@ -129,22 +140,27 @@ if __name__ == "__main__":
                 log.fail("Please specify an VIF for configuring the IP.")
                 exit(1)
             device_name = options.device
-            if device_name is not None and device_name not in vnet_driver.get_all_devices():
+            if device_name is not None and device_name not in virthost.get_all_devices():
                 log.fail("Invalid device name:[%s].", device_name)
                 exit(1)
             network = options.network
-            if network is not None and network not in vnet_driver.get_network_list():
+            if network is not None and network not in virthost.get_network_list():
                 log.fail("No network named: [%s].", network)
                 exit(1)
+            bridge = options.bridge
+            if bridge is not None and bridge not in virthost.get_bridge_list():
+                log.fail("No bridge named: [%s].", bridge)
+                exit(1)
 
-            if options.device is None and options.network is None:
+            if options.device is None and options.network is None and options.bridge is None:
                 options.device = virthost.get_default_device()
                 if not options.device:
                     log.fail("Failed to get default device. "
                              "Please specify a NIC or network for the new created virtual interface.")
                     exit(1)
 
-            if not virthost.is_IP_available(options.vif_ip, vif_netmask=options.vif_netmask, device=options.device):
+            if not virthost.is_IP_available(options.vif_ip, vif_netmask=options.vif_netmask, device=options.device,
+                                            network=options.network, bridge=options.bridge):
                 log.fail("IP check failed.")
                 exit(1)
 
@@ -176,7 +192,7 @@ if __name__ == "__main__":
 
         # 3. config VM
         if options.vif_ip is not None:
-            config_ret = virthost.config_vif(new_vm_name, options.vif_index, options.device, options.network, options.vif_ip)
+            config_ret = virthost.config_vif(new_vm_name, options.vif_index, options.device, options.network, options.bridge, options.vif_ip)
             if not config_ret:
                 log.warn("Vif configure failed.")
             else:
