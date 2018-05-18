@@ -45,11 +45,6 @@ if __name__ == "__main__":
         log.fail("XML file '%s' did not validate with the schema.xsd!", filename)
         exit(1)
 
-    # #if just validate, exit when validate finish
-    # if not create:
-    #     log.success("Xml validate successfully.")
-    #     exit(0)
-
     # start to create via xml
     parsed_xml = xml_utils.parse_xml(filename)
     #[{'passwd': '123456', 'host': '192.168.1.10', 'user': 'root', 'vms': []}]
@@ -73,6 +68,10 @@ if __name__ == "__main__":
         free_memory = virt_driver.get_host_mem_info()['size_free']
         total_memory = 0
         disk_size = {}
+        iplist = []
+        device_list = virthost.get_all_devices()
+        bridge_list = virthost.get_bridge_list()
+        network_list = virthost.get_network_list()
         for vm in server['vms']:
             if virt_driver.is_instance_exists(vm['vmname']):
                 log.fail("There is already one VM named [%s]", vm['vmname'])
@@ -92,12 +91,37 @@ if __name__ == "__main__":
                 storage = diskdic['storage']
                 if not storage:
                     storage = default_sr
-                elif storage not in virt_driver.get_host_all_storages():
+                elif storage not in all_sr_info:
                     log.fail("No storage named '%s' in server %s.", storage, virthost.server_name)
                     exit(1)
                 disk_size.setdefault(storage, 0)
                 disk_size[storage] += float(diskdic['size'])
             #IP validation
+            vif_index_list = []
+            for ipdic in vm['ips']:
+                if ipdic['ip'] not in iplist:
+                    iplist.append(ipdic['ip'])
+                else:
+                    log.fail('Duplicate ip:[%s] in vm [%s].', ipdic['ip'], vm['vmname'])
+                    exit(1)
+                if ipdic['vifIndex'] not in vif_index_list:
+                    vif_index_list.append(ipdic['vifIndex'])
+                else:
+                    log.fail("Duplicate vif index:[%s] in vm [%s].", ipdic['vifIndex'], vm['vmname'])
+                    exit(1)
+                if ipdic['device'] and ipdic['device'] not in device_list:
+                    log.fail("No available device [%s] in server [%s].", ipdic['device'], hostname)
+                    exit(1)
+                if ipdic['network'] and ipdic['network'] not in network_list:
+                    log.fail("No available network [%s] in server [%s].", ipdic['network'], hostname)
+                    exit(1)
+                if ipdic['bridge'] and ipdic['bridge'] not in bridge_list:
+                    log.fail("No available bridge [%s] in server [%s].", ipdic['bridge'], hostname)
+                    exit(1)
+                log.debug("VM [%s] has a IP infor: %s", vm['vmname'], ipdic)
+                if not virthost.is_IP_available(ipdic['ip'], ipdic['netmask'], ipdic['device'], ipdic['network'], ipdic['bridge']):
+                    log.fail("IP [%s] check failed in vm [%s].", ipdic['ip'], vm['vmname'])
+                    exit(1)
 
         if total_memory > free_memory:
             log.error("Total memory %s exceed the limit of free memory %s in server %s", total_memory, free_memory, virthost.server_name)

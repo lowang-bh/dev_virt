@@ -88,9 +88,10 @@ class QemuVnetDriver(VnetDriver):
             self._hypervisor_handler.close()
         self._hypervisor_handler = None
 
-    def get_network_list(self):
+    def get_bridge_list(self):
         """
         @return: return all the switch/bridge names on host
+        @note: can not list the bridge which is not defined by xml
         """
         if self._hypervisor_handler is None:
             self._hypervisor_handler = self.get_handler()
@@ -101,13 +102,30 @@ class QemuVnetDriver(VnetDriver):
 
         return bridge_name_list
 
+    def get_network_list(self):
+        """
+        return all the switch/bridge/network on host
+        """
+        all_network = self._hypervisor_handler.listAllNetworks()
+        network_names = [network.name() for network in all_network]
+        return network_names
+
+    def is_bridge_exist(self, bridge_name):
+        """
+        :param bridge_name:
+        :return:
+        """
+        if bridge_name in self.get_bridge_list():
+            return True
+        else:
+            return False
+
     def is_network_exist(self, network_name):
         """
         @param network_name: the name of network created on bridge(when use linux bridge) or switch(when use openvswitch)
         @return: Ture if exist or False
         """
-        all_bridges = self.get_network_list()
-        if network_name in all_bridges:
+        if network_name in self.get_network_list():
             return True
         else:
             return False

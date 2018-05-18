@@ -53,7 +53,9 @@ class VirtHostDomain(ServerDomain):
         # No matter delete vm from DB failed or not, return True
         return True
 
-    def create_new_vif(self, inst_name, vif_index, device_name=None, network=None, ip=None):
+    # TODO: need to add bridge, kvm use device, network or bridge to create vif, xen use device, bridge(network same as bridge)
+    # TODO: vnet_driver.create_new_vif in xen an kvm will use device, network or bridge branch according to the given params
+    def create_new_vif(self, inst_name, vif_index, device_name=None, network=None, bridge=None, ip=None):
         """
         create a new virtual interface on the target VM
         @param inst_name: Vm name
@@ -71,7 +73,7 @@ class VirtHostDomain(ServerDomain):
             mac_addr = None
 
         log.debug("Create VIF [%s] with IP: %s,  MAC: %s.", vif_index, ip, mac_addr)
-        new_vif = self.vnet_driver.create_new_vif(inst_name, vif_index, device_name, network, MAC=mac_addr)
+        new_vif = self.vnet_driver.create_new_vif(inst_name, vif_index, device_name, network, bridge=bridge, MAC=mac_addr)
         if new_vif is not None:
 
             self.update_ip_infor_to_database(inst_name, vif_index=vif_index, ip=ip)
@@ -118,7 +120,7 @@ class VirtHostDomain(ServerDomain):
 
         return True
 
-    def config_vif(self, inst_name, vif_index, device_name=None, network=None, ip=None):
+    def config_vif(self, inst_name, vif_index, device_name=None, network=None, bridge=None, ip=None):
         """
         configure a vif: first destroy old vif and then create a new vif
         @param inst_name: Vm name
@@ -132,7 +134,7 @@ class VirtHostDomain(ServerDomain):
         if not self.destroy_old_vif(inst_name, vif_index):
             return False
 
-        ret = self.create_new_vif(inst_name, vif_index, device_name, network, ip)
+        ret = self.create_new_vif(inst_name, vif_index, device_name, network, bridge, ip)
 
         return ret
 

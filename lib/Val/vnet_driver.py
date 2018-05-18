@@ -173,3 +173,18 @@ class VnetDriver(object):
         :return:
         """
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_bridge_list(self):
+        """
+        return all the switch/bridge/network on host
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def is_bridge_exist(self, bridge_name):
+        """
+        :param bridge_name:
+        :return:
+        """
+        raise NotImplementedError()

@@ -50,7 +50,7 @@ def parse_xml(xml_file):
             ips = vm.findall('IP')
             disks = vm.findall('DISK')
             for ip in ips:
-                ipdict = {'vifIndex': None, 'network': None, 'ip': None, 'netmask': None}
+                ipdict = {'vifIndex': None, 'network': None, 'ip': None, 'netmask': None, 'device': None, 'bridge': None}
                 ipdict.update(ip.attrib)
                 vmdict['ips'].append(ipdict)
             for disk in disks:
@@ -64,7 +64,7 @@ def parse_xml(xml_file):
 
 
 if __name__ == "__main__":
-    servers = parse_xml("/Users/wang/mygit/dev_xen/etc/example.xml")
+    servers = parse_xml("../../etc/example.xml")
     print servers
     for server in servers:
         for key,value in server.items():
@@ -72,4 +72,5 @@ if __name__ == "__main__":
                 print key, value
             else:
                 for vmdic in value:
-                    print vmdic
+                    for k,v in vmdic.items():
+                        print k, v
