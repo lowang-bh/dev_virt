@@ -358,7 +358,7 @@ class QemuVnetDriver(VnetDriver):
             self._hypervisor_handler = self.get_handler()
 
         for interface_dom in self._hypervisor_handler.listAllInterfaces():
-            if interface_dom.name == device_name:
+            if interface_dom.name() == device_name:
                 interface_tree = xmlEtree.fromstring(interface_dom.XMLDesc())
                 if interface_tree.attrib.get('type') == 'bridge':
                     return interface_tree.attrib.get('name')

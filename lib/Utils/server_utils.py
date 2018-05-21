@@ -86,7 +86,7 @@ class ServerDomain(object):
             mac = pif_infor.get('MAC')
             ip = pif_infor.get('IP')
             ip = ip if ip else None
-            log.info("%s\t%s\tMAC: %s, IP: %15s, Bridge: %s", pif_index, pif_name, mac, ip, bridge_name)
+            log.info("%s\t%-15s\tMAC: %s, IP: %15s, Bridge: %s", pif_index, pif_name, mac, ip, bridge_name)
 
         return True
 
