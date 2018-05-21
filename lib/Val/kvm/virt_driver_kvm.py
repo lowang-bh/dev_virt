@@ -324,7 +324,7 @@ class QemuVirtDriver(VirtDriver):
             # flags will prevent the forceful termination of the guest, and will instead
             # return an error if the guest doesn't terminate by the end of the timeout
             if domain.isActive():
-                ret = domain.destroyFlags(flags=1)
+                ret = domain.destroyFlags(flags=1) # VIR_DOMAIN_DESTROY_GRACEFUL = 1
                 if ret != 0:
                     ret = domain.destroyFlags(flags=0)
                 return ret == 0
@@ -362,64 +362,6 @@ class QemuVirtDriver(VirtDriver):
             return dom.OSType()  # In KVM it will return hvm
         else:
             return None
-
-    def set_mac_address(self, inst_name, eth_index, mac):
-        '''
-        <mac address='52:54:00:68:43:c2'/>
-        '''
-        vm_name = inst_name
-        domain = self._get_domain_handler(domain_name=vm_name)
-        if not domain:
-            log.error("Domain %s doesn't exist, set mac failed.", inst_name)
-            return False
-        if domain.isActive():
-            self.power_off_vm(vm_name)
-
-        tree = xmlEtree.fromstring(domain.XMLDesc())
-        mac_list = tree.findall('devices/interface/mac')
-        try:
-            mac_element = mac_list[eth_index]
-            log.debug("Change mac to %s on interface index %s", mac, eth_index)
-        except IndexError:
-            log.error("No interface with index %s on domain: %s", eth_index, inst_name)
-            return False
-
-        mac_element.set('address', mac)
-        domain_xml = xmlEtree.tostring(tree)
-
-        # after change the xml, redeine it
-        hv_handler = self.get_handler()
-        if not hv_handler:
-            log.error("Can not connect to host: %s when create domain %s.", self.hostname, vm_name)
-            return False
-        try:
-            # if failed it will raise libvirtError, return value is always a Domain object
-            _ = hv_handler.defineXML(domain_xml)
-        except libvirtError:
-            log.error("Create domain %s failed when define by xml.", vm_name)
-            return False
-
-        return True
-
-    def get_mac_address(self, inst_name, eth_index):
-        """
-        :param eth_index: index of virtual interface
-        :return:
-        """
-        domain = self._get_domain_handler(domain_name=inst_name)
-        if not domain:
-            log.error("Domain %s doesn't exist, set mac failed.", inst_name)
-            return None
-
-        tree = xmlEtree.fromstring(domain.XMLDesc())
-        mac_list = tree.findall('devices/interface/mac')
-        try:
-            mac_element = mac_list[eth_index]
-        except IndexError:
-            log.error("No interface with index %s on domain: %s", eth_index, inst_name)
-            return None
-
-        return mac_element.get('address')  # If no key with address, will return None
 
     def reboot(self, inst_name):
         '''

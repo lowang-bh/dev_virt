@@ -8,6 +8,9 @@
 
 import libvirt
 import signal
+import xml.etree.ElementTree as xmlEtree
+from libvirt import libvirtError
+from ipaddress import IPv4Address
 from lib.Val.vnet_driver import VnetDriver
 from lib.Log.log import log
 
@@ -79,6 +82,30 @@ class QemuVnetDriver(VnetDriver):
 
         return self._hypervisor_handler
 
+    def _get_domain_handler(self, domain_name=None, domain_id=None):
+        """
+        get domain handler under qemu, in future, we could have a cache layer
+        :param domain_name: the instanse name with the format support by libvirt
+        :return:
+        """
+        hv_handler = self.get_handler()
+        if not hv_handler:
+            log.error("cannot find the connection to qemu")
+            return None
+
+        if domain_id is None and domain_name is None:
+            log.error("Both domain ID and Name is None.")
+            return None
+        try:
+            if domain_name:
+                dom = hv_handler.lookupByName(domain_name)
+            else:
+                dom = hv_handler.lookupByID(domain_id)
+            return dom
+        except libvirtError, e:
+            log.exception(str(e))
+            return None
+
     def delete_handler(self):
         """
          close the connect to host
@@ -142,21 +169,95 @@ class QemuVnetDriver(VnetDriver):
             log.error("Exceptions raised when get all devices: %s", error)
             return []
 
-    def get_device_infor(self, device_name=None, pif_ref=None):
+    def get_device_infor(self, device_name=None):
         """
         @param device_name: name of interface in host
         @return: return a dict with key: DNS,IP,MTU,MAC,netmask,gateway,network, etc.
         """
-        raise NotImplementedError()
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+        try:
+            device_dom = self._hypervisor_handler.interfaceLookupByName(device_name)
+        except libvirtError as error:
+            log.error("Exception when get device infor: %s", error)
+            return {}
 
         default_infor = {}
-        default_infor.setdefault('device', pif_record.get('device', None))
-        default_infor.setdefault('IP', pif_record.get('IP', None))
-        default_infor.setdefault('DNS', pif_record.get('DNS', None))
-        default_infor.setdefault('MAC', pif_record.get('MAC', None))
-        default_infor.setdefault('gateway', pif_record.get('gateway', None))
-        default_infor.setdefault('netmask', pif_record.get('netmask', None))
+
+        device_tree = xmlEtree.fromstring(device_dom.XMLDesc())
+        ip_element =  device_tree.find("protocol[@family='ipv4']/ip")
+        if ip_element is not None:
+            prefix, ip = ip_element.attrib.get('prefix'), ip_element.attrib.get('address', None)
+            default_infor.setdefault('IP', ip)
+            default_infor.setdefault('netmask', str(IPv4Address._make_netmask(prefix)[0]))
+        else:
+            default_infor.setdefault('IP', None)
+            default_infor.setdefault('netmask', None)
+
+        default_infor.setdefault('device', device_name)
+        default_infor.setdefault('DNS',  None)
+        default_infor.setdefault('MAC', device_dom.MACString())
+        default_infor.setdefault('gateway',  None)
+
         return default_infor
+
+    def set_mac_address(self, inst_name, eth_index, mac):
+        '''
+        <mac address='52:54:00:68:43:c2'/>
+        '''
+        vm_name = inst_name
+        domain = self._get_domain_handler(domain_name=vm_name)
+        if not domain:
+            log.error("Domain %s doesn't exist, set mac failed.", inst_name)
+            return False
+        if domain.isActive():
+            self.power_off_vm(vm_name)
+
+        tree = xmlEtree.fromstring(domain.XMLDesc())
+        mac_list = tree.findall('devices/interface/mac')
+        try:
+            mac_element = mac_list[eth_index]
+            log.debug("Change mac to %s on interface index %s", mac, eth_index)
+        except IndexError:
+            log.error("No interface with index %s on domain: %s", eth_index, inst_name)
+            return False
+
+        mac_element.set('address', mac)
+        domain_xml = xmlEtree.tostring(tree)
+
+        # after change the xml, redeine it
+        hv_handler = self.get_handler()
+        if not hv_handler:
+            log.error("Can not connect to host: %s when create domain %s.", self.hostname, vm_name)
+            return False
+        try:
+            # if failed it will raise libvirtError, return value is always a Domain object
+            _ = hv_handler.defineXML(domain_xml)
+        except libvirtError:
+            log.error("Create domain %s failed when define by xml.", vm_name)
+            return False
+
+        return True
+
+    def get_mac_address(self, inst_name, eth_index):
+        """
+        :param eth_index: index of virtual interface
+        :return:
+        """
+        domain = self._get_domain_handler(domain_name=inst_name)
+        if not domain:
+            log.error("Domain %s doesn't exist, set mac failed.", inst_name)
+            return None
+
+        tree = xmlEtree.fromstring(domain.XMLDesc())
+        mac_list = tree.findall('devices/interface/mac')
+        try:
+            mac_element = mac_list[eth_index]
+        except IndexError:
+            log.error("No interface with index %s on domain: %s", eth_index, inst_name)
+            return None
+
+        return mac_element.get('address')  # If no key with address, will return None
 
     def get_all_vifs_indexes(self, inst_name):
         """

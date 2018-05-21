@@ -67,6 +67,8 @@ if [[ $mymac == 52:54:* ]];then
     elif [[ $grep_res == IPADDR=* ]];then
         echo "origin IP on $myeth:$grep_res, set to new: $MyIP"
         sed -i "s/^IPADDR=.*$/IPADDR=$MyIP/" /etc/sysconfig/network-scripts/ifcfg-$myeth
+        sed -i "s/^GATEWAY=.*$/GATEWAY=$MyIP/" /etc/sysconfig/network-scripts/ifcfg-$myeth
+        sed -i "s/^BROADCAST=.*$/BROADCAST=$MyIP/" /etc/sysconfig/network-scripts/ifcfg-$myeth
     else
         echo "Already configed $myeth"
     fi
