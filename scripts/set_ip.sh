@@ -49,6 +49,7 @@ if [[ $mymac == 00:66* ]];then
         touch /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "TYPE=Ethernet" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "BOOTPROTO=static" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
+        echo "DEFROUTE=no" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "NAME=$myeth" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "ONBOOT=yes" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "PREFIX=24" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
