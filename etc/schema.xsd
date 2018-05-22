@@ -28,10 +28,10 @@
 
     <xsd:complexType name="VMType">
         <!--An VM may contain max 16 VIF and 16 Virtual disk, due to there is already one boot disk, so max disk is 15 -->
-        <xsd:sequence>
+        <xsd:choice maxOccurs="unbounded">
             <xsd:element maxOccurs="16" name="IP" type="IPType"/>
             <xsd:element maxOccurs="15" name="DISK"  type="DiskType"/>
-        </xsd:sequence>
+        </xsd:choice>
         <xsd:attribute name="vmname" type="xsd:string" use="required"/>
         <xsd:attribute name="template" type="xsd:string" use="required"/>
         <xsd:attribute name="cpucores" type="xsd:string" use="optional"/>

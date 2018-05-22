@@ -772,7 +772,11 @@ class QemuVirtDriver(VirtDriver):
         The server name, in kvm it is hostname.
         :return: (name_label, hostname)
         """
-        raise NotImplementedError()
+        if not self._hypervisor_handler:
+            self._hypervisor_handler = self.get_handler()
+
+        hostname = self._hypervisor_handler.getHostname()
+        return (hostname, hostname)
 
     def set_vm_static_memory(self, inst_name, memory_max, memory_min):
         """
