@@ -167,7 +167,7 @@ if __name__ == "__main__":
                 virthost.config_memory(vmname, dynamic_min=vm['memory'], dynamic_max=vm['memory'])
 
             for ipdic in vm['ips']:
-                virthost.config_vif(vmname, ipdic['vifIndex'], None, ipdic['network'], ipdic['ip'])
+                virthost.config_vif(vmname, ipdic['vifIndex'], ipdic['device'], ipdic['network'], ipdic['bridge'], ipdic['ip'])
 
             for diskdic in vm['disks']:
                 storage = diskdic['storage']
