@@ -57,6 +57,7 @@ if __name__ == "__main__":
         for vm_name in args:
             if not virt_driver.is_instance_exists(vm_name):
                 log.warn("No VM exists with name [%s].", vm_name)
+                res_dict[vm_name] = 1
                 continue
 
             res_dict.setdefault(vm_name, 0)
@@ -71,7 +72,7 @@ if __name__ == "__main__":
             log.fail("VMs %s power on failed.", str(failed_vm_list))
             exit(1)
         else:
-            log.success("All VMs in %s power on successfully.", args)
+            log.success("All VMs %s power on successfully.", args)
             exit(0)
     else:
         parser.print_help()

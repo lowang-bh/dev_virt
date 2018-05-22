@@ -53,6 +53,7 @@ if [[ $mymac == 52:54:* ]];then
         touch /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "TYPE=Ethernet" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "BOOTPROTO=static" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
+        echo "DEFROUTE=no" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "NAME=$myeth" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "ONBOOT=yes" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "PREFIX=24" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
@@ -80,12 +81,13 @@ if [[ $mymac == 52:54:* ]];then
         sed -i "/IPADDR/a\HWADDR=$mymac" /etc/sysconfig/network-scripts/ifcfg-$myeth
     fi
 
-    #config the IP when system up
-    ifconfig $myeth $MyIP netmask 255.255.255.0
-    #add default GW only when gw match the IP 10.* for a whole net, other IP as 192.168* will discard
-    if [[ $MyGW == 10.* ]];then
-        route add default gw $MyGW
-    fi
+#    #config the IP when system up
+#    ifconfig $myeth $MyIP netmask 255.255.255.0
+#    #add default GW only when gw match the IP 10.* for a whole net, other IP as 192.168* will discard
+#    if [[ $MyGW == 10.* ]];then
+#        route add default gw $MyGW
+#    fi
+    /etc/init.d/network restart
 else
     echo "No MAC match the default pattern, exiting"
 fi

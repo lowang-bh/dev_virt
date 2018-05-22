@@ -76,12 +76,13 @@ if [[ $mymac == 00:66* ]];then
         sed -i "/IPADDR/a\HWADDR=$mymac" /etc/sysconfig/network-scripts/ifcfg-$myeth
     fi
 
-    #config the IP when system up
-    ifconfig $myeth $MyIP netmask 255.255.255.0
-    #add default GW only when gw match the IP 10.* for a whole net, other IP as 192.168* will discard
-    if [[ $MyGW == 10.* ]];then
-        route add default gw $MyGW
-    fi
+#    #config the IP when system up
+#    ifconfig $myeth $MyIP netmask 255.255.255.0
+#    #add default GW only when gw match the IP 10.* for a whole net, other IP as 192.168* will discard
+#    if [[ $MyGW == 10.* ]];then
+#        route add default gw $MyGW
+#    fi
+    /etc/init.d/network restart
 else
     echo "No MAC match the default pattern, exiting"
 fi
