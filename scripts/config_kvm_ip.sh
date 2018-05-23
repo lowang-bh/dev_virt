@@ -15,16 +15,11 @@ else
     myeth=eth0
 fi
 
-mymac=`ifconfig $myeth | awk '/HWaddr\ / {print $5}'`
+mymac=`ip link show $myeth | awk '/ether\ / {print $2}'`
 
 if [[ x$mymac == x"" ]];then
-    echo "No HWaddr find on $myeth, try another pattern"
-    mymac=`ifconfig $myeth | awk '/ether\ / {print $2}'`
-
-    if [[ x$mymac == x"" ]];then
-        echo "Can not match Hwaddr or ether on $myeth, exiting..."
-        exit 1
-    fi
+    echo "Can not match Hwaddr or ether on $myeth, exiting..."
+    exit 1
 fi
 
 GetMacNum()
