@@ -13,7 +13,7 @@
 touch /var/lock/subsys/local
 SetIPScript=/root/.config_ip.sh
 if [[ -f $SetIPScript ]];then
-    ALLETHS=`ifconfig |/bin/egrep "eth[0-9]|ens" |awk  '{print $1}'|tr -d ":"`
+    ALLETHS=`ip link show |/bin/egrep 'eth[0-9]|en[o,s][0-9]' |awk  '{print $2}'|tr -d ":"`
     echo "All eths are: $ALLETHS"
     for myeth in $ALLETHS
     do
