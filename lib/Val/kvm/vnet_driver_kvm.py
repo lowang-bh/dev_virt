@@ -102,7 +102,7 @@ class QemuVnetDriver(VnetDriver):
             else:
                 dom = hv_handler.lookupByID(domain_id)
             return dom
-        except libvirtError, e:
+        except libvirtError as e:
             log.exception(str(e))
             return None
 
@@ -210,8 +210,10 @@ class QemuVnetDriver(VnetDriver):
         if not domain:
             log.error("Domain %s doesn't exist, set mac failed.", inst_name)
             return False
+
         if domain.isActive():
-            self.power_off_vm(vm_name)
+            log.error("Set mac need domain to be stoped.")
+            return False
 
         tree = xmlEtree.fromstring(domain.XMLDesc())
         mac_list = tree.findall('devices/interface/mac')
@@ -332,13 +334,23 @@ class QemuVnetDriver(VnetDriver):
         The manage interface, or the default interface configured with a managed IP
         :return:
         """
-        raise NotImplementedError()
+        try:
+            raise NotImplementedError()
+        except NotImplementedError:
+            log.error("get host nanage interface is not supported in KVM by now.")
+
+        return {}
 
     def get_host_bond_info(self):
         """
         :return: return the bond information
         """
-        raise NotImplementedError()
+        try:
+            raise NotImplementedError()
+        except NotImplementedError:
+            log.error("Get host bond info is not supported in KVM by now.")
+
+        return {}
 
     def get_vif_network_name(self, inst_name, vif_index):
         """

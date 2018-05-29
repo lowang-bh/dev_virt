@@ -187,7 +187,7 @@ class QemuVirtDriver(VirtDriver):
             else:
                 dom = hv_handler.lookupByID(domain_id)
             return dom
-        except libvirtError, e:
+        except libvirtError as e:
             log.exception(str(e))
             return None
 
@@ -306,7 +306,7 @@ class QemuVirtDriver(VirtDriver):
                     return False
 
             return ret == 0
-        except Exception, error:
+        except Exception as error:
             log.exception(error)
             return False
 
@@ -330,7 +330,7 @@ class QemuVirtDriver(VirtDriver):
                 return ret == 0
             else:
                 return True
-        except Exception, e:
+        except Exception as e:
             log.exception(e)
             return False
 
@@ -412,7 +412,7 @@ class QemuVirtDriver(VirtDriver):
         dom_hdl = self._get_domain_handler(inst_name)
         try:
             dom_xml = dom_hdl.XMLDesc()
-        except libvirtError, err:
+        except libvirtError as err:
             log.debug(str(err))
             log.error("Failed to fetch the defined XML for %s", inst_name)
             return False
@@ -438,7 +438,7 @@ class QemuVirtDriver(VirtDriver):
         hv_hdl = self.get_handler()
         try:
             hv_hdl.defineXML(dom_xml)
-        except libvirtError, err:
+        except libvirtError as err:
             log.debug(str(err))
             log.error("Failed to define new XML for %s", inst_name)
             return False
@@ -462,7 +462,7 @@ class QemuVirtDriver(VirtDriver):
         dom_hdl = self._get_domain_handler(inst_name)
         try:
             dom_xml = dom_hdl.XMLDesc()
-        except libvirtError, err:
+        except libvirtError as err:
             log.debug(str(err))
             log.error("Failed to fetch the defined XML for %s", inst_name)
             return False
@@ -490,7 +490,7 @@ class QemuVirtDriver(VirtDriver):
         hv_hdl = self.get_handler()
         try:
             hv_hdl.defineXML(dom_xml)
-        except libvirtError, err:
+        except libvirtError as err:
             log.debug(str(err))
             log.error("Failed to define new XML for %s", inst_name)
             return False
@@ -517,6 +517,19 @@ class QemuVirtDriver(VirtDriver):
         else:
             return []
 
+    # host information API
+    def __is_kvm_available(self, xmlfile):
+        """
+        :param xmlfile:
+        :return: return True is kvm is supported, else False
+        """
+        etree = xmlEtree.fromstring(xmlfile)
+        if etree.find("guest/arch/domain/[@type='kvm']"):
+            log.debug("host capabilities: type=kvm found, host support KVM")
+            return True
+        else:
+            return False
+
     def __resolve_ver(self, ver):
         """
         Resolve the version string to major, minor and release number
@@ -535,7 +548,7 @@ class QemuVirtDriver(VirtDriver):
         try:
             hv_ver = hv_handler.getVersion()
             lib_ver = hv_handler.getLibVersion()
-        except libvirtError, e:
+        except libvirtError as e:
             log.debug(str(e))
             log.warn("Could not get HV version")
             return None
@@ -557,7 +570,7 @@ class QemuVirtDriver(VirtDriver):
         try:
             # https://libvirt.org/docs/libvirt-appdev-guide-python/en-US/html/ch03s04s03.html
             hv_info = hv_handler.getInfo()
-        except libvirtError, e:
+        except libvirtError as e:
             log.debug(str(e))
             log.warn("Could not get CPU info")
             return ret_cpu_dict
@@ -592,7 +605,7 @@ class QemuVirtDriver(VirtDriver):
         try:
             pool_dom = hv_driver.storagePoolLookupByName(storage_name)
             pool_info = pool_dom.info()
-        except libvirtError, error:
+        except libvirtError as error:
             log.exception("Exceptions: %s", error)
             return ret_storage_dict
 
@@ -612,7 +625,7 @@ class QemuVirtDriver(VirtDriver):
         try:
             # https://libvirt.org/docs/libvirt-appdev-guide-python/en-US/html/ch03s04s16.html
             mem_info = hv_handler.getMemoryStats(libvirt.VIR_NODE_MEMORY_STATS_ALL_CELLS)
-        except libvirtError, e:
+        except libvirtError as e:
             log.debug(str(e))
             log.warn("Could not get memory info")
             return ret_mem_dict
@@ -631,7 +644,7 @@ class QemuVirtDriver(VirtDriver):
         hv_root_hdl = self._get_root_handler()
         try:
             sys_info_xml = hv_root_hdl.getSysinfo(0)
-        except libvirtError, e:
+        except libvirtError as e:
             log.debug(str(e))
             log.warn("Could not get platform/system info")
             return ret_plat_dict
@@ -650,18 +663,29 @@ class QemuVirtDriver(VirtDriver):
 
         return ret_plat_dict
 
-    def get_host_os(self, short_name):
+    def get_host_os(self, short_name=True):
         """
-        :return: the host system information
+        :return: the host OS information. As no API to get host OS, return KVM/QEMU instead
         """
-        raise NotImplementedError()
+        log.warn('QEMU/KVM does not support to get host os, return kvm/qemu instead.')
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        xmlfile = self._hypervisor_handler.getCapabilities()
+        if self.__is_kvm_available(xmlfile):
+            return "KVM"
+        else:
+            return "QEMU"
 
     def get_templates_list(self):
         """
         :description get all the templates on host
         :return a list of tempaltes names
         """
-        raise NotImplementedError()
+        log.info("All powered-off VM can be used as a template. ")
+        vm_list = self.get_vm_list()
+        templist = [dom_name for dom_name in vm_list if self.is_instance_halted(dom_name)]
+        return templist
 
     def is_instance_halted(self, inst_name):
         '''
@@ -673,7 +697,7 @@ class QemuVirtDriver(VirtDriver):
             return False
 
         stats = domain.info()
-        if stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTDOWN:
+        if stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTDOWN or stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTOFF:
             return True
         return False
 
@@ -688,7 +712,11 @@ class QemuVirtDriver(VirtDriver):
             return {}
         #  dom.info() consist of the state, max memory,memory, cpus and cpu time for the domain.
         vm_record = {}
-        vm_record['VCPUs_max'] = dom.maxVcpus()
+        if self.is_instance_running(inst_name=inst_name):
+            vm_record['VCPUs_max'] = dom.maxVcpus()
+        else:
+            vm_record['VCPUs_max'] = 0
+
         vm_record['VCPUs_live'] = vm_record['VCPUs_max']
         vm_record['domid'] = dom.ID()
         vm_record['uuid'] = dom.UUIDString()

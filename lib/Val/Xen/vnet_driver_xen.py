@@ -33,7 +33,7 @@ class XenVnetDriver(VnetDriver):
                 log.debug("Release handler in vnet driver, ID:%s", id(self._hypervisor_handler))
                 self._hypervisor_handler.xenapi.session.logout()
                 self._hypervisor_handler = None
-        except Exception, error:
+        except Exception as error:
             log.debug(error)
 
     def get_handler(self):
@@ -53,7 +53,7 @@ class XenVnetDriver(VnetDriver):
         signal.alarm(4)   #  connetctions timeout set to 5 secs
         try:
             self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1, 'XenVirtDriver')
-        except Exception, error:
+        except Exception as error:
             log.warn("Exception raised: %s when get handler.", error)
             log.info("Retry connecting to :%s", "https://" + str(self.hostname))
             self._hypervisor_handler = XenAPI.Session("https://" + str(self.hostname))
@@ -80,7 +80,7 @@ class XenVnetDriver(VnetDriver):
                 log.debug("Release handler manually in vnet driver, ID:%s", id(self._hypervisor_handler))
                 self._hypervisor_handler.xenapi.session.logout()
                 self._hypervisor_handler = None
-        except Exception, error:
+        except Exception as error:
             log.debug(error)
 
     def get_bridge_list(self):
@@ -144,7 +144,7 @@ class XenVnetDriver(VnetDriver):
         try:
             all_pifs = self._hypervisor_handler.xenapi.PIF.get_all()
             return [self._hypervisor_handler.xenapi.PIF.get_device(pif) for pif in all_pifs]
-        except Exception, error:
+        except Exception as error:
             log.exception(error)
             return []
 
@@ -271,7 +271,7 @@ class XenVnetDriver(VnetDriver):
 
         try:
             return self._hypervisor_handler.xenapi.network.create(new_network_record)
-        except Exception, error:
+        except Exception as error:
             log.exception("Exceptions: %s", error)
             return None
 
@@ -321,8 +321,9 @@ class XenVnetDriver(VnetDriver):
             all_vifs = self.get_all_vifs_indexes(inst_name)
             guest_metrics_ref = self._hypervisor_handler.xenapi.VM.get_guest_metrics(vm_ref)
             network_dict = self._hypervisor_handler.xenapi.VM_guest_metrics.get_networks(guest_metrics_ref)
-        except Exception, error:
+        except Exception as error:
             log.debug("Except in get_vif_ip: %s", error)
+            return None
 
         try:
             vif_key = sorted(all_vifs).index(str(vif_index))
@@ -401,7 +402,7 @@ class XenVnetDriver(VnetDriver):
             guest_metrics_ref = self._hypervisor_handler.xenapi.VM.get_guest_metrics(vm_ref)
             # When vm first start up, the guest_metrics_ref is 'OpaqueRef:NULL', so no networks information
             network_dict = self._hypervisor_handler.xenapi.VM_guest_metrics.get_networks(guest_metrics_ref)
-        except Exception, error:
+        except Exception as error:
             log.debug("Exceptions when get VM_guest_metrics: %s", error)
             network_dict = {}
 
@@ -497,7 +498,7 @@ class XenVnetDriver(VnetDriver):
 
         try:
             self._hypervisor_handler.xenapi.VIF.destroy(vif_ref)
-        except Exception, error:
+        except Exception as error:
             log.exception("Exceptions raised when destroy VIF:%s", error)
             return False
         return True
@@ -524,7 +525,7 @@ class XenVnetDriver(VnetDriver):
 
         try:
             self._hypervisor_handler.xenapi.VIF.plug(vif_ref)
-        except Exception, error:
+        except Exception as error:
             log.error("Exception raised when hot-plug a VIF:%s.", error)
             return False
         return True
@@ -552,7 +553,7 @@ class XenVnetDriver(VnetDriver):
 
         try:
             self._hypervisor_handler.xenapi.VIF.unplug(vif_ref)
-        except Exception, error:
+        except Exception as error:
             log.exception("Exceptions raised when unplug a VIF:%s", error)
             return False
         return True
