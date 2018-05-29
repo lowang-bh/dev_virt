@@ -32,7 +32,7 @@ class XenVirtDriver(VirtDriver):
                 log.debug("Release handler in virt driver, ID:%s", id(self._hypervisor_handler))
                 self._hypervisor_handler.xenapi.session.logout()
                 self._hypervisor_handler = None
-        except Exception, error:
+        except Exception as error:
             log.debug(error)
 
     def get_handler(self):
@@ -79,7 +79,7 @@ class XenVirtDriver(VirtDriver):
                 log.debug("Release handler manually in virt driver, ID:%s", id(self._hypervisor_handler))
                 self._hypervisor_handler.xenapi.session.logout()
                 self._hypervisor_handler = None
-        except Exception, error:
+        except Exception as error:
             log.debug(error)
 
     def get_vm_list(self):
@@ -157,7 +157,7 @@ class XenVirtDriver(VirtDriver):
             templ_ref = handler.xenapi.VM.get_by_name_label(reference_vm)[0]  #get_by_name_label return a list
             new_vm_ref = handler.xenapi.VM.clone(templ_ref, inst_name)
             handler.xenapi.VM.provision(new_vm_ref)
-        except Exception, error:
+        except Exception as error:
             log.exception("Exception: %s while create VM [%s].", error, inst_name)
             return False
 
@@ -181,7 +181,7 @@ class XenVirtDriver(VirtDriver):
             else:
                 log.error("Cann't get handler while destroy vm [%s].", inst_name)
                 return False
-        except Exception, error:
+        except Exception as error:
             log.exception("Exception: %s raised when destory vm [%s].", error, inst_name)
             return False
 
@@ -205,7 +205,7 @@ class XenVirtDriver(VirtDriver):
         try:
             handler.xenapi.VM.shutdown(vm_ref)
             time.sleep(0.5)
-        except Exception, error:
+        except Exception as error:
             log.exception("Exception raised: %s when shutdown VM [%s].", error, inst_name)
             return False
 
@@ -232,7 +232,7 @@ class XenVirtDriver(VirtDriver):
                 else:  # vm_state == "Halted"
                     handler.xenapi.VM.start(vm_ref, False, True)
                 time.sleep(1)
-            except Exception, error:
+            except Exception as error:
                 log.error("Raise exception:'%s' while power on vm:%s", error, inst_name)
                 return False
         else:
@@ -259,7 +259,7 @@ class XenVirtDriver(VirtDriver):
         try:
             handler.xenapi.VM.clean_reboot(vm_ref)
             time.sleep(2)
-        except Exception, error:
+        except Exception as error:
             log.exception("Exception: %s when reboot VM [%s].", error, inst_name)
             return False
 
@@ -390,7 +390,7 @@ class XenVirtDriver(VirtDriver):
                 vcpu_num = cpu_max
             self._hypervisor_handler.xenapi.VM.set_VCPUs_number_live(vm_ref, str(vcpu_num))
             return True
-        except Exception, error:
+        except Exception as error:
             log.exception("Raise exceptions: [%s].", error)
             return False
 
@@ -415,7 +415,7 @@ class XenVirtDriver(VirtDriver):
 
             self._hypervisor_handler.xenapi.VM.set_VCPUs_max(vm_ref, str(vcpu_num))
             return True
-        except Exception, error:
+        except Exception as error:
             log.exception("Raise exceptions: [%s].", error)
             return False
 
@@ -430,7 +430,7 @@ class XenVirtDriver(VirtDriver):
             vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
             cpu_max = self._hypervisor_handler.xenapi.VM.get_VCPUs_at_startup(vm_ref)
             return int(cpu_max)
-        except Exception, error:
+        except Exception as error:
             log.exception("Raise exceptions: [%s].", error)
             return 0
 
@@ -446,7 +446,7 @@ class XenVirtDriver(VirtDriver):
             vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
             cpu_max = self._hypervisor_handler.xenapi.VM.get_VCPUs_max(vm_ref)
             return int(cpu_max)
-        except Exception, error:
+        except Exception as error:
             log.exception("Raise exceptions: [%s].", error)
             return 0
 
@@ -460,7 +460,7 @@ class XenVirtDriver(VirtDriver):
             self._hypervisor_handler = self.get_handler()
         try:
             vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
-        except Exception, error:
+        except Exception as error:
             log.exception("Raise exceptions when get vm reference: [%s].", error)
             return None
         return vm_ref
@@ -475,7 +475,7 @@ class XenVirtDriver(VirtDriver):
         try:
             vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
             record = handler.xenapi.VM.get_record(vm_ref)
-        except Exception, error:
+        except Exception as error:
             log.exception("Exception: %s when get record for VM [%s].", error, inst_name)
             return {}
 
@@ -495,7 +495,7 @@ class XenVirtDriver(VirtDriver):
             guest_metrics = handler.xenapi.VM.get_metrics(vm_ref)
             memory_actual = handler.xenapi.VM_metrics.get_memory_actual(guest_metrics)
             vm_record['memory_actual'] = float("%.3f" % (float(memory_actual) / GB))
-        except Exception, error:
+        except Exception as error:
             vm_record['memory_actual'] = vm_record['memory_target']
         vm_record['running'] = record['power_state'] == 'Running'
         vm_record['halted'] = record['power_state'] == 'Halted'
@@ -528,7 +528,7 @@ class XenVirtDriver(VirtDriver):
             vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
             guest_metrics_ref = handler.xenapi.VM.get_guest_metrics(vm_ref)
             return handler.xenapi.VM_guest_metrics.get_record(guest_metrics_ref)
-        except Exception, error:
+        except Exception as error:
             log.debug("Exceptions raised when get vm guest metrics:%s", error)
             return {}
 
@@ -542,7 +542,7 @@ class XenVirtDriver(VirtDriver):
             vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
             vm_metrics_ref = handler.xenapi.VM.get_metrics(vm_ref)
             return handler.xenapi.VM_metrics.get_record(vm_metrics_ref)
-        except Exception, error:
+        except Exception as error:
             log.exception("Exceptions raised:%s", error)
             return {}
 
@@ -627,7 +627,7 @@ class XenVirtDriver(VirtDriver):
         record = {"name_label": inst_name + " data " + userdevice, "name_description": name_description}
         try:
             sr_ref = handler.xenapi.SR.get_by_name_label(storage_name)[0]
-        except Exception, error:
+        except Exception as error:
             log.exception("No storage named [%s], exception: %s", storage_name, error)
             return False
 
@@ -639,7 +639,7 @@ class XenVirtDriver(VirtDriver):
         record["other_config"] = {}
         try:
             vdi_ref = handler.xenapi.VDI.create(record)
-        except Exception, error:
+        except Exception as error:
             log.error("Create VDI raise error:[%s]", error)
             return False
 
@@ -652,7 +652,7 @@ class XenVirtDriver(VirtDriver):
             vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
             vbd_record['VM'] = vm_ref
             vbd_ref = handler.xenapi.VBD.create(vbd_record)
-        except Exception, error:
+        except Exception as error:
             log.exception("Exception when create VBD: %s.", error)
             return False
 
@@ -669,7 +669,7 @@ class XenVirtDriver(VirtDriver):
                 time.sleep(2)
                 handler.xenapi.VBD.plug(vbd_ref)
                 sleep_time += 2
-        except Exception, error:
+        except Exception as error:
             log.exception("Exception when plug VBD: %s", error)
             return False
 
@@ -733,7 +733,7 @@ class XenVirtDriver(VirtDriver):
             ret_cpu_dict['thread_per_core'] = 2
             # number of cores per socket
             ret_cpu_dict['cores_per_socket'] = int(ret_cpu_dict['cpu_cores']) / int(ret_cpu_dict['cpu_sockets']) / int(ret_cpu_dict['thread_per_core'])
-        except Exception, error:
+        except Exception as error:
             log.exception("Exceptions when get host cpu infor: %s", error)
             return ret_cpu_dict
 
@@ -750,7 +750,7 @@ class XenVirtDriver(VirtDriver):
         try:
             all_storage = self._hypervisor_handler.xenapi.SR.get_all()
             ret_storage_list = [self._hypervisor_handler.xenapi.SR.get_name_label(sr_ref) for sr_ref in all_storage]
-        except Exception, error:
+        except Exception as error:
             log.exception("Exception when get all storage info:%s", error)
 
         return ret_storage_list
@@ -765,7 +765,7 @@ class XenVirtDriver(VirtDriver):
         ret_storage_dict = {}
         try:
             sr_ref = self._hypervisor_handler.xenapi.SR.get_by_name_label(storage_name)[0]
-        except  Exception, error:
+        except  Exception as error:
             log.exception("No storage repository named: [%s], %s", storage_name, error)
             return ret_storage_dict
 
@@ -789,7 +789,7 @@ class XenVirtDriver(VirtDriver):
             host_metrics_ref = self._hypervisor_handler.xenapi.host.get_metrics(host_ref)
             total = self._hypervisor_handler.xenapi.host_metrics.get_memory_total(host_metrics_ref)
             free = self._hypervisor_handler.xenapi.host_metrics.get_memory_free(host_metrics_ref)
-        except Exception, error:
+        except Exception as error:
             log.exception("Exception raised when get host memory infor:%s", error)
             return ret_mem_dict
 
@@ -812,7 +812,7 @@ class XenVirtDriver(VirtDriver):
                 return "xapi: %s" % soft_record['xapi']
             else:
                 return "xen: %s, xapi: %s" % (soft_record['xen'], soft_record['xapi'])
-        except Exception, error:
+        except Exception as error:
             log.exception("Exceptions: %s", error)
             return ""
 
@@ -829,7 +829,7 @@ class XenVirtDriver(VirtDriver):
             ret_plat_dict['vendor_name'] = bios_info.get('system-manufacturer', "")
             ret_plat_dict['product_name'] = bios_info.get('system-product-name', "")
             ret_plat_dict['serial_number'] = bios_info.get('system-serial-number', "")
-        except Exception, error:
+        except Exception as error:
             log.error("Exception when get host platform infor:%s", error)
 
         return ret_plat_dict
@@ -860,7 +860,7 @@ class XenVirtDriver(VirtDriver):
                 return " ".join([record.get('product_brand', 'Unknown'), record.get('product_version', 'Unknown')])
             else:
                 return record.get('xs:main', 'Unknown')
-        except Exception, error:
+        except Exception as error:
             log.error("Exception when get host os infor:%s", error)
 
         return None

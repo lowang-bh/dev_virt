@@ -265,7 +265,7 @@ class VirtDriver(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def get_host_os(self, short_name):
+    def get_host_os(self, short_name=True):
         """
         :return: the host system information
         """
