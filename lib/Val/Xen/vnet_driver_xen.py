@@ -331,9 +331,12 @@ class XenVnetDriver(VnetDriver):
             log.error("Vif index does not exist.")
             return None
 
+        # by test, if there are vif 0,1,3, and each device with a ip, then the dic are about "2/ip: 192.168.1.122;  1/ip: 192.168.1.200;  0/ip: 10.143.248.253;"
+        # if there are vif 0,1,2,3, with ip attached to 0,1,3, then the dic looks like "3/ip: 192.168.1.122;1/ip: 192.168.1.200;  0/ip: 10.143.248.253;"
+
         return network_dict.get(str(vif_key)+"/ip", None)
 
-    def get_vif_network_name(self, inst_name, vif_index):
+    def get_vif_bridge_name(self, inst_name, vif_index):
         """
         :param inst_name:
         :param vif_index:
@@ -353,6 +356,15 @@ class XenVnetDriver(VnetDriver):
 
         bridge_name = self._get_bridge_name_by_networkref(network_ref)
         return bridge_name if bridge_name else None
+
+    def get_vif_network_name(self, inst_name, vif_index):
+        """
+        This function return bridge name for network name in Xen
+        :param inst_name:
+        :param vif_index:
+        :return:
+        """
+        return self.get_vif_bridge_name(inst_name, vif_index)
 
 
     def get_vif_info(self, inst_name, vif_index):
@@ -406,8 +418,11 @@ class XenVnetDriver(VnetDriver):
             log.debug("Exceptions when get VM_guest_metrics: %s", error)
             network_dict = {}
 
+        # by test, if there are vif 0,1,3, and each device with a ip, then the dic are about "2/ip: 192.168.1.122;  1/ip: 192.168.1.200;  0/ip: 10.143.248.253;"
+        # if there are vif 0,1,2,3, with ip attached to 0,1,3, then the dic looks like "3/ip: 192.168.1.122; 1/ip: 192.168.1.200;  0/ip: 10.143.248.253;"
         for vkey, vindex in enumerate(sorted(vifs_info.keys())):
-            vifs_info[vindex].setdefault('ip', network_dict.get(str(vindex)+"/ip", None))
+            vifs_info[vindex].setdefault('ip', network_dict.get(str(vkey) + "/ip", None)) # should use the index, not device_index
+            #vifs_info[vindex].setdefault('ip', network_dict.get(str(vindex)+"/ip", None))
         log.debug("All vif infor: %s", vifs_info)
 
         return vifs_info

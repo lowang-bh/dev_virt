@@ -331,7 +331,7 @@ class VirtHostDomain(ServerDomain):
 
         vifs_info = self.vnet_driver.get_all_vif_info(inst_name=inst_name)
         for vif_index in sorted(vifs_info):
-            bridge_name = self.vnet_driver.get_vif_network_name(inst_name=inst_name, vif_index=vif_index)
+            bridge_name = self.vnet_driver.get_vif_bridge_name(inst_name=inst_name, vif_index=vif_index)
             mac, ip = vifs_info[vif_index]['mac'], vifs_info[vif_index]['ip']
             log.info("\t%s\tMAC: %s, IP: %15s, Bridge: %s", vif_index, mac, ip, bridge_name)
 
