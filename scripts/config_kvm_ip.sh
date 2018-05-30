@@ -36,11 +36,7 @@ if [[ $mymac == 52:54:* ]];then
     num3rd=`GetMacNum $mymac 5`
     num4th=`GetMacNum $mymac 6`
 
-    if [[ $num1st -eq 10 || $num1st -eq 172 ]];then
-    	MyIP=$num1st.$num2ed.$num3rd.$num4th
-    else
-	    MyIP=192.$num2ed.$num3rd.$num4th
-    fi
+    MyIP=$num1st.$num2ed.$num3rd.$num4th
 
     MyGW=`echo $MyIP | awk -F. '{print $1"."$2"."$3".1"}'`
     MyBC=`echo $MyIP | awk -F. '{print $1"."$2"."$3".255"}'`
