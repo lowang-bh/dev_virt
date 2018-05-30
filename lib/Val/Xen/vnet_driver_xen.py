@@ -366,7 +366,6 @@ class XenVnetDriver(VnetDriver):
         """
         return self.get_vif_bridge_name(inst_name, vif_index)
 
-
     def get_vif_info(self, inst_name, vif_index):
         """
         return a dict of vif information, MAC, IP, etc
