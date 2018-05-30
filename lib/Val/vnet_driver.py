@@ -188,3 +188,13 @@ class VnetDriver(object):
         :return:
         """
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_vif_bridge_name(self, inst_name, vif_index):
+        """
+        :param inst_name:
+        :param vif_index:
+        :return: the bridge name which the vif attached to
+        """
+        raise NotImplementedError()
+

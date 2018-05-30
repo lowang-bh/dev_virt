@@ -329,6 +329,53 @@ class QemuVnetDriver(VnetDriver):
         """
         raise NotImplementedError()
 
+    def get_vif_network_name(self, inst_name, vif_index):
+        """
+        :param inst_name:
+        :param vif_index:
+        :return: the bridge name which the vif attached to
+        """
+        if not self._hypervisor_handler:
+            self._hypervisor_handler = self.get_handler()
+
+        domain = self._get_domain_handler(domain_name=inst_name)
+        if not domain:
+            log.error("Domain %s doesn't exist, can not get network name.", inst_name)
+            return None
+
+        tree = xmlEtree.fromstring(domain.XMLDesc())
+        source_bridge_list = tree.findall('devices/interface/source')
+        try:
+            netwrok_name  = source_bridge_list[int(vif_index)].get('network', None)
+            return netwrok_name
+        except IndexError:
+            log.error("No interface with index %s on domain: %s", vif_index, inst_name)
+            return None
+
+    def get_vif_bridge_name(self, inst_name, vif_index):
+        """
+        :param inst_name:
+        :param vif_index:
+        :return: the bridge name which the vif attached to
+        """
+        if not self._hypervisor_handler:
+            self._hypervisor_handler = self.get_handler()
+
+        domain = self._get_domain_handler(domain_name=inst_name)
+        if not domain:
+            log.error("Domain %s doesn't exist, can not get network name.", inst_name)
+            return None
+
+        tree = xmlEtree.fromstring(domain.XMLDesc())
+        source_bridge_list = tree.findall('devices/interface/source')
+        try:
+            bridge_name = source_bridge_list[int(vif_index)].get('bridge', None)
+            return bridge_name
+        except IndexError:
+            log.error("No interface with index %s on domain: %s", vif_index, inst_name)
+            return None
+
+    # Host network API
     def get_host_manage_interface_infor(self):
         """
         The manage interface, or the default interface configured with a managed IP
@@ -351,14 +398,6 @@ class QemuVnetDriver(VnetDriver):
             log.error("Get host bond info is not supported in KVM by now.")
 
         return {}
-
-    def get_vif_network_name(self, inst_name, vif_index):
-        """
-        :param inst_name:
-        :param vif_index:
-        :return: the bridge name which the vif attached to
-        """
-        raise NotImplementedError()
 
     def get_bridge_name(self, device_name):
         """
