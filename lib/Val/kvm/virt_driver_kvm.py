@@ -730,8 +730,8 @@ class QemuVirtDriver(VirtDriver):
 
         #  dom.info() consist of the state, max memory,memory, cpus and cpu time for the domain.
         stats = dom.info()
-        vm_record['memory_target'] = float("%.3f" % (stats[DOMAIN_INFO_MEM] / 1024.0 / 1024.0))
-        vm_record['memory_actual'] = vm_record['memory_target']
+        vm_record['memory_target'] = float("%.3f" % (stats[DOMAIN_INFO_MAX_MEM] / 1024.0 / 1024.0))
+        vm_record['memory_actual'] = float("%.3f" % (stats[DOMAIN_INFO_MEM] / 1024.0 / 1024.0))
         vm_record['running'] = stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_RUNNING
         vm_record['halted'] = stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTDOWN or \
                               stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTOFF
@@ -753,12 +753,11 @@ class QemuVirtDriver(VirtDriver):
             log.error("Domain %s doesn't exist, can not get interfaces information.", inst_name)
             return disk_dict
         tree = xmlEtree.fromstring(domain.XMLDesc())
-        disk_list = tree.findall('devices/disk')
+        disk_list = tree.findall("devices/disk[@device='disk']")
         for disk in disk_list:
-            address_element = disk.find('address')
-            slot = address_element.attrib.get('slot', None)
-            if slot:
-                disk_dict[int(slot, 16)] = disk
+            device_name = disk.find('target').get('dev')
+            if device_name:
+                disk_dict[device_name] = disk
         # a dict of disk element, sorted by disk/address/slot.
         return [disk_dict[key] for key in sorted(disk_dict)]
 
@@ -770,8 +769,12 @@ class QemuVirtDriver(VirtDriver):
         """
         if not self._hypervisor_handler:
             self._hypervisor_handler = self.get_handler()
-        pool = self._hypervisor_handler.storagePoolLookupByName(storage_name)
-
+        try:
+            pool = self._hypervisor_handler.storagePoolLookupByName(storage_name)
+        except libvirtError as error:
+            log.error("Exceptions when add disk: %s", error)
+            return False
+        # TODO:
         storage_vol_xml = """
         <volume>
         <name>sparse.img</name>
@@ -829,8 +832,10 @@ class QemuVirtDriver(VirtDriver):
 
             volume_info = self._hypervisor_handler.storageVolLookupByPath(file_path).info()
             disk_dize = volume_info[1]/1024.0/1024.0/1024.0
+            disk_free = (volume_info[1] - volume_info[2])/1024.0/1024.0/1024.0
+            disk_free = float("%.3f" %disk_free)
 
-            all_disk_info[disk_num] = {'disk_size': disk_dize, 'device_name': device_name}
+            all_disk_info[disk_num] = {'disk_size': disk_dize, 'device_name': device_name, 'disk_free': disk_free}
 
         return all_disk_info
 
@@ -889,31 +894,75 @@ class QemuVirtDriver(VirtDriver):
         hostname = self._hypervisor_handler.getHostname()
         return (hostname, hostname)
 
-    def set_vm_static_memory(self, inst_name, memory_max, memory_min):
+    def set_vm_static_memory(self, inst_name, memory_max=None, memory_min=None):
         """
         :param inst_name:
         :param memory_max: size of GB
         :param memory_min: size of GB
         :return:
         """
-        raise NotImplementedError()
+        # dom.setMaxMemory() need dom to be inactive
+        dom = self._get_domain_handler(domain_name=inst_name)
+        if dom is None:
+            return False
+        if dom.isActive():
+            log.error("Set domain max memory need it to be stopped.")
+            return False
 
-    def set_vm_dynamic_memory(self, inst_name, memory_max, memory_min):
+        gitabyte = 1024 * 1024 # unit is KB
+        if memory_max:
+            memory_size = int(memory_max) * gitabyte
+        elif memory_min:
+            memory_size = int(memory_min) * gitabyte
+        else:
+            log.error("Neither maxMemory nor minMemory is supplied.")
+            return False
+        # dom.setMemoryFlags(memory_size, libvirt.VIR_DOMAIN_AFFECT_CURRENT|libvirt.VIR_DOMAIN_MEM_MAXIMUM) also OK
+        ret = dom.setMaxMemory(memory_size)
+        return ret == 0
+
+    def set_vm_dynamic_memory(self, inst_name, memory_max=None, memory_min=None):
         """
         :param inst_name:
         :param max_memory:
         :param min_memory:
         :return:
         """
-        raise NotImplementedError()
+        dom = self._get_domain_handler(domain_name=inst_name)
+        if dom is None:
+            return False
+        gitabyte = 1024 * 1024 # unit is KB
+        if memory_max:
+            memory_size = int(memory_max) * gitabyte
+        elif memory_min:
+            memory_size = int(memory_min) * gitabyte
+        else:
+            log.error("Neither maxMemory nor minMemory is supplied.")
+            return False
+        #
+        if dom.isActive():
+            ret = dom.setMemoryFlags(memory_size, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+        else:
+            ret =dom.setMemoryFlags(memory_size) # dom.setMemory need dom to be active
+
+        return ret == 0
 
     def set_vm_memory_live(self, inst_name, memory_target):
         """
         :param memory_target: Memory in GB
         :return:
         """
-        raise NotImplementedError()
+        dom = self._get_domain_handler(domain_name=inst_name)
+        if dom is None:
+            return False
+        if not dom.isActive():
+            log.error("Set domain memory lively need it to be running.")
+            return False
 
+        memory_size = int(memory_target) * 1024 * 1024  # memory in KB
+        ret = dom.setMemoryFlags(memory_size, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+
+        return ret == 0
 
 if __name__ == "__main__":
     from optparse import OptionParser
@@ -925,5 +974,6 @@ if __name__ == "__main__":
     virt = QemuVirtDriver(hostname=options.host, user=options.user, passwd=options.passwd)
     filebeat = virt._get_domain_handler("filebeat")
     test = virt._get_domain_handler("test")
+    print virt.set_vm_memory_live("test",1)
     # print virt.get_disk_size(inst_name="test", device_num=0)
     # print virt.get_all_disk(inst_name="test")
