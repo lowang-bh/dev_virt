@@ -844,16 +844,31 @@ class QemuVirtDriver(VirtDriver):
         :param inst_name:
         :return: True if allowed to set vcpu lively, else False
         """
-        raise NotImplementedError()
+        return True
 
     def set_vm_vcpu_live(self, inst_name, vcpu_num):
         """
-        set the vcpu numbers for a running VM
+        set the vcpu numbers for a running VM;and set vcpus in the config file when domain is deactive
         :param inst_name:
         :param vcpu_num: should be str of a int number
         :return: True or False
         """
-        raise NotImplementedError()
+        dom = self._get_domain_handler(domain_name=inst_name)
+        if dom is None:
+            return False
+
+        vcpu_num = int(vcpu_num)
+        if vcpu_num > self.get_vm_vcpu_max(inst_name):
+            log.error("vCpus number [%s] exceed the limit of max vcpus: %s",vcpu_num, dom.maxVcpus())
+            return False
+
+        if dom.isActive():
+            # dom.setVcpus(vcpu_num) # only effect the live domain, when power off, the config lose
+            ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+        else:
+            ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+
+        return ret == 0
 
     def set_vm_vcpu_max(self, inst_name, vcpu_num):
         """
@@ -862,13 +877,45 @@ class QemuVirtDriver(VirtDriver):
         :param vcpu_num:
         :return: True or False
         """
-        raise NotImplementedError()
+        dom = self._get_domain_handler(domain_name=inst_name)
+        if dom is None:
+            return False
+
+        vcpu_num = int(vcpu_num)
+        # Flag 'VIR_DOMAIN_AFFECT_CONFIG' is required by flag 'VIR_DOMAIN_VCPU_MAXIMUM'
+        ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_CONFIG|libvirt.VIR_DOMAIN_VCPU_MAXIMUM)
+        return ret == 0
+
+
+    def __get_vcpu_from_xml(self, xml_str):
+        """
+        if no current vcpus in xml, return max vcpus as current vcpus
+        :param xml_str:
+        :return: (max vcpus, current vcpus)
+        """
+        xmltree = xmlEtree.fromstring(xml_str)
+        vcpu = xmltree.find('vcpu')
+        if vcpu is None:
+            log.error("No vcpu element found in XML description.")
+            return (0, 0)
+        else:
+            try:
+                max = int(vcpu.text)
+                current = vcpu.get("current", max)
+            except ValueError:
+                max, current = 0, 0
+            return (max, current)
 
     def get_vm_vcpu_current(self, inst_name):
         """
         :return: the current vcpu number or 0
         """
-        raise NotImplementedError()
+        dom = self._get_domain_handler(domain_name=inst_name)
+        if dom is None:
+            return 0
+
+        _, current_vcpu= self.__get_vcpu_from_xml(dom.XMLDesc())
+        return current_vcpu
 
     def get_vm_vcpu_max(self, inst_name):
         """
@@ -879,7 +926,7 @@ class QemuVirtDriver(VirtDriver):
         if dom is None:
             return 0
         if not dom.isActive():
-            return 0
+            return self.__get_vcpu_from_xml(dom.XMLDesc())[0]
         else:
             return dom.maxVcpus()
 
@@ -896,6 +943,7 @@ class QemuVirtDriver(VirtDriver):
 
     def set_vm_static_memory(self, inst_name, memory_max=None, memory_min=None):
         """
+        set memory for a inactive domain
         :param inst_name:
         :param memory_max: size of GB
         :param memory_min: size of GB
@@ -923,6 +971,7 @@ class QemuVirtDriver(VirtDriver):
 
     def set_vm_dynamic_memory(self, inst_name, memory_max=None, memory_min=None):
         """
+        set memory for a domain, if it is active, set it lively and the config file, if it is deactive, set the config file
         :param inst_name:
         :param max_memory:
         :param min_memory:
@@ -974,6 +1023,7 @@ if __name__ == "__main__":
     virt = QemuVirtDriver(hostname=options.host, user=options.user, passwd=options.passwd)
     filebeat = virt._get_domain_handler("filebeat")
     test = virt._get_domain_handler("test")
-    print virt.set_vm_memory_live("test",1)
+    print virt.set_vm_vcpu_max("filebeat", 4)
+    print virt.set_vm_vcpu_live("filebeat", 2)
     # print virt.get_disk_size(inst_name="test", device_num=0)
     # print virt.get_all_disk(inst_name="test")
