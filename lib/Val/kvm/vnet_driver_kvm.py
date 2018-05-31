@@ -459,7 +459,7 @@ class QemuVnetDriver(VnetDriver):
         try:
             raise NotImplementedError()
         except NotImplementedError:
-            log.error("get host nanage interface is not supported in KVM by now.")
+            log.warn("get host nanage interface is not supported in KVM by now.")
 
         return {}
 
@@ -470,7 +470,7 @@ class QemuVnetDriver(VnetDriver):
         try:
             raise NotImplementedError()
         except NotImplementedError:
-            log.error("Get host bond info is not supported in KVM by now.")
+            log.warn("Get host bond info is not supported in KVM by now.")
 
         return {}
 
@@ -492,3 +492,16 @@ class QemuVnetDriver(VnetDriver):
         return 'unKnown'
 
 
+if __name__ == "__main__":
+    from optparse import OptionParser
+    parser = OptionParser()
+    parser.add_option("--host", dest="host", help="IP for host server")
+    parser.add_option("-u", "--user", dest="user", help="User name for host server")
+    parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
+    (options, args) = parser.parse_args()
+    virt = QemuVnetDriver(hostname=options.host, user=options.user, passwd=options.passwd)
+
+    pifs = virt.get_all_devices()
+    print pifs
+    for pif in pifs:
+        print virt.get_bridge_name(pif)

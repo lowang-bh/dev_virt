@@ -570,8 +570,9 @@ class XenVirtDriver(VirtDriver):
 
     def get_all_disk(self, inst_name):
         """
+        return {'0': {'disk_size': 20.0, 'device_name': 'xvda'}, '3': {'disk_size': 0, 'device_name': 'xvdd'}}
         :param inst_name:
-        :return: return all the virtual disk number, eg, 1,2, etc and its name in guest, eg:hda1
+        :return: return a dict about all the virtual disk number, eg, 1,2, etc and its name in guest, eg:xvda, xvdd
         """
         handler = self.get_handler()
 
@@ -581,7 +582,14 @@ class XenVirtDriver(VirtDriver):
         for vdb_ref in all_vdbs:
             device_number = handler.xenapi.VBD.get_userdevice(vdb_ref)
             device_name = handler.xenapi.VBD.get_device(vdb_ref)
-            device_dict.setdefault(device_number, device_name)
+            vdi_ref = handler.xenapi.VBD.get_VDI(vdb_ref)
+            if "NULL" not in vdi_ref:
+                disk_size = handler.xenapi.VDI.get_virtual_size(vdi_ref)
+                disk_size = int(disk_size) / 1024.0 / 1024.0 / 1024.0
+            else:
+                disk_size = 0
+
+            device_dict.setdefault(int(device_number), {'device_name':device_name, 'disk_size': disk_size})
 
         return device_dict
 
@@ -876,4 +884,5 @@ if __name__ == "__main__":
     virt = XenVirtDriver(hostname=options.host, user=options.user, passwd=options.passwd)
     # print virt.set_vm_static_memory(inst_name="test2", memory_max=1, memory_min=1)
     # print virt.set_vm_dynamic_memory("test2", 1, 1)
-    print virt.get_host_os()
+    # print virt.get_host_os()
+    print virt.get_all_disk(inst_name="test_vm")
