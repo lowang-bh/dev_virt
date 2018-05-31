@@ -524,7 +524,7 @@ class QemuVirtDriver(VirtDriver):
         :return: return True is kvm is supported, else False
         """
         etree = xmlEtree.fromstring(xmlfile)
-        if etree.find("guest/arch/domain/[@type='kvm']"):
+        if etree.find("guest/arch/domain/[@type='kvm']") is not None:
             log.debug("host capabilities: type=kvm found, host support KVM")
             return True
         else:
@@ -710,7 +710,7 @@ class QemuVirtDriver(VirtDriver):
             dom = handler.lookupByName(inst_name)
         except libvirtError:
             return {}
-        #  dom.info() consist of the state, max memory,memory, cpus and cpu time for the domain.
+
         vm_record = {}
         if self.is_instance_running(inst_name=inst_name):
             vm_record['VCPUs_max'] = dom.maxVcpus()
@@ -721,18 +721,46 @@ class QemuVirtDriver(VirtDriver):
         vm_record['domid'] = dom.ID()
         vm_record['uuid'] = dom.UUIDString()
         vm_record['name_label'] = inst_name
-        vm_record['memory_dynamic_max'] = None
+
+        max_memory = dom.maxMemory() / 1024.0 / 1024.0
+        vm_record['memory_dynamic_max'] = float("%.3f" % (float(max_memory)))
         vm_record['memory_dynamic_min'] = None
-        vm_record['memory_static_max'] = None
+        vm_record['memory_static_max'] = float("%.3f" % (float(max_memory)))
         vm_record['memory_static_min'] = None
-        vm_record['memory_target'] = float("%.3f" % (dom.maxMemory() / 1024.0 / 1024.0))
-        vm_record['memory_actual'] = vm_record['memory_target']
+
+        #  dom.info() consist of the state, max memory,memory, cpus and cpu time for the domain.
         stats = dom.info()
+        vm_record['memory_target'] = float("%.3f" % (stats[DOMAIN_INFO_MEM] / 1024.0 / 1024.0))
+        vm_record['memory_actual'] = vm_record['memory_target']
         vm_record['running'] = stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_RUNNING
         vm_record['halted'] = stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTDOWN or \
                               stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTOFF
 
         return  vm_record
+
+    # Disk API
+    def __get_disk_elements_list(self, inst_name):
+        """
+        :param inst_name:
+        :return: a dict with key is disk index and value is disk xml element
+        """
+        if not self._hypervisor_handler:
+            self._hypervisor_handler = self.get_handler()
+
+        disk_dict = {}
+        domain = self._get_domain_handler(domain_name=inst_name)
+        if not domain:
+            log.error("Domain %s doesn't exist, can not get interfaces information.", inst_name)
+            return disk_dict
+        tree = xmlEtree.fromstring(domain.XMLDesc())
+        disk_list = tree.findall('devices/disk')
+        for disk in disk_list:
+            address_element = disk.find('address')
+            slot = address_element.attrib.get('slot', None)
+            if slot:
+                disk_dict[int(slot, 16)] = disk
+        # a dict of disk element, sorted by disk/address/slot.
+        return [disk_dict[key] for key in sorted(disk_dict)]
 
     def add_vdisk_to_vm(self, inst_name, storage_name, size):
         """
@@ -740,7 +768,25 @@ class QemuVirtDriver(VirtDriver):
         @param storage_name: which storage repository the virtual disk put
         @param size: the disk size
         """
-        raise NotImplementedError()
+        if not self._hypervisor_handler:
+            self._hypervisor_handler = self.get_handler()
+        pool = self._hypervisor_handler.storagePoolLookupByName(storage_name)
+
+        storage_vol_xml = """
+        <volume>
+        <name>sparse.img</name>
+        <allocation>0</allocation>
+        <capacity unit="G">2</capacity>
+        <target>
+        <path>/var/lib/virt/images/sparse.img</path>
+        <permissions>
+        <owner>107</owner>
+        <group>107</group>
+        <mode>0744</mode>
+        <label>virt_image_t</label>
+        </permissions>
+        </target>
+        </volume>"""
 
     def get_disk_size(self, inst_name, device_num):
         """
@@ -748,14 +794,45 @@ class QemuVirtDriver(VirtDriver):
         :param device_num: the disk index number
         :return: return size in GB, or 0 if no device found
         """
-        raise NotImplementedError()
+        disk_list = self.__get_disk_elements_list(inst_name)
+        try:
+            disk_element = disk_list[int(device_num)]
+        except IndexError:
+            log.error("No disk found with device number: %s", device_num)
+            return 0
+
+        source = disk_element.find("source")
+        if source is None:
+            return 0
+
+        file_path = source.get("file", None)
+        try:
+            volume_obj = self._hypervisor_handler.storageVolLookupByPath(file_path)
+            # volume_list.info(): type, Capacity, Allocation(used)
+            return volume_obj.info()[1]/1024.0/1024.0/1024.0
+        except (TypeError, IndexError) as error:
+            log.exception("Exceptions raise when get disk size: %s", error)
+            return 0
 
     def get_all_disk(self, inst_name):
         """
+        {'0': {'disk_size': 20.0, 'device_name': 'xvda'}, '3': {'disk_size': 0, 'device_name': 'xvdd'}}
         :param inst_name:
-        :return: return all the virtual disk number, eg, 1,2, etc and its name in guest, eg:hda1
+        :return: return a dict with infor about all the virtual disk number, eg, 1,2, etc and its name in guest, eg:vda
         """
-        raise NotImplementedError()
+        disk_list = self.__get_disk_elements_list(inst_name=inst_name)
+        all_disk_info = {}
+        for disk_num, disk_elment in enumerate(disk_list):
+            device_name = disk_elment.find('target').get('dev')
+            file_path = disk_elment.find('source').get('file')
+            log.debug("Disks on domain [%s]: disk path: %s",inst_name, file_path)
+
+            volume_info = self._hypervisor_handler.storageVolLookupByPath(file_path).info()
+            disk_dize = volume_info[1]/1024.0/1024.0/1024.0
+
+            all_disk_info[disk_num] = {'disk_size': disk_dize, 'device_name': device_name}
+
+        return all_disk_info
 
     def allowed_set_vcpu_live(self, inst_name):
         """
@@ -793,7 +870,13 @@ class QemuVirtDriver(VirtDriver):
         :param inst_name:
         :return: max cpu number or 0
         """
-        raise NotImplementedError()
+        dom = self._get_domain_handler(domain_name=inst_name)
+        if dom is None:
+            return 0
+        if not dom.isActive():
+            return 0
+        else:
+            return dom.maxVcpus()
 
     def get_host_name(self):
         """
@@ -830,3 +913,17 @@ class QemuVirtDriver(VirtDriver):
         :return:
         """
         raise NotImplementedError()
+
+
+if __name__ == "__main__":
+    from optparse import OptionParser
+    parser = OptionParser()
+    parser.add_option("--host", dest="host", help="IP for host server")
+    parser.add_option("-u", "--user", dest="user", help="User name for host server")
+    parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
+    (options, args) = parser.parse_args()
+    virt = QemuVirtDriver(hostname=options.host, user=options.user, passwd=options.passwd)
+    filebeat = virt._get_domain_handler("filebeat")
+    test = virt._get_domain_handler("test")
+    # print virt.get_disk_size(inst_name="test", device_num=0)
+    # print virt.get_all_disk(inst_name="test")

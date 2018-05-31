@@ -18,7 +18,7 @@ def validate(schemaFile, xmlFile):
         with open(xmlFile) as f:
             xmlDoc = etree.parse(f)
         schema.assert_(xmlDoc)
-    except Exception, e:
+    except Exception as e:
         log.exception(str(e))
         return False
 
@@ -36,6 +36,7 @@ def parse_xml(xml_file):
     servers = tree.findall('SERVER')
     server_list=[]
     for server in servers:
+        #print type(server), server.get('user'), server.get('serverIp'), server.get('host'), type(server.attrib)
         host = server.attrib['serverIp']
         user = server.attrib['user']
         passwd = server.attrib['passwd']
@@ -67,10 +68,12 @@ if __name__ == "__main__":
     servers = parse_xml("../../etc/example.xml")
     print servers
     for server in servers:
+        print type(server), server.get('user'), server.get('serverIp'), server.get('host')
         for key,value in server.items():
             if key != "vms":
                 print key, value
             else:
                 for vmdic in value:
+                    print "-------another VM------"
                     for k,v in vmdic.items():
                         print k, v
