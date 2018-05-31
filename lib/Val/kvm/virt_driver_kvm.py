@@ -862,17 +862,21 @@ class QemuVirtDriver(VirtDriver):
             log.error("vCpus number [%s] exceed the limit of max vcpus: %s",vcpu_num, dom.maxVcpus())
             return False
 
-        if dom.isActive():
-            # dom.setVcpus(vcpu_num) # only effect the live domain, when power off, the config lose
-            ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
-        else:
-            ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+        try:
+            if dom.isActive():
+                # dom.setVcpus(vcpu_num) # only effect the live domain, when power off, the config lose
+                ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+            else:
+                ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
+        except libvirtError as error:
+            log.exception("Exceptions when set vcpu lively: %s", error)
+            return False
 
         return ret == 0
 
     def set_vm_vcpu_max(self, inst_name, vcpu_num):
         """
-        set the vcpu numbers for a halted VM
+        set the vcpu numbers for a halted VM; when vm is active, the setting will take effect when next reboot
         :param inst_name:
         :param vcpu_num:
         :return: True or False
@@ -882,10 +886,14 @@ class QemuVirtDriver(VirtDriver):
             return False
 
         vcpu_num = int(vcpu_num)
-        # Flag 'VIR_DOMAIN_AFFECT_CONFIG' is required by flag 'VIR_DOMAIN_VCPU_MAXIMUM'
-        ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_CONFIG|libvirt.VIR_DOMAIN_VCPU_MAXIMUM)
-        return ret == 0
+        try:
+            # Flag 'VIR_DOMAIN_AFFECT_CONFIG' is required by flag 'VIR_DOMAIN_VCPU_MAXIMUM'
+            ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_CONFIG|libvirt.VIR_DOMAIN_VCPU_MAXIMUM)
+        except libvirtError as error:
+            log.exception("Exception when set vcpu max: %s", error)
+            return False
 
+        return ret == 0
 
     def __get_vcpu_from_xml(self, xml_str):
         """
@@ -1023,7 +1031,7 @@ if __name__ == "__main__":
     virt = QemuVirtDriver(hostname=options.host, user=options.user, passwd=options.passwd)
     filebeat = virt._get_domain_handler("filebeat")
     test = virt._get_domain_handler("test")
-    print virt.set_vm_vcpu_max("filebeat", 4)
-    print virt.set_vm_vcpu_live("filebeat", 2)
+    print virt.set_vm_vcpu_max("filebeat", 5)
+    print virt.set_vm_vcpu_live("filebeat", 3)
     # print virt.get_disk_size(inst_name="test", device_num=0)
     # print virt.get_all_disk(inst_name="test")
