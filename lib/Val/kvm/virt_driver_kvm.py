@@ -7,6 +7,7 @@
 # Created Time: 2018-02-08 11:32:30
 #########################################################################
 
+import os
 import subprocess
 import signal
 import libvirt
@@ -604,6 +605,7 @@ class QemuVirtDriver(VirtDriver):
         hv_driver = self.get_handler()
         try:
             pool_dom = hv_driver.storagePoolLookupByName(storage_name)
+            # pool.info is a list [Pool state, Capacity, Allocation, Available]
             pool_info = pool_dom.info()
         except libvirtError as error:
             log.exception("Exceptions: %s", error)
@@ -751,45 +753,193 @@ class QemuVirtDriver(VirtDriver):
         domain = self._get_domain_handler(domain_name=inst_name)
         if not domain:
             log.error("Domain %s doesn't exist, can not get interfaces information.", inst_name)
-            return disk_dict
+            return []
+
         tree = xmlEtree.fromstring(domain.XMLDesc())
         disk_list = tree.findall("devices/disk[@device='disk']")
         for disk in disk_list:
             device_name = disk.find('target').get('dev')
             if device_name:
                 disk_dict[device_name] = disk
-        # a dict of disk element, sorted by disk/address/slot.
+        # a dict of disk element, sorted by disk/target/dev.
         return [disk_dict[key] for key in sorted(disk_dict)]
 
-    def add_vdisk_to_vm(self, inst_name, storage_name, size):
+    def _get_all_vdisk_name(self, inst_name=None):
+        """
+        return a list off all virtual disk names for a domain when inst_name is None, else return all volume names
+        """
+        file_path = []
+        if inst_name:
+            all_disks = self.__get_disk_elements_list(inst_name)
+            for disk_element in all_disks:
+                source = disk_element.find('source')
+                if source is not None:
+                    file_path.append(source.get('file'))
+
+            return [os.path.basename(path) for path in file_path]
+
+        else:
+            if self._hypervisor_handler is None:
+                self._hypervisor_handler = self.get_handler()
+            for pool in self._hypervisor_handler.listAllStoragePools(libvirt.VIR_CONNECT_LIST_STORAGE_POOLS_ACTIVE):
+                file_path.extend(pool.listVolumes()) #  listAllVolumes(flags=0) return list of object, flags is not used
+
+            return file_path
+
+    def _get_available_vdisk_name(self, inst_name):
+        """
+        :param inst_name:
+        :return: a available virtual disk name for a domain, different from all the volume name in all pools
+        """
+        all_names = [str(filename).split(".")[0] for filename in filter(lambda x: inst_name in x, self._get_all_vdisk_name())]
+        log.debug("all vdisk name with inst name :%s, %s", inst_name, all_names)
+        nextindex = len(all_names)
+
+        new_name = inst_name + "-" + str(nextindex)
+        while new_name in all_names:
+            nextindex += 1
+            new_name = inst_name+ "-" + str(nextindex)
+
+        return new_name
+
+    def _delete_volume_from_pool(self, volume_path):
+        """
+        :param volume_path:
+        :return:
+        """
+        try:
+            volobj = self._hypervisor_handler.storageVolLookupByPath(volume_path)
+            volobj.wipe(0)
+            volobj.delete(0)
+        except libvirtError as error:
+            log.debug("Error when delete volume: %s", volume_path)
+            return False
+        return True
+
+    def add_vdisk_to_vm(self, inst_name, storage_name, size, disk_type="qcow2"):
         """
         @param inst_name: the name of VM
         @param storage_name: which storage repository the virtual disk put
         @param size: the disk size
+        @:param disk_type: qcow, qcow2, vmdk, raw, vhd, fat, ext2/3/4, etc
         """
         if not self._hypervisor_handler:
             self._hypervisor_handler = self.get_handler()
         try:
             pool = self._hypervisor_handler.storagePoolLookupByName(storage_name)
         except libvirtError as error:
-            log.error("Exceptions when add disk: %s", error)
+            log.error("No storage named: %s", storage_name)
             return False
-        # TODO:
+        pool_free = pool.info()[-1] # pool.info is a list [Pool state, Capacity, Allocation, Available]
+        if int(size) * (2**30) > pool_free:
+            log.error("No such enough free size in storage %s", storage_name)
+            return False
+
+        pool_xml_tree = xmlEtree.fromstring(pool.XMLDesc())
+        pool_path = pool_xml_tree.find("target/path")
+        if pool_path is None:
+            path_str = "/var/lib/libvirt/images" #  the default path for pool in kvm
+        else:
+            path_str = pool_path.text
+        disk_name = "".join([self._get_available_vdisk_name(inst_name), ".", disk_type])
+        target_vol_path = os.path.join(path_str, disk_name )
+
+        # volume type: file, block, dir, network, netdir
+        #'GB' (gigabytes, 10^9 bytes), 'G' or 'GiB' (gibibytes, 2^30 bytes)
         storage_vol_xml = """
-        <volume>
-        <name>sparse.img</name>
-        <allocation>0</allocation>
-        <capacity unit="G">2</capacity>
-        <target>
-        <path>/var/lib/virt/images/sparse.img</path>
-        <permissions>
-        <owner>107</owner>
-        <group>107</group>
-        <mode>0744</mode>
-        <label>virt_image_t</label>
-        </permissions>
-        </target>
+        <volume type="file">
+            <name>%s</name>
+            <allocation>0</allocation>
+            <capacity unit="G">%s</capacity>
+            <target>
+                <path>%s</path>
+                <format type='%s'/>
+                <permissions>
+                    <owner>107</owner>
+                    <group>107</group>
+                    <mode>0644</mode>
+                    <label>virt_image_t</label>
+                </permissions>
+            </target>
         </volume>"""
+
+        storage_vol_xml = storage_vol_xml %(disk_name, size, target_vol_path, disk_type)
+        vol_obj = pool.createXML(storage_vol_xml)
+
+        return self.attach_disk_to_domain(inst_name, target_vol_path, disk_type)
+
+    def attach_disk_to_domain(self, inst_name, target_volume, disk_type):
+        """
+        add disk in xml definition
+        :param inst_name:
+        :param target_volume:
+        :return:
+        """
+        dom = self._get_domain_handler(domain_name=inst_name)
+        if dom is None:
+            return False
+        xmlstr = dom.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
+        tree =  xmlEtree.fromstring(xmlstr)
+        device_elment = tree.find("devices")
+        target_dev = [target.get("dev") for target in device_elment.findall("disk[@device='disk']/target")]
+        print target_dev
+        virtio_dev = [dev[2:] for dev in filter(lambda x: "vd" in x, target_dev)]
+        dev = "vd%c" %(ord(sorted(virtio_dev)[-1]) + 1)
+
+        disk_xml_str = """
+        <disk type='file' device='disk'>
+            <driver name='qemu' type='%s'/>
+            <source file='%s'/> 
+            <target dev='%s' bus='virtio'/>
+        </disk>""" % (disk_type, target_volume, dev)
+        disk_elment = xmlEtree.fromstring(disk_xml_str)
+        device_elment.append(disk_elment)
+        # new_xml = xmlEtree.tostring(tree)
+        # ret = self._hypervisor_handler.defineXML(new_xml)
+        if dom.isActive():
+            ret = dom.attachDeviceFlags(disk_xml_str, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+        else:
+            ret = dom.attachDeviceFlags(disk_xml_str)
+        return ret == 0
+
+    def detach_disk_from_domain(self, inst_name, target_volume, force=False):
+        """
+        deactivate volume from pool, if force is True, physically remove the volume
+        :param inst_name:
+        :param target_volume: the full path name of disk file
+        :param force: True to physically remove volume
+        :return: True or False
+        """
+        dom = self._get_domain_handler(domain_name=inst_name)
+        if dom is None:
+            log.error("No domain named %s.", inst_name)
+            return False
+
+        xmlstr = dom.XMLDesc()
+        tree =  xmlEtree.fromstring(xmlstr)
+        device_elment = tree.find("devices")
+        disk_list = device_elment.findall("disk[@device='disk']")
+        for disk_element in disk_list:
+            source = disk_element.find("source")
+            if source is None:
+                continue
+            else:
+                file_path = source.get("file")
+                if file_path != target_volume:
+                    continue
+
+            if dom.isActive():
+                ret = dom.detachDeviceFlags(xmlEtree.tostring(disk_element),
+                                            libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+            else:
+                ret = dom.detachDeviceFlags(xmlEtree.tostring(disk_element))
+            # remove disk from host
+            if force and ret ==0:
+                return self._delete_volume_from_pool(file_path)
+            return ret == 0
+        # no disk found in xml config
+        log.error("No volume named %s in domain.", target_volume)
+        return False
 
     def get_disk_size(self, inst_name, device_num):
         """
@@ -1031,7 +1181,18 @@ if __name__ == "__main__":
     virt = QemuVirtDriver(hostname=options.host, user=options.user, passwd=options.passwd)
     filebeat = virt._get_domain_handler("filebeat")
     test = virt._get_domain_handler("test")
-    print virt.set_vm_vcpu_max("filebeat", 5)
-    print virt.set_vm_vcpu_live("filebeat", 3)
+    # print virt.set_vm_vcpu_max("filebeat", 5)
+    # print virt.set_vm_vcpu_live("filebeat", 3)
     # print virt.get_disk_size(inst_name="test", device_num=0)
     # print virt.get_all_disk(inst_name="test")
+    pool = virt._hypervisor_handler.storagePoolLookupByName("default")
+    for vol in  pool.listAllVolumes():
+        if "test-1.qcow2" == vol.name():
+            break
+    vol_obj= virt.add_vdisk_to_vm("test", "default",2)
+    virt._delete_volume_from_pool("/var/lib/libvirt/images/test-6.qcow2")
+    virt.detach_disk_from_domain("test", "/var/lib/libvirt/images/test-1.qcow2")
+    virt.detach_disk_from_domain("test", "/var/lib/libvirt/images/test-3.qcow2")
+    # virt.attach_disk_to_domain("test", "/var/lib/libvirt/images/test-5.qcow2", "qcow2" )
+    # print test.XMLDesc()
+    # print test.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
