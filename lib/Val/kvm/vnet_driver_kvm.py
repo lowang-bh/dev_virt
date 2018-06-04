@@ -621,16 +621,18 @@ if __name__ == "__main__":
     parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
     (options, args) = parser.parse_args()
     virt = QemuVnetDriver(hostname=options.host, user=options.user, passwd=options.passwd)
-    mac = "52:54:c0:a8:01:7b"
-    vif_element = virt.create_new_vif("test", 2, network="default", MAC=mac)
-    print xmlEtree.tostring(vif_element)
+    mac = "52:54:c0:a8:7a:c9"
+    # vif_element = virt.create_new_vif("test", 2, network="default", MAC=mac)
+    # print xmlEtree.tostring(vif_element)
 
-    print virt.plug_vif_to_vm(inst_name="test", vif_index=2)
+    # print virt.plug_vif_to_vm(inst_name="test", vif_index=2)
 
     # ----unplug vif and destroy it-----
     # print virt.unplug_vif_from_vm(inst_name="test", vif_index=2)
     # print virt.destroy_vif(inst_name="test", vif_index=2)
+    virt.set_mac_address("new_vm", 1, "52:54:c0:a8:01:c9")
 
+    virt.set_mac_address("new_vm", 2, mac)
     # pifs = virt.get_all_devices()
     # print pifs
     # for pif in pifs:
