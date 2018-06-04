@@ -204,42 +204,46 @@ class QemuVirtDriver(VirtDriver):
     def create_instance(self, vm_name, reference_vm):
         '''
         '''
-        log.debug("enter create_instance %s", vm_name)
-
-        # copy the disk first
-        target_disk = ''.join((VM_HOUSE, vm_name, ".qcow2"))  # qcow2 is recommand
-        reference_disk = ''.join((VM_HOUSE, reference_vm, ".qcow2"))
-        cmd = "\cp -f %s %s" % (reference_disk, target_disk)
-        log.debug("%s", cmd)
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        _, perr = p.communicate()
-        if perr:
-            log.error("Create domain %s meet an error when copy disk: %s", vm_name, str(perr))
-            return False
-
-        # change the xml
-        target_xml = TEMPLATE_CFG_POOL + vm_name + ".xml"
-        reference_xml = "".join((VM_HOUSE, reference_vm, ".xml"))
-        cmd = "cp %s %s && sed -i 's/%s/%s/g' %s" % (reference_xml, target_xml, reference_vm, vm_name, target_xml)
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        _, perr = p.communicate()
-        if perr:
-            log.error("Create domain %s meet an error when change xml:%s", vm_name, str(perr))
+        log.info("enter create_instance %s", vm_name)
+        if self.is_instance_exists(vm_name):
+            log.error("Already exist domain: %s", vm_name)
             return False
 
         hv_handler = self.get_handler()
-        if not hv_handler:
-            log.error("Can not connect to host: %s when create domain %s.", self.hostname, vm_name)
-            return False
-        if vm_name in [dom.name() for dom in hv_handler.listAllDomains()]:
-            log.info("Vm %s is registered.", vm_name)
-            return True
+        template_dom = self._get_domain_handler(domain_name=reference_vm)
+        template_xml =  template_dom.XMLDesc(libvirt.VIR_DOMAIN_XML_SECURE)
+        tree = xmlEtree.fromstring(template_xml)
+        name = tree.find("name")
+        name.text = vm_name
+        uuid = tree.find('uuid')
+        tree.remove(uuid)
 
-        with open(target_xml) as xml_file:
-            xml = xml_file.read()
+        # remove MAC for interface
+        for interface in tree.findall("devices/interface"):
+            elm = interface.find("mac")
+            interface.remove(elm)
+
+        # clone disk for new domain
+        disk_index = 0
+        for disk in tree.findall("devices/disk[@device='disk']"):
+            source_elm = disk.find('source')
+            source_file = source_elm.get('file')
+            suffix = str(os.path.basename(source_file)).split(".")[-1]
+            if source_file:
+                # if disk_index == 0:
+                #     target_file = ".".join([vm_name, suffix])
+                # else:
+                #     target_file = ".".join([vm_name + "-" + str(disk_index), suffix])
+
+                target_file = ".".join([self._get_available_vdisk_name(vm_name), suffix])
+                clone_path = os.path.join(os.path.dirname(source_file), target_file)
+                source_elm.set('file', clone_path)
+                self.clone_disk(source_file, target_file)
+                disk_index += 1
+
         try:
             # if failed it will raise libvirtError, return value is always a Domain object
-            new_dom = hv_handler.defineXML(xml)
+            new_dom = hv_handler.defineXML(xmlEtree.tostring(tree))
         except libvirtError:
             log.error("Create domain %s failed when define by xml.", vm_name)
             return False
@@ -248,41 +252,7 @@ class QemuVirtDriver(VirtDriver):
 
         return True
 
-    def create_instance_v1(self, vm_name, image_pool,):
-        '''
-        use virt-clone will automatically generate the UUID,MAC, this is recommand
-        virt-clone -o template_domain -n taget_domain -f disk_path_for_targe_domain
-        '''
-        reference_vm = image_pool
-        log.debug("enter create_instance %s", vm_name)
-
-        target_disk = VM_HOUSE + vm_name + ".qcow2"  # qcow2 is recommand
-
-        cmd = "virt-clone -o %s -n %s -f %s" % (reference_vm, vm_name, target_disk)
-        log.debug(cmd)
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        pout, perr = p.communicate()
-        if "successfully" not in pout:
-            log.error("%s,%s", pout, perr)
-            return False
-        hv_handler = self.get_handler()
-        if not hv_handler:
-            log.error("Can not connect to host: %s when create domain %s.", self.hostname, vm_name)
-            return False
-        target_xml = TEMPLATE_CFG_POOL + vm_name + ".xml"
-
-        with open(target_xml) as xmlfile:
-            xml = xmlfile.read()
-        try:
-            #if failed it will raise libvirtError, return value is always a Domain object
-            _ = hv_handler.defineXML(xml)
-        except libvirtError:
-            log.error("Create domain %s failed when define by xml.", vm_name)
-            return False
-
-        return True
-
-    def delete_instance(self, inst_name):
+    def delete_instance(self, inst_name, delete_disk=False):
         '''
         undefine:If the domain is running, it's converted to transient domain, without stopping it.
         If the domain is inactive, the domain configuration is removed.
@@ -292,24 +262,21 @@ class QemuVirtDriver(VirtDriver):
             return True
 
         if domain.isActive():
-            domain.destroy()  # It will shutdown the domain force, if it is already shutdown, libvirtError will raise
+            log.info("Try to power off vm [%s] gracefully.", inst_name)
+            ret =  domain.destroyFlags(flags=libvirt.VIR_DOMAIN_DESTROY_GRACEFUL)
+            if ret != 0:
+                log.info("Power off failed, try to poweroff forcely.")
+                domain.destroy()  # It will shutdown the domain force, if it is already shutdown, libvirtError will raise
+
+        self.detach_disk_from_domain(inst_name, force=delete_disk)
 
         try:
-            ret = domain.undefine()
-            if ret == 0:
-                target_disk = VM_HOUSE + inst_name + ".qcow2"
-                cmd = "rm -f %s" % target_disk
-                log.debug("remove the disk file for %s: %s", inst_name, cmd)
-                p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-                _, perr = p.communicate()
-                if perr:
-                    log.error("Deleting the disk for vm %s meet an error:%s", inst_name, perr)
-                    return False
-
-            return ret == 0
-        except Exception as error:
-            log.exception(error)
+            ret = domain.undefine() # may use undefineFlags to handler managed save image or snapshots
+        except libvirtError as error:
+            log.exception("Exception raise when delete domain [%s]: %s.", inst_name, error)
             return False
+
+        return ret == 0
 
     def power_off_vm(self, inst_name):
         """
@@ -325,9 +292,9 @@ class QemuVirtDriver(VirtDriver):
             # flags will prevent the forceful termination of the guest, and will instead
             # return an error if the guest doesn't terminate by the end of the timeout
             if domain.isActive():
-                ret = domain.destroyFlags(flags=1) # VIR_DOMAIN_DESTROY_GRACEFUL = 1
+                ret = domain.destroyFlags(flags=libvirt.VIR_DOMAIN_DESTROY_GRACEFUL) # VIR_DOMAIN_DESTROY_GRACEFUL = 1
                 if ret != 0:
-                    ret = domain.destroyFlags(flags=0)
+                    ret = domain.destroyFlags(flags=libvirt.VIR_DOMAIN_DESTROY_DEFAULT)
                 return ret == 0
             else:
                 return True
@@ -391,112 +358,6 @@ class QemuVirtDriver(VirtDriver):
         if stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_RUNNING:
             return True
         return False
-
-    def attach_vif_to_vswitch(self, inst_name, eth_index, vswitch=None, domain=None, update_flag=True):
-        """
-        Attach the guest interface to a vSwitch
-
-        inst_name: Guest VM name
-        eth_index: Network interface number in guest, e.g. eth<eth_index>
-        """
-        if self.is_instance_running(inst_name):
-            raise StandardError('VM %s cannot be configured when running' % inst_name)
-
-        if vswitch is None:
-            log.error("vSwitch must be specified")
-            return False
-
-        if not isinstance(eth_index, int):
-            log.error("Param <eth_index> must be an int type")
-            return False
-
-        dom_hdl = self._get_domain_handler(inst_name)
-        try:
-            dom_xml = dom_hdl.XMLDesc()
-        except libvirtError as err:
-            log.debug(str(err))
-            log.error("Failed to fetch the defined XML for %s", inst_name)
-            return False
-
-        dom_tree = xmlEtree.fromstring(dom_xml)
-        if_node_list = dom_tree.findall('devices/interface')
-        if eth_index >= len(if_node_list):
-            log.error("No network interface %d defined in %s", eth_index, inst_name)
-            return False
-
-        target_if_node = if_node_list[eth_index]
-        src_item = target_if_node.find('source')
-        if src_item is not None:
-            log.debug("Reset <source> to %s for interface %d in %s", vswitch, eth_index, inst_name)
-            src_item.attrib['bridge'] = str(vswitch)
-        else:
-            log.debug("Create new <source> to %s for interface %d in %s", vswitch, eth_index, inst_name)
-            new_src_item = xmlEtree.SubElement(target_if_node, 'source')
-            new_src_item.attrib['bridge'] = str(vswitch)
-
-        dom_xml = xmlEtree.tostring(dom_tree)
-
-        hv_hdl = self.get_handler()
-        try:
-            hv_hdl.defineXML(dom_xml)
-        except libvirtError as err:
-            log.debug(str(err))
-            log.error("Failed to define new XML for %s", inst_name)
-            return False
-
-        return True
-
-    def detach_vif_from_vswitch(self, inst_name, port, update_flag=True):
-        """
-        Detach the guest interface to a vSwitch
-
-        inst_name: Guest VM name
-        port: Network interface number in guest, e.g. eth<port>
-        """
-        if self.is_instance_running(inst_name):
-            raise StandardError('VM %s cannot be configured when running' % inst_name)
-
-        if not isinstance(port, int):
-            log.error("Param <port> must be an int type")
-            return False
-
-        dom_hdl = self._get_domain_handler(inst_name)
-        try:
-            dom_xml = dom_hdl.XMLDesc()
-        except libvirtError as err:
-            log.debug(str(err))
-            log.error("Failed to fetch the defined XML for %s", inst_name)
-            return False
-
-        dom_tree = xmlEtree.fromstring(dom_xml)
-        if_node_list = dom_tree.findall('devices/interface')
-        if port >= len(if_node_list):
-            log.error("No network interface %d defined in %s", port, inst_name)
-            return False
-
-        # Removing <source> not work here
-        """
-        target_if_node = if_node_list[port]
-        src_item = target_if_node.find('source')
-        if src_item is not None:
-            log.debug("Remove <source> element from interface %d on %s", port, inst_name)
-            target_if_node.remove(src_item)
-        else:
-            log.debug("<source> element alreay removed from interface %d on %s", port, inst_name)
-
-        """
-
-        dom_xml = xmlEtree.tostring(dom_tree)
-
-        hv_hdl = self.get_handler()
-        try:
-            hv_hdl.defineXML(dom_xml)
-        except libvirtError as err:
-            log.debug(str(err))
-            log.error("Failed to define new XML for %s", inst_name)
-            return False
-
-        return True
 
     def get_active_vms(self):
         '''
@@ -768,8 +629,8 @@ class QemuVirtDriver(VirtDriver):
         """
         return a list off all virtual disk names for a domain when inst_name is None, else return all volume names
         """
-        file_path = []
         if inst_name:
+            file_path = []
             all_disks = self.__get_disk_elements_list(inst_name)
             for disk_element in all_disks:
                 source = disk_element.find('source')
@@ -779,12 +640,13 @@ class QemuVirtDriver(VirtDriver):
             return [os.path.basename(path) for path in file_path]
 
         else:
+            file_name = []
             if self._hypervisor_handler is None:
                 self._hypervisor_handler = self.get_handler()
             for pool in self._hypervisor_handler.listAllStoragePools(libvirt.VIR_CONNECT_LIST_STORAGE_POOLS_ACTIVE):
-                file_path.extend(pool.listVolumes()) #  listAllVolumes(flags=0) return list of object, flags is not used
+                file_name.extend(pool.listVolumes()) #  listAllVolumes(flags=0) return list of object, flags is not used
 
-            return file_path
+            return file_name
 
     def _get_available_vdisk_name(self, inst_name):
         """
@@ -795,7 +657,7 @@ class QemuVirtDriver(VirtDriver):
         log.debug("all vdisk name with inst name :%s, %s", inst_name, all_names)
         nextindex = len(all_names)
 
-        new_name = inst_name + "-" + str(nextindex)
+        new_name = inst_name # + "-" + str(nextindex)
         while new_name in all_names:
             nextindex += 1
             new_name = inst_name+ "-" + str(nextindex)
@@ -868,6 +730,35 @@ class QemuVirtDriver(VirtDriver):
 
         return self.attach_disk_to_domain(inst_name, target_vol_path, disk_type)
 
+    def clone_disk(self, source_file_path, target_disk_name):
+        """
+        :param source_file_path:
+        :param target_disk_name:
+        :return:
+        """
+        vol = self._hypervisor_handler.storageVolLookupByPath(source_file_path)
+        format_element = xmlEtree.fromstring(vol.XMLDesc(0)).find("target/format")
+        vol_format = format_element.get('type')
+        vol_clone_xml = """
+                        <volume>
+                            <name>%s</name>
+                            <capacity>0</capacity>
+                            <allocation>0</allocation>
+                            <target>
+                                <format type='%s'/>
+                                 <permissions>
+                                    <owner>107</owner>
+                                    <group>107</group>
+                                    <mode>0644</mode>
+                                    <label>virt_image_t</label>
+                                </permissions>
+                            </target>
+                        </volume>""" %(target_disk_name, vol_format)
+        log.info("Clone from %s to %s", source_file_path, target_disk_name)
+        pool = vol.storagePoolLookupByVolume()
+        new_vol = pool.createXMLFrom(vol_clone_xml, vol, 0) # only (name, perms) are passed for a new volume
+        return new_vol
+
     def attach_disk_to_domain(self, inst_name, target_volume, disk_type):
         """
         add disk in xml definition
@@ -884,7 +775,7 @@ class QemuVirtDriver(VirtDriver):
         target_dev = [target.get("dev") for target in device_elment.findall("disk[@device='disk']/target")]
 
         virtio_dev = [dev[2:] for dev in filter(lambda x: "vd" in x, target_dev)]
-        dev = "vd%c" %(ord(sorted(virtio_dev)[-1]) + 1)
+        dev = "vd%c" %(ord(sorted(virtio_dev)[-1]) + 1 if virtio_dev else "a")
 
         disk_xml_str = """
         <disk type='file' device='disk'>
@@ -902,7 +793,7 @@ class QemuVirtDriver(VirtDriver):
             ret = dom.attachDeviceFlags(disk_xml_str)
         return ret == 0
 
-    def detach_disk_from_domain(self, inst_name, target_volume, force=False):
+    def detach_disk_from_domain(self, inst_name, target_volume=None, force=False):
         """
         deactivate volume from pool, if force is True, physically remove the volume
         :param inst_name:
@@ -919,27 +810,35 @@ class QemuVirtDriver(VirtDriver):
         tree =  xmlEtree.fromstring(xmlstr)
         device_elment = tree.find("devices")
         disk_list = device_elment.findall("disk[@device='disk']")
+        ret = None
         for disk_element in disk_list:
             source = disk_element.find("source")
             if source is None:
                 continue
             else:
                 file_path = source.get("file")
-                if file_path != target_volume:
+                if target_volume and file_path != target_volume:
                     continue
-
+            log.info("Detach device: %s", file_path)
             if dom.isActive():
                 ret = dom.detachDeviceFlags(xmlEtree.tostring(disk_element),
                                             libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
             else:
                 ret = dom.detachDeviceFlags(xmlEtree.tostring(disk_element))
             # remove disk from host
-            if force and ret ==0:
-                return self._delete_volume_from_pool(file_path)
+            if force and ret == 0:
+                log.debug("Physically remove disk: %s", file_path)
+                self._delete_volume_from_pool(file_path)
+            if ret != 0:
+                log.error("Detach disk [%s] from domain [%s] return %s", file_path, inst_name, ret)
+                return False
+
+        if ret is None:
+            # no disk found in xml config
+            log.error("No volume named %s in domain.", target_volume)
+            return False
+        else:
             return ret == 0
-        # no disk found in xml config
-        log.error("No volume named %s in domain.", target_volume)
-        return False
 
     def get_disk_size(self, inst_name, device_num):
         """
@@ -1182,7 +1081,7 @@ if __name__ == "__main__":
     filebeat = virt._get_domain_handler("filebeat")
     test = virt._get_domain_handler("test")
     # print virt.set_vm_vcpu_max("filebeat", 5)
-    print virt.set_vm_vcpu_live("test", 3)
+    #print virt.set_vm_vcpu_live("test", 3)
     # print virt.get_disk_size(inst_name="test", device_num=0)
     # print virt.get_all_disk(inst_name="test")
     pool = virt._hypervisor_handler.storagePoolLookupByName("default")
@@ -1191,8 +1090,14 @@ if __name__ == "__main__":
             break
     # vol_obj= virt.add_vdisk_to_vm("test", "default",2)
     # virt._delete_volume_from_pool("/var/lib/libvirt/images/test-6.qcow2")
-    # virt.detach_disk_from_domain("test", "/var/lib/libvirt/images/test-1.qcow2")
-    # virt.detach_disk_from_domain("test", "/var/lib/libvirt/images/test-7.qcow2")
-    # virt.attach_disk_to_domain("test", "/var/lib/libvirt/images/test-5.qcow2", "qcow2" )
+    # virt.attach_disk_to_domain("test", "/var/lib/libvirt/images/test-1.qcow2", "qcow2")
+    # virt.attach_disk_to_domain("test", "/var/lib/libvirt/images/test.qcow2", "qcow2" )
+    # virt.detach_disk_from_domain("test", "/var/lib/libvirt/images/test-5.qcow2")
+    # print virt.detach_disk_from_domain("test")
     # print test.XMLDesc()
     # print test.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
+
+    # vol = virt.clone_disk("/var/lib/libvirt/images/test-7.qcow2", "clone-disk.qcow2")
+    # ret = virt.create_instance("new_vm", "test")
+    # print ret
+    virt.delete_instance("new_vm", True)
