@@ -1097,7 +1097,10 @@ if __name__ == "__main__":
     # print test.XMLDesc()
     # print test.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
 
-    # vol = virt.clone_disk("/var/lib/libvirt/images/test-7.qcow2", "clone-disk.qcow2")
-    # ret = virt.create_instance("new_vm", "test")
+     # vol = virt.clone_disk("/var/lib/libvirt/images/test-7.qcow2", "clone-disk.qcow2")
+    # ret = virt.create_instance("new_vm", "CentOS7Mini")
+
     # print ret
+    # virt.power_on_vm("new_vm")
+
     virt.delete_instance("new_vm", True)
