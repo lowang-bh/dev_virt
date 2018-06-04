@@ -450,8 +450,10 @@ class XenVnetDriver(VnetDriver):
     def create_new_vif(self, inst_name, vif_index, device_name=None, network=None, bridge=None, MAC=None):
         """
         @param inst_name: name of the guest VM
-        @param device_name: device name on the host which the network belong to
         @param vif_index: index of interface in guest VM
+        @param device_name: device name on the host which the network belong to
+        @:param network: network name defined by libvirt
+        @:param bridge: bridge name, may be linux bridge or openvswitch bridge
         @return: a reference to virtual interface in guest VM
         to change the MTU, please set it in other-config:mtu=9000
         """
