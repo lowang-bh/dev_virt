@@ -281,7 +281,7 @@ class QemuVnetDriver(VnetDriver):
             return []
 
         interface_dict = {}
-        tree = xmlEtree.fromstring(domain.XMLDesc())
+        tree = xmlEtree.fromstring(domain.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE))
         interface_list = tree.findall('devices/interface')
         for interface in interface_list:
             address_element = interface.find('address')
@@ -308,36 +308,157 @@ class QemuVnetDriver(VnetDriver):
         else:
             return False
 
-    def create_new_vif(self, inst_name, vif_index, device_name=None, network=None, MAC=None):
+    def create_new_vif(self, inst_name, vif_index, device_name=None, network=None, bridge=None, MAC=None):
         """
         @param inst_name: name of the guest VM
-        @param device_name: device name on the host which the network belong to
         @param vif_index: index of interface in guest VM
-        @return: a virtual interface object in guest VM
+        @param device_name: device name on the host which the network belong to
+        @:param network: network name defined by libvirt
+        @:param bridge: bridge name, may be linux bridge or openvswitch bridge
+        @return: a virtual interface xmlElement in guest VM
         """
-        raise NotImplementedError()
+        vif_list = self._get_dom_interfaces_elements_list(inst_name)
+        # vif_index is the next vif index sored by the interface
+        if int(vif_index) != len(vif_list):
+            log.error("Support vif index is:%s", len(vif_list))
+            return None
+
+        if bridge is not None:
+            vif_element = self._create_vif_with_bridge(bridge, MAC)
+        elif network is not None:
+            vif_element = self._create_vif_with_network(network, MAC)
+        elif device_name is not None:
+            vif_element = self._create_vif_with_device(device_name, MAC)
+        else:
+            log.error("No network or bridge supply to create a vif.")
+            return None
+        if vif_element is None:
+            return None
+
+        dom = self._get_domain_handler(domain_name=inst_name)
+        dom.attachDeviceFlags(xmlEtree.tostring(vif_element), libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+
+        return vif_element
+
+    def _create_vif_with_device(self, device_name, MAC=None):
+        """
+        """
+        bridge_name = self.get_bridge_name(device_name)
+        if  bridge_name == "unKnown":
+            log.error("Can not find a bridge with physical interface:%s", device_name)
+            return None
+
+        vif_xml = """
+            <interface type='bridge'>
+                <source bridge='%s'/>
+                <model type='virtio'/>
+            </interface>""" % (bridge_name)
+        vif_element = xmlEtree.fromstring(vif_xml)
+        if MAC:
+            mac_elment = xmlEtree.SubElement(vif_element, "mac")
+            mac_elment.attrib['address'] = str(MAC)
+
+        return vif_element
+
+    def _create_vif_with_bridge(self, bridge_name, MAC=None):
+        """
+        :param bridge_name:
+        :param MAC:
+        :return: a interface element
+        """
+        vif_xml = """
+          <interface type='bridge'>
+            <source bridge='%s'/>
+            <model type='virtio'/>
+          </interface>""" % (bridge_name)
+        vif_element = xmlEtree.fromstring(vif_xml)
+        if MAC:
+            mac_elment = xmlEtree.SubElement(vif_element, "mac")
+            mac_elment.attrib['address'] = str(MAC)
+
+        return vif_element
+
+    def _create_vif_with_network(self, network_name, MAC=None):
+        """
+        :param bridge_name:
+        :param MAC:
+        :return: a interface element
+        """
+        vif_xml = """
+          <interface type='network'>
+            <source network='%s'/>
+            <model type='virtio'/>
+          </interface>""" % (network_name)
+        vif_element = xmlEtree.fromstring(vif_xml)
+        if MAC:
+            mac_elment = xmlEtree.SubElement(vif_element, "mac")
+            mac_elment.attrib['address'] = str(MAC)
+
+        return vif_element
 
     def destroy_vif(self, inst_name, vif_index):
         """
+        In order to be keep same with Xen, destroy it in config
         @param vif_index: reference object to virtual interface in guest VM
         """
-        raise NotImplementedError()
+        vif_list = self._get_dom_interfaces_elements_list(inst_name)
+        try:
+            vif = vif_list[int(vif_index)]
+        except (IndexError, ValueError):
+            log.error("No vif with index %s found in domain %s", vif_index, inst_name)
+            return False
+
+        dom = self._get_domain_handler(domain_name=inst_name)
+        if dom.isActive():
+            ret = dom.detachDeviceFlags(xmlEtree.tostring(vif), libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+        else:
+            ret = dom.detachDeviceFlags(xmlEtree.tostring(vif))
+
+        return ret == 0
 
     def plug_vif_to_vm(self, inst_name, vif_index):
         """
         @description: Hotplug the specified VIF to the running VM
         @param vif_index: virtual interface index
-        @return: Ture if success else False
+        @return: True if success else False
         """
-        raise NotImplementedError()
+        vif_list = self._get_dom_interfaces_elements_list(inst_name)
+        try:
+            vif = vif_list[int(vif_index)]
+        except (IndexError, ValueError):
+            log.error("No vif with index %s found in domain %s", vif_index, inst_name)
+            return False
+
+        dom = self._get_domain_handler(domain_name=inst_name)
+        if dom.isActive():
+            ret = dom.attachDeviceFlags(xmlEtree.tostring(vif), libvirt.VIR_DOMAIN_AFFECT_LIVE)
+        else:
+            # ret = dom.attachDeviceFlags(xmlEtree.tostring(vif))
+            return True
+
+        return ret == 0
 
     def unplug_vif_from_vm(self, inst_name, vif_index):
         """
         @description Hot-unplug the specified VIF from the running VM
         @param vif_index: virtual interface index
-        @return: Ture if success else False
+        @return: True if success else False
         """
-        raise NotImplementedError()
+        vif_list = self._get_dom_interfaces_elements_list(inst_name)
+        try:
+            vif = vif_list[int(vif_index)]
+        except (IndexError, ValueError):
+            log.error("No vif with index %s found in domain %s", vif_index, inst_name)
+            return False
+
+        dom = self._get_domain_handler(domain_name=inst_name)
+        if dom.isActive():
+            ret = dom.detachDeviceFlags(xmlEtree.tostring(vif), libvirt.VIR_DOMAIN_AFFECT_LIVE)
+        else:
+            # ret = dom.detachDeviceFlags(xmlEtree.tostring(vif))
+            return True
+
+        return ret == 0
 
     def __get_mac_and_ip(self, element):
         """
@@ -500,8 +621,22 @@ if __name__ == "__main__":
     parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
     (options, args) = parser.parse_args()
     virt = QemuVnetDriver(hostname=options.host, user=options.user, passwd=options.passwd)
+    mac = "52:54:c0:a8:01:7b"
+    vif_element = virt.create_new_vif("test", 2, network="default", MAC=mac)
+    print xmlEtree.tostring(vif_element)
 
-    pifs = virt.get_all_devices()
-    print pifs
-    for pif in pifs:
-        print virt.get_bridge_name(pif)
+    print virt.plug_vif_to_vm(inst_name="test", vif_index=2)
+
+    # ----unplug vif and destroy it-----
+    # print virt.unplug_vif_from_vm(inst_name="test", vif_index=2)
+    # print virt.destroy_vif(inst_name="test", vif_index=2)
+
+    # pifs = virt.get_all_devices()
+    # print pifs
+    # for pif in pifs:
+    #     print virt.get_bridge_name(pif)
+    #
+    #
+    # print virt._get_dom_interfaces_elements_list(inst_name="test")
+    # print virt.get_all_vifs_indexes(inst_name="test")
+    # print virt.destroy_vif("test", 2)

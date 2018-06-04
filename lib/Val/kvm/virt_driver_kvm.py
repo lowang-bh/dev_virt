@@ -755,7 +755,7 @@ class QemuVirtDriver(VirtDriver):
             log.error("Domain %s doesn't exist, can not get interfaces information.", inst_name)
             return []
 
-        tree = xmlEtree.fromstring(domain.XMLDesc())
+        tree = xmlEtree.fromstring(domain.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE))
         disk_list = tree.findall("devices/disk[@device='disk']")
         for disk in disk_list:
             device_name = disk.find('target').get('dev')
@@ -882,7 +882,7 @@ class QemuVirtDriver(VirtDriver):
         tree =  xmlEtree.fromstring(xmlstr)
         device_elment = tree.find("devices")
         target_dev = [target.get("dev") for target in device_elment.findall("disk[@device='disk']/target")]
-        print target_dev
+
         virtio_dev = [dev[2:] for dev in filter(lambda x: "vd" in x, target_dev)]
         dev = "vd%c" %(ord(sorted(virtio_dev)[-1]) + 1)
 
@@ -1182,17 +1182,17 @@ if __name__ == "__main__":
     filebeat = virt._get_domain_handler("filebeat")
     test = virt._get_domain_handler("test")
     # print virt.set_vm_vcpu_max("filebeat", 5)
-    # print virt.set_vm_vcpu_live("filebeat", 3)
+    print virt.set_vm_vcpu_live("test", 3)
     # print virt.get_disk_size(inst_name="test", device_num=0)
     # print virt.get_all_disk(inst_name="test")
     pool = virt._hypervisor_handler.storagePoolLookupByName("default")
     for vol in  pool.listAllVolumes():
         if "test-1.qcow2" == vol.name():
             break
-    vol_obj= virt.add_vdisk_to_vm("test", "default",2)
-    virt._delete_volume_from_pool("/var/lib/libvirt/images/test-6.qcow2")
-    virt.detach_disk_from_domain("test", "/var/lib/libvirt/images/test-1.qcow2")
-    virt.detach_disk_from_domain("test", "/var/lib/libvirt/images/test-3.qcow2")
+    # vol_obj= virt.add_vdisk_to_vm("test", "default",2)
+    # virt._delete_volume_from_pool("/var/lib/libvirt/images/test-6.qcow2")
+    # virt.detach_disk_from_domain("test", "/var/lib/libvirt/images/test-1.qcow2")
+    # virt.detach_disk_from_domain("test", "/var/lib/libvirt/images/test-7.qcow2")
     # virt.attach_disk_to_domain("test", "/var/lib/libvirt/images/test-5.qcow2", "qcow2" )
     # print test.XMLDesc()
     # print test.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)

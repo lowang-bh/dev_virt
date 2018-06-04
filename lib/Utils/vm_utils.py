@@ -54,14 +54,15 @@ class VirtHostDomain(ServerDomain):
         return True
 
     # TODO: need to add bridge, kvm use device, network or bridge to create vif, xen use device, bridge(network same as bridge)
-    # TODO: vnet_driver.create_new_vif in xen an kvm will use device, network or bridge branch according to the given params
+    # TODO: vnet_driver.create_new_vif, kvm will use device, network or bridge branch according to the given params
     def create_new_vif(self, inst_name, vif_index, device_name=None, network=None, bridge=None, ip=None):
         """
         create a new virtual interface on the target VM
         @param inst_name: Vm name
-        @param device_name: vswitch (with the host-device attached) which the vif attach to
+        @param device_name: physical interface name (with the host-device attached with a bridge)
         @param vif_index: vif index
-        @param network: bridge name
+        @param network: network name, in kvm the network is defined by libvirt, in xen, treat it same as the bridge name
+        @param bridge: bridge name on which the network is defined
         @param ip
         """
         log.info("Start to add a new virtual interface device with index:[%s] to VM [%s]", vif_index, inst_name)
@@ -467,14 +468,13 @@ class VirtHostDomain(ServerDomain):
             power_state = "unknown"
 
         disk_info = self.virt_driver.get_all_disk(inst_name=inst_name)
-        disk_size, disk_num, disk_free, disk_free_available = 0, 0, 0, False
+        disk_size, disk_num, disk_free = 0, 0, 0
         for disk in disk_info:
             size = disk_info[disk]['disk_size'] # self.virt_driver.get_disk_size(inst_name, disk)
             if size >= 1:
                 disk_size += size
                 disk_num += 1 # exclude those cd
                 if disk_info[disk].get('disk_free', None) is not None:
-                    disk_free_available = True
                     disk_free += disk_info[disk].get('disk_free')
 
         vif_dic = self.vnet_driver.get_all_vif_info(inst_name)
@@ -496,7 +496,7 @@ class VirtHostDomain(ServerDomain):
                      "memory_size": int(memory_size),
                      "disk_num": int(disk_num),
                      "disk_size": int(disk_size),
-                     "disk_free": int(disk_free) if disk_free_available else None,
+                     "disk_free": int(disk_free) if disk_free else None,
                      "first_ip": first_ip,
                      "second_ip": second_ip,
                      "vm_host_ip": vm_host_ip,
