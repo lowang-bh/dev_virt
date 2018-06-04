@@ -631,8 +631,8 @@ if __name__ == "__main__":
     # print virt.unplug_vif_from_vm(inst_name="test", vif_index=2)
     # print virt.destroy_vif(inst_name="test", vif_index=2)
     virt.set_mac_address("new_vm", 1, "52:54:c0:a8:01:c9")
-
-    virt.set_mac_address("new_vm", 2, mac)
+    virt.create_new_vif("new_vm", 2, network="default", MAC=mac)
+    # virt.set_mac_address("new_vm", 2, mac)
     # pifs = virt.get_all_devices()
     # print pifs
     # for pif in pifs:
