@@ -390,9 +390,7 @@ class VirtHostDomain(ServerDomain):
                  vm_record['memory_actual'])
 
         log.info("VM OS informations:")
-        log.info("OS type: %s\n", self.virt_driver.get_os_type(inst_name, short_name=False))
-
-        # log.info("\nHost Default Storage informations:")
+        log.info("OS type: %s", self.virt_driver.get_os_type(inst_name, short_name=False))
 
     def create_database_info(self, inst_name):
         """

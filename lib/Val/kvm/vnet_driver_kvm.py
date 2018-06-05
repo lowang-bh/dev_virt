@@ -584,7 +584,7 @@ class QemuVnetDriver(VnetDriver):
         try:
             raise NotImplementedError()
         except NotImplementedError:
-            log.warn("get host nanage interface is not supported in KVM by now.")
+            log.warn("get host mnanage interface is not supported in KVM by now.")
 
         return {}
 
