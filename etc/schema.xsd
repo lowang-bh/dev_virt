@@ -23,6 +23,7 @@
         <xsd:attribute name="serverIp" type="xsd:string" use="required"/>
         <xsd:attribute name="user" type="xsd:string" use="required"/>
         <xsd:attribute name="passwd" type="xsd:string" use="required"/>
+        <xsd:attribute name="platform" type="xsd:string" use="optional" default="Xen"/>
     </xsd:complexType>
     <!--Server Type Definition-->
 
