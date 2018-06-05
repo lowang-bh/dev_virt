@@ -70,14 +70,14 @@ if __name__ == "__main__":
     virt_driver = virthost.virt_driver
 
     if options.list_vm:
-        all_vms = virt_driver.get_vm_list()
+        all_vms = virthost.get_vm_list()
         if all_vms:
             log.info(str(sorted(all_vms)))
         else:
             log.info("No VMs.")
 
     elif options.list_templ:
-        all_templs = virt_driver.get_templates_list()
+        all_templs = virthost.get_templates_list()
         str_templ = "All templates are:\n" + "\n".join(sorted(all_templs))
         if all_templs:
             log.info(str_templ)
