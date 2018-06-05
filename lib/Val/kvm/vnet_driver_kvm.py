@@ -339,7 +339,11 @@ class QemuVnetDriver(VnetDriver):
             return None
 
         dom = self._get_domain_handler(domain_name=inst_name)
-        dom.attachDeviceFlags(xmlEtree.tostring(vif_element), libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+        try:
+            dom.attachDeviceFlags(xmlEtree.tostring(vif_element), libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+        except libvirtError as error:
+            log.error("Exceptions when create a new vif: %s", error)
+            return None
 
         return vif_element
 
@@ -412,10 +416,14 @@ class QemuVnetDriver(VnetDriver):
             return False
 
         dom = self._get_domain_handler(domain_name=inst_name)
-        if dom.isActive():
-            ret = dom.detachDeviceFlags(xmlEtree.tostring(vif), libvirt.VIR_DOMAIN_AFFECT_CONFIG)
-        else:
-            ret = dom.detachDeviceFlags(xmlEtree.tostring(vif))
+        try:
+            if dom.isActive():
+                ret = dom.detachDeviceFlags(xmlEtree.tostring(vif), libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+            else:
+                ret = dom.detachDeviceFlags(xmlEtree.tostring(vif))
+        except libvirtError as error:
+            log.error("Exceptions when destroy vif: %s", error)
+            return False
 
         return ret == 0
 
@@ -433,13 +441,16 @@ class QemuVnetDriver(VnetDriver):
             return False
 
         dom = self._get_domain_handler(domain_name=inst_name)
-        if dom.isActive():
-            ret = dom.attachDeviceFlags(xmlEtree.tostring(vif), libvirt.VIR_DOMAIN_AFFECT_LIVE)
-        else:
-            # ret = dom.attachDeviceFlags(xmlEtree.tostring(vif))
-            return True
-
-        return ret == 0
+        try:
+            if dom.isActive():
+                ret = dom.attachDeviceFlags(xmlEtree.tostring(vif), libvirt.VIR_DOMAIN_AFFECT_LIVE)
+                return ret == 0
+            else:
+                # ret = dom.attachDeviceFlags(xmlEtree.tostring(vif))
+                return True
+        except libvirtError as error:
+            log.error("Exceptions when plug vif: %s", error)
+            return False
 
     def unplug_vif_from_vm(self, inst_name, vif_index):
         """
@@ -455,11 +466,15 @@ class QemuVnetDriver(VnetDriver):
             return False
 
         dom = self._get_domain_handler(domain_name=inst_name)
-        if dom.isActive():
-            ret = dom.detachDeviceFlags(xmlEtree.tostring(vif), libvirt.VIR_DOMAIN_AFFECT_LIVE)
-        else:
-            # ret = dom.detachDeviceFlags(xmlEtree.tostring(vif))
-            return True
+        try:
+            if dom.isActive():
+                ret = dom.detachDeviceFlags(xmlEtree.tostring(vif), libvirt.VIR_DOMAIN_AFFECT_LIVE)
+            else:
+                # ret = dom.detachDeviceFlags(xmlEtree.tostring(vif))
+                return True
+        except libvirtError as error:
+            log.error("Exceptions when unplug vif: %s", error)
+            return False
 
         return ret == 0
 
@@ -584,7 +599,7 @@ class QemuVnetDriver(VnetDriver):
         try:
             raise NotImplementedError()
         except NotImplementedError:
-            log.warn("get host mnanage interface is not supported in KVM by now.")
+            log.warn("get host manage interface is not supported in KVM by now.")
 
         return {}
 
