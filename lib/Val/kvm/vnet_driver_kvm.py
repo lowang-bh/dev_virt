@@ -127,6 +127,13 @@ class QemuVnetDriver(VnetDriver):
         for netdom in self._hypervisor_handler.listAllNetworks():
             bridge_name_list.append(netdom.bridgeName())
 
+        for interface_dom in self._hypervisor_handler.listAllInterfaces():
+            interface_tree = xmlEtree.fromstring(interface_dom.XMLDesc())
+            if interface_tree.attrib.get('type') == 'bridge':
+                bridge_name = interface_tree.get('name')
+                if bridge_name not in bridge_name_list:
+                    bridge_name_list.append(bridge_name)
+
         return bridge_name_list
 
     def get_network_list(self):
@@ -303,25 +310,21 @@ class QemuVnetDriver(VnetDriver):
         @param vif_index: the interface index in guest VM, a integer number
         @return: True if exist else False
         """
-        if vif_index in self.get_all_vifs_indexes():
+        if int(vif_index) in self.get_all_vifs_indexes(inst_name):
             return True
         else:
             return False
 
-    def create_new_vif(self, inst_name, vif_index, device_name=None, network=None, bridge=None, MAC=None):
+    def create_new_vif(self, inst_name, vif_index=None, device_name=None, network=None, bridge=None, MAC=None):
         """
         @param inst_name: name of the guest VM
-        @param vif_index: index of interface in guest VM
+        @param vif_index: does not need it
         @param device_name: device name on the host which the network belong to
         @:param network: network name defined by libvirt
         @:param bridge: bridge name, may be linux bridge or openvswitch bridge
         @return: a virtual interface xmlElement in guest VM
         """
         vif_list = self._get_dom_interfaces_elements_list(inst_name)
-        # vif_index is the next vif index sored by the interface
-        if int(vif_index) != len(vif_list):
-            log.error("Support vif index is:%s", len(vif_list))
-            return None
 
         if bridge is not None:
             vif_element = self._create_vif_with_bridge(bridge, MAC)
@@ -531,20 +534,17 @@ class QemuVnetDriver(VnetDriver):
         :param vif_index:
         :return: the bridge name which the vif attached to
         """
-        if not self._hypervisor_handler:
-            self._hypervisor_handler = self.get_handler()
-
-        domain = self._get_domain_handler(domain_name=inst_name)
-        if not domain:
-            log.error("Domain %s doesn't exist, can not get network name.", inst_name)
-            return None
-
-        tree = xmlEtree.fromstring(domain.XMLDesc())
-        source_bridge_list = tree.findall('devices/interface/source')
+        vif_list = self._get_dom_interfaces_elements_list(inst_name)
         try:
-            netwrok_name  = source_bridge_list[int(vif_index)].get('network', None)
+            tree = vif_list[int(vif_index)]
+        except (IndexError, ValueError) as error:
+            log.error("No vif with index: %s", vif_index)
+            return None
+        source_element = tree.find('source')
+        try:
+            netwrok_name  = source_element.get('network', None)
             return netwrok_name
-        except IndexError:
+        except AttributeError:
             log.error("No interface with index %s on domain: %s", vif_index, inst_name)
             return None
 
@@ -554,20 +554,24 @@ class QemuVnetDriver(VnetDriver):
         :param vif_index:
         :return: the bridge name which the vif attached to
         """
-        if not self._hypervisor_handler:
-            self._hypervisor_handler = self.get_handler()
-
-        domain = self._get_domain_handler(domain_name=inst_name)
-        if not domain:
-            log.error("Domain %s doesn't exist, can not get network name.", inst_name)
+        vif_list = self._get_dom_interfaces_elements_list(inst_name)
+        try:
+            tree = vif_list[int(vif_index)]
+        except (IndexError, ValueError):
+            log.error("No vif with index: %s", vif_index)
             return None
 
-        tree = xmlEtree.fromstring(domain.XMLDesc())
-        source_bridge_list = tree.findall('devices/interface/source')
+        source_element = tree.find('source')
         try:
-            bridge_name = source_bridge_list[int(vif_index)].get('bridge', None)
+            bridge_name  = source_element.get('bridge', None)
+            if bridge_name is None:
+                network = source_element.get("network", None)
+                if network:
+                    network_dom =  self._hypervisor_handler.networkLookupByName(network)
+                    bridge_name = network_dom.bridgeName()
+
             return bridge_name
-        except IndexError:
+        except AttributeError:
             log.error("No interface with index %s on domain: %s", vif_index, inst_name)
             return None
 

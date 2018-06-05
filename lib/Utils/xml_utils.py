@@ -40,7 +40,8 @@ def parse_xml(xml_file):
         host = server.attrib['serverIp']
         user = server.attrib['user']
         passwd = server.attrib['passwd']
-        server_dict = {'host':host, 'user':user, 'passwd':passwd, 'vms':[]}
+        platform = server.get("platform")
+        server_dict = {'host':host, 'user':user, 'passwd':passwd, 'platform': platform, 'vms':[]}
         server_list.append(server_dict)
         for vm in list(server):
             vmname = vm.attrib['vmname']
@@ -66,8 +67,8 @@ def parse_xml(xml_file):
 
 if __name__ == "__main__":
     servers = parse_xml("../../etc/example.xml")
-    print servers
     for server in servers:
+        print server
         print type(server), server.get('user'), server.get('serverIp'), server.get('host')
         for key,value in server.items():
             if key != "vms":
