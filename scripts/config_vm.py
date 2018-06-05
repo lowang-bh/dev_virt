@@ -166,6 +166,10 @@ if __name__ == "__main__":
                 exit(1)
         if options.add_index:
             vif_index = options.add_index
+            if vnet_driver.is_vif_exist(inst_name, vif_index):
+                log.fail("Virtual interface with index %s already exist.", vif_index)
+                exit(1)
+
             if virthost.create_new_vif(inst_name, vif_index, device_name, network, bridge, options.vif_ip):
                 log.success("New virtual interface device created successfully.")
                 exit(0)

@@ -1092,7 +1092,7 @@ if __name__ == "__main__":
     # virt._delete_volume_from_pool("/var/lib/libvirt/images/test-6.qcow2")
     # virt.attach_disk_to_domain("test", "/var/lib/libvirt/images/test-1.qcow2", "qcow2")
     # virt.attach_disk_to_domain("test", "/var/lib/libvirt/images/test.qcow2", "qcow2" )
-    # virt.detach_disk_from_domain("test", "/var/lib/libvirt/images/test-5.qcow2")
+    virt.detach_disk_from_domain("test", "/var/lib/libvirt/images/test-9.qcow2")
     # print virt.detach_disk_from_domain("test")
     # print test.XMLDesc()
     # print test.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
@@ -1103,4 +1103,4 @@ if __name__ == "__main__":
     # print ret
     # virt.power_on_vm("new_vm")
 
-    virt.delete_instance("new_vm", True)
+    # virt.delete_instance("new_vm", True)
