@@ -24,6 +24,12 @@ if __name__ == "__main__":
     parser.add_option("--list-pif", dest="list_pif", action="store_true", help="List all the interface information")
     parser.add_option("--list-bond", dest="list_bond", action="store_true", help="List all the bond information")
     parser.add_option("--list-vm", dest="list_vm", action="store_true", help="List all the vms")
+    parser.add_option("--list-templ", dest="list_templ", action="store_true",
+                      help="List all the templates in the server.")
+    parser.add_option("--list-network", dest="list_network", action="store_true",
+                      help="List the network in the host(in Xenserver, it is same as bridge)")
+    parser.add_option("--list-bridge", dest="list_bridge", action="store_true",
+                      help="List the bridge/switch names in the host")
 
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
@@ -47,10 +53,35 @@ if __name__ == "__main__":
             log.info("%-15s: \tTotal: %8sGB, Free:%8sGB", k, v[0], v[1])
     elif options.list_pif:
         serverDomain.print_all_interface()
+
     elif options.list_bond:
         serverDomain.print_bond_inforation()
+
     elif options.list_vm:
         serverDomain.print_all_vms()
+
+    elif options.list_templ:
+        all_templs = serverDomain.get_templates_list()
+        str_templ = "All templates are:\n" + "\n".join(sorted(all_templs))
+        if all_templs:
+            log.info(str_templ)
+        else:
+            log.info("No templates.")
+
+    elif options.list_network:
+        all_networks = serverDomain.get_network_list()
+        if all_networks:
+            log.info(str(sorted(all_networks)))
+        else:
+            log.info("No network found.")
+
+    elif options.list_bridge:
+        all_bridges = serverDomain.get_bridge_list()
+        if all_bridges:
+            log.info(str(sorted(all_bridges)))
+        else:
+            log.info("No bridges found.")
+
     else:
         serverDomain.print_server_hardware_info()
 

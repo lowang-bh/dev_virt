@@ -146,6 +146,7 @@ class ServerDomain(object):
         else:
             log.error("No device found with an IP configured.")
             return None
+
     def get_all_devices(self):
         """
         :return: all the physical interface or bridge in server
@@ -165,6 +166,18 @@ class ServerDomain(object):
         :return:
         """
         return self.vnet_driver.get_bridge_list()
+
+    def get_vm_list(self):
+        """
+        :return:
+        """
+        return self.virt_driver.get_vm_list()
+
+    def get_templates_list(self):
+        """
+        :return:
+        """
+        return self.virt_driver.get_templates_list()
 
     def get_max_free_size_storage(self):
         """
