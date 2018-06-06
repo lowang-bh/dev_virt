@@ -19,6 +19,7 @@ if [[ -f $SetIPScript ]];then
     do
         $SetIPScript $myeth
     done
+    /etc/init.d/network restart
 else
     echo "No $SetIPScript found."
 fi
