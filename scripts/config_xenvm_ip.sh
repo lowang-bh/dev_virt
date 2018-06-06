@@ -59,13 +59,14 @@ if [[ $mymac == 00:66* ]];then
     elif [[ $grep_res == IPADDR=* ]];then
         echo "origin IP on $myeth:$grep_res, set to new: $MyIP"
         sed -i "s/^IPADDR=.*$/IPADDR=$MyIP/" /etc/sysconfig/network-scripts/ifcfg-$myeth
-        sed -i "s/^GATEWAY=.*$/GATEWAY=$MyIP/" /etc/sysconfig/network-scripts/ifcfg-$myeth
-        sed -i "s/^BROADCAST=.*$/BROADCAST=$MyIP/" /etc/sysconfig/network-scripts/ifcfg-$myeth
+        sed -i "s/^GATEWAY=.*$/GATEWAY=$MyGW/" /etc/sysconfig/network-scripts/ifcfg-$myeth
+        sed -i "s/^BROADCAST=.*$/BROADCAST=$MyBC/" /etc/sysconfig/network-scripts/ifcfg-$myeth
     else
         echo "Already configed $myeth"
     fi
     #write the MAC to configfile, in case of the ip will be randomly on interface when restart network
-    grep "HWADDR" /etc/sysconfig/network-scripts/ifcfg-$myeth 2> /dev/null
+    hwaddr_res=$(grep "HWADDR" /etc/sysconfig/network-scripts/ifcfg-$myeth 2> /dev/null)
+    echo "Old HWADDR: $hwaddr_res, set to new: $mymac"
     if [[ $? -eq 0 ]];then
         sed -i "s/^HWADDR=.*$/HWADDR=$mymac/" /etc/sysconfig/network-scripts/ifcfg-$myeth
     else
@@ -78,7 +79,8 @@ if [[ $mymac == 00:66* ]];then
 #    if [[ $MyGW == 10.* ]];then
 #        route add default gw $MyGW
 #    fi
-    /etc/init.d/network restart
+    #should move this command to rc.local when finish setting all config file
+    # /etc/init.d/network restart
 else
     echo "No MAC match the default pattern, exiting"
 fi
