@@ -227,7 +227,7 @@ class ServerDomain(object):
                 device_info = self.vnet_driver.get_device_infor(device_name=device)
                 dest_metmask = device_info["netmask"]
                 dest_gateway = device_info['gateway']
-            except KeyError, error:
+            except KeyError as error:
                 log.exception(str(error))
         elif network is not None or bridge is not None:
             # TODO: need to add API to get network infor accroding to network or bridge

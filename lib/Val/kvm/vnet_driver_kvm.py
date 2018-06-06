@@ -616,7 +616,8 @@ class QemuVnetDriver(VnetDriver):
 
     def get_bridge_name(self, device_name):
         """
-        This is not always work for KVM, need to improve
+        If device_name is a bridge device, then it will return the bridge name; if device_name if a interface (which may
+        not be listed by libvirt API), try to find the bridge it belongs to
         :param device_name:
         :return:
         """
@@ -624,10 +625,15 @@ class QemuVnetDriver(VnetDriver):
             self._hypervisor_handler = self.get_handler()
 
         for interface_dom in self._hypervisor_handler.listAllInterfaces():
-            if interface_dom.name() == device_name:
-                interface_tree = xmlEtree.fromstring(interface_dom.XMLDesc())
-                if interface_tree.attrib.get('type') == 'bridge':
-                    return interface_tree.attrib.get('name')
+            interface_tree = xmlEtree.fromstring(interface_dom.XMLDesc())
+            if interface_tree.get("type") == "bridge":
+                bridge_name = interface_tree.get("name")
+                if  bridge_name == device_name:
+                    return bridge_name # device name is bridge itself
+                else:
+                    target_device = interface_tree.find("bridge/interface[@name='%s']" %(device_name))
+                    if target_device is not None:
+                        return bridge_name # device name belongs to this bridge
 
         return 'unKnown'
 
@@ -649,15 +655,17 @@ if __name__ == "__main__":
     # ----unplug vif and destroy it-----
     # print virt.unplug_vif_from_vm(inst_name="test", vif_index=2)
     # print virt.destroy_vif(inst_name="test", vif_index=2)
-    virt.set_mac_address("new_vm", 1, "52:54:c0:a8:01:c9")
-    virt.create_new_vif("new_vm", 2, network="default", MAC=mac)
+    # virt.set_mac_address("new_vm", 1, "52:54:c0:a8:01:c9")
+    # virt.create_new_vif("new_vm", 2, network="default", MAC=mac)
     # virt.set_mac_address("new_vm", 2, mac)
     # pifs = virt.get_all_devices()
     # print pifs
     # for pif in pifs:
     #     print virt.get_bridge_name(pif)
-    #
-    #
+    print(virt.get_bridge_name("br0"))
+    print(virt.get_bridge_name("eno2"))
+    print(virt.get_bridge_name("eno3"))
+    print(virt.get_bridge_name("vnet2"))
     # print virt._get_dom_interfaces_elements_list(inst_name="test")
     # print virt.get_all_vifs_indexes(inst_name="test")
     # print virt.destroy_vif("test", 2)
