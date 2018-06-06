@@ -53,8 +53,8 @@ class VirtHostDomain(ServerDomain):
         # No matter delete vm from DB failed or not, return True
         return True
 
-    # TODO: need to add bridge, kvm use device, network or bridge to create vif, xen use device, bridge(network same as bridge)
-    # TODO: vnet_driver.create_new_vif, kvm will use device, network or bridge branch according to the given params
+    # DONE: need to add bridge, kvm use device, network or bridge to create vif, xen use device, bridge(network same as bridge)
+    # DONE: vnet_driver.create_new_vif, kvm will use device, network or bridge branch according to the given params
     def create_new_vif(self, inst_name, vif_index, device_name=None, network=None, bridge=None, ip=None):
         """
         create a new virtual interface on the target VM
