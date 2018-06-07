@@ -67,9 +67,9 @@ def timeout_decrator(time_wait=3, default_ret=None):
 
 
 @timeout_decrator()
-def test_wrapper(timeout=1):
+def detest_wrapper(timeout=1):
     print("In test wrapper..")
-    print("name:%s" % test_wrapper.__name__)
+    print("name:%s" % detest_wrapper.__name__)
     import time
     time.sleep(timeout)
     return True
@@ -77,5 +77,5 @@ def test_wrapper(timeout=1):
 
 if __name__ == "__main__":
     for time in [1, 2, 3, 4]:
-        res = test_wrapper(time)
+        res = detest_wrapper(time)
         print "time=%s, value=%s"  % (time, res)

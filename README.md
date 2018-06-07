@@ -27,7 +27,7 @@ ReadME
     6). Log server is available to write the debug and exception infor to /var/log/virt.log. Remember to use sudo when
         start the log server in case of no permission to the directory /var/log
 
-        sudo nohup python /Users/wang/mygit/dev_xen/lib/Log/logging_server.py &
+        sudo nohup python ~/dev_virt/lib/Log/logging_server.py &
 
 ## Some phrase:
 - PIF: physical interface, the eth on server

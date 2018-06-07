@@ -8,7 +8,6 @@
 #########################################################################
 
 import os
-import subprocess
 import signal
 import libvirt
 import xml.etree.ElementTree as xmlEtree
@@ -1032,8 +1031,8 @@ class QemuVirtDriver(VirtDriver):
         """
         set memory for a domain, if it is active, set it lively and the config file, if it is deactive, set the config file
         :param inst_name:
-        :param max_memory:
-        :param min_memory:
+        :param memory_max:
+        :param memory_min:
         :return:
         """
         dom = self._get_domain_handler(domain_name=inst_name)
@@ -1094,7 +1093,7 @@ if __name__ == "__main__":
     # virt._delete_volume_from_pool("/var/lib/libvirt/images/test-6.qcow2")
     # virt.attach_disk_to_domain("test", "/var/lib/libvirt/images/test-1.qcow2", "qcow2")
     # virt.attach_disk_to_domain("test", "/var/lib/libvirt/images/test.qcow2", "qcow2" )
-    virt.detach_disk_from_domain("test", "/var/lib/libvirt/images/test-9.qcow2")
+    # virt.detach_disk_from_domain("test", "/var/lib/libvirt/images/test-5.qcow2")
     # print virt.detach_disk_from_domain("test")
     # print test.XMLDesc()
     # print test.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
