@@ -16,6 +16,8 @@ hostname=$(hostname)
 master_name=k8s-1
 
 # setup master
+# if a error about: No API token found for service account "default", retry after the token is automatically created and added to the service account
+# change the KUBE_ADMISSION_CONTROL="
 if [[ $hostname == $master_name ]];then
     mv /etc/etcd/etcd.conf /etc/etcd/etcd.conf.bak
     echo 'ETCD_NAME="default"' >> /etc/etcd/etcd.conf
@@ -49,7 +51,7 @@ if [[ $hostname == $master_name ]];then
 fi
 
 # setup nodes, treat master as one node
-
+#if thereis a error: details: (open /etc/docker/certs.d/registry.access.redhat.com/redhat-ca.crt: no such file or directory)",then comment the KUBELET_POD_INFRA_CONTAINER
 mv /etc/kubernetes/kubelet /etc/kubernetes/kubelet.bak
 echo 'KUBELET_ADDRESS="--address=0.0.0.0"' >> /etc/kubernetes/kubelet
 echo "KUBELET_HOSTNAME=\"--hostname-override=$hostname\"" >> /etc/kubernetes/kubelet
@@ -65,4 +67,7 @@ do
     systemctl enable $SERVICES
     systemctl status $SERVICES
 done
-
+#  kubectl create  -f pod.yaml
+#  kubectl get pods
+#  kubectl describe pod/rss-site
+#
