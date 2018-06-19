@@ -1,9 +1,16 @@
+由于tcp 使用明文传输，不建议使用， 推荐使用tls。不过可以在测试区使用tcp。配置libvirtd里设置auth_tcp = "none"可以免验证。<br>
+若使用auth_tcp = "sasl"，高版本由于不再使用DIGEST-MD5, 而是默认使用GSSAPI作为验证方式，需要配置Kerberos v5认证。<br>
+但是Kerberos环境配置起来感觉比较麻烦，详细的配置还需要查kerberos的文档。
+
+
 
 ## Server setup
+
 ### 1. install krb5-server
 ```
 yum install krb5-server krb5-libs
 ```
+
 ### 2. 修改krb5.conf
 主要修改libdefaults中default_realm， realms 和domain_realm部分
 ```
@@ -54,6 +61,7 @@ includedir /etc/krb5.conf.d/
   supported_enctypes = aes256-cts:normal aes128-cts:normal des3-hmac-sha1:normal arcfour-hmac:normal camellia256-cts:normal camellia128-cts:normal des-hmac-sha1:normal des-cbc-md5:normal des-cbc-crc:normal
  }
 ```
+
 ### 4.创建/初始化Kerberos database
 其中，[-s]表示生成stash file，并在其中存储master server key（krb5kdc）；还可以用[-r]来指定一个realm name —— 当krb5.conf中定义了多个realm时才是必要的
 `kdb5_util create -r KVM1 -s`
@@ -74,7 +82,7 @@ drwxr-xr-x. 4 root root    31 Jun  8 23:12 ..
 修改kadm5.acl
 ```
 [root@KVM1 krb5kdc]# vim kadm5.acl
-  1 */admin@KVM1    *
+   */admin@KVM1    *
 ```
 添加管理用户admin/admin和libvirt用户libvirt/kvm1
 ```
@@ -130,12 +138,43 @@ virsh #
 klist: Credentials cache keyring 'persistent:0:0' not found
 ```
 
+### 6. libvirtd setup
+设置 libvirtd.conf
+```
+[root@KVM1 ~]# grep ^[^#] /etc/libvirt/libvirtd.conf
+listen_tcp = 1
+auth_tcp = "sasl"
+```
+
+设置libvirt.conf
+```
+[root@KVM1 ~]# grep ^[^#] /etc/sasl2/libvirt.conf
+mech_list: scram-sha-1 gssapi
+keytab: /etc/libvirt/krb5.tab
+```
+重启libvirtd
+```
+systemctl restart libvirtd
+```
+
 ## Client
 install krb5-client
 ```
 yum install krb5-workstation krb5-libs
 ```
-use authconfig to set up the system to use Kerberos
+
+将server上的/etc/krb5.conf 和 /etc/libvirt/krb5.tab 复制到客服端，在客户端上执行kinit
 ```
-authconfig --enablekrb5 --krb5realm=KVM1 --krb5adminserver=kvm1 --krb5kdc=kvm1 --update
+[root@kvmhost etc]# kinit libvirt/kvm1 -k -t /etc/libvirt/krb5.tab
+```
+
+tcp远程连接到libvirtd
+```
+[root@kvmhost etc]# virsh -c qemu+tcp://root@kvm1/system
+Welcome to virsh, the virtualization interactive terminal.
+
+Type:  'help' for help with commands
+       'quit' to quit
+
+virsh #
 ```
