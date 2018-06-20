@@ -1,0 +1,25 @@
+<servers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="">
+
+	<SERVER serverIp="192.168.1.17" user="root" passwd="123456">
+        <!--VM element: vmname, template is required, others are options, if you want to keep those options params same with that in template, don't set it here -->
+        <VM vmname="createViaXml" cpucores="2" cpumax="4" memory="2" maxMemory="4" template="NewTemplate">
+            <!--IP element: vifIndex and ip is required, device/network/bridge is options, if no device/network/bridge, will choose manage network as default -->
+            <IP vifIndex="0" ip="192.168.1.240" network="xenbr1" />
+            <!--DISK element: size is required, storage is options, is no storage, it will choose the storage which has largest free size -->
+            <DISK size="2" storage="Local storage" />
+        </VM>
+  </SERVER>
+  <!--here you can add another server -->
+  <SERVER serverIp="192.168.1.15" user="root" passwd="123456">
+      <!--VM element: vmname, template is required, others are options -->
+        <VM vmname="createViaXml2" cpucores="1" cpumax="2" minMemory="1" memory="2" maxMemory="3" template="NewTemplate">
+            <!--IP element: vifIndex and ip is required, device/network/bridge is options, if no device/network/bridge, will choose manage network as default -->
+            <IP vifIndex="0" ip="192.168.1.239" device="eth1" />
+            <IP vifIndex="1" ip="192.168.1.241" network="xenbr1" />
+            <IP vifIndex="2" ip="192.168.1.242" bridge="xenbr1" />
+            <!--DISK element: size is required, storage is options, is no storage, it will choose the storage which has largest free size -->
+            <DISK size="2" />
+        </VM>
+  </SERVER>
+
+</servers>

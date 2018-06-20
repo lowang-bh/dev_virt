@@ -8,4 +8,4 @@ test.py
 venv
 scripts/shell/conf.json
 scripts/shell/cookie
-example.xml
+etc/example.xml
