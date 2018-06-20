@@ -35,6 +35,9 @@ if __name__ == "__main__":
     else:
         parser.print_help()
         exit(1)
+    if len(args) != 1:
+        parser.print_help()
+        exit(1)
 
     filename = args[0]
     if not os.path.isfile(filename):
