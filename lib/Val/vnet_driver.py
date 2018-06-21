@@ -198,3 +198,20 @@ class VnetDriver(object):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def get_bridge_info(self, bridge_name):
+        """
+        :param bridge_name: bridge name, treat it as a device
+        :return: return a dict with key, IP, MAC, network , etc
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def get_network_info(self, network_name):
+        """
+        :param network_name: network name defined by libvirt.
+        :return: return a dict with key, IP, MAC, network , etc
+        """
+        raise NotImplementedError()
+
+

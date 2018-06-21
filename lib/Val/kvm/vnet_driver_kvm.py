@@ -208,6 +208,47 @@ class QemuVnetDriver(VnetDriver):
 
         return default_infor
 
+    def get_bridge_info(self, bridge_name):
+        """
+        :param bridge_name: bridge name, treat it as a device
+        :return: return a dict with key, IP, MAC, network , etc
+        """
+        return self.get_device_infor(bridge_name)
+
+    def get_network_info(self, network_name):
+        """
+        :param network_name: network name defined by libvirt.
+        :return: return a dict with key, IP, MAC, network , etc
+        """
+        if self._hypervisor_handler is None:
+            self._hypervisor_handler = self.get_handler()
+
+        default_infor = {}
+        default_infor.setdefault('device', network_name)
+        default_infor.setdefault('IP',  None)
+        default_infor.setdefault('DNS',  None)
+        default_infor.setdefault('MAC',  None)
+        default_infor.setdefault('gateway',  None)
+        default_infor.setdefault('netmask',  None)
+        if network_name not in self.get_network_list():
+            return default_infor
+
+        network_dom = self._hypervisor_handler.networkLookupByName(network_name)
+        xmldesc = network_dom.XMLDesc()
+        xml_tree = xmlEtree.fromstring(xmldesc)
+        macelment =  xml_tree.find("mac")
+        if macelment is not None:
+            default_infor['MAC'] = macelment.get("address")
+        ip_element = xml_tree.find("ip")
+        if ip_element is not None:
+            default_infor['IP'] = ip_element.get("address")
+            default_infor['netmask'] = ip_element.get("netmask")
+        bridge_ele = xml_tree.find("bridge")
+        if bridge_ele is not None:
+            default_infor['device'] = bridge_ele.get("name")
+
+        return default_infor
+
     # VM interface API
     def set_mac_address(self, inst_name, eth_index, new_mac):
         """
