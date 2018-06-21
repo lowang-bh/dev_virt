@@ -1019,12 +1019,18 @@ class QemuVirtDriver(VirtDriver):
         if memory_max:
             memory_size = int(memory_max) * gitabyte
         elif memory_min:
-            memory_size = int(memory_min) * gitabyte
+            log.info("Don't support min memory set.")
+            return True
         else:
             log.error("Neither maxMemory nor minMemory is supplied.")
             return False
         # dom.setMemoryFlags(memory_size, libvirt.VIR_DOMAIN_AFFECT_CURRENT|libvirt.VIR_DOMAIN_MEM_MAXIMUM) also OK
-        ret = dom.setMaxMemory(memory_size)
+        try:
+            ret = dom.setMaxMemory(memory_size)
+        except libvirtError as error:
+            log.exception("Exception: %s", error)
+            return False
+
         return ret == 0
 
     def set_vm_dynamic_memory(self, inst_name, memory_max=None, memory_min=None):
@@ -1042,15 +1048,19 @@ class QemuVirtDriver(VirtDriver):
         if memory_max:
             memory_size = int(memory_max) * gitabyte
         elif memory_min:
-            memory_size = int(memory_min) * gitabyte
+            log.info("Don't support min memory set.")
+            return True
         else:
             log.error("Neither maxMemory nor minMemory is supplied.")
             return False
-        #
-        if dom.isActive():
-            ret = dom.setMemoryFlags(memory_size, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
-        else:
-            ret =dom.setMemoryFlags(memory_size) # dom.setMemory need dom to be active
+        try:
+            if dom.isActive():
+                ret = dom.setMemoryFlags(memory_size, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+            else:
+                ret =dom.setMemoryFlags(memory_size) # dom.setMemory need dom to be active
+        except libvirtError as error:
+            log.exception("Exception: %s", error)
+            return False
 
         return ret == 0
 
@@ -1067,7 +1077,11 @@ class QemuVirtDriver(VirtDriver):
             return False
 
         memory_size = int(memory_target) * 1024 * 1024  # memory in KB
-        ret = dom.setMemoryFlags(memory_size, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+        try:
+            ret = dom.setMemoryFlags(memory_size, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+        except libvirtError as error:
+            log.exception("Exception: %s", error)
+            return False
 
         return ret == 0
 
