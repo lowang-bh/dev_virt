@@ -654,9 +654,9 @@ class QemuVirtDriver(VirtDriver):
         """
         all_names = [str(filename).split(".")[0] for filename in filter(lambda x: inst_name in x, self._get_all_vdisk_name())]
         log.debug("all vdisk name with inst name :%s, %s", inst_name, all_names)
-        nextindex = len(all_names)
+        nextindex = len(all_names) - 1
 
-        new_name = inst_name # + "-" + str(nextindex)
+        new_name = inst_name
         while new_name in all_names:
             nextindex += 1
             new_name = inst_name+ "-" + str(nextindex)
