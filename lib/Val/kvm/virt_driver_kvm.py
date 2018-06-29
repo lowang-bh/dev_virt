@@ -267,12 +267,15 @@ class QemuVirtDriver(VirtDriver):
                 log.info("Power off failed, try to poweroff forcely.")
                 domain.destroy()  # It will shutdown the domain force, if it is already shutdown, libvirtError will raise
 
-        self.detach_disk_from_domain(inst_name, force=delete_disk)
+        try:
+            self.detach_disk_from_domain(inst_name, force=delete_disk)
+        except libvirtError:
+            pass
 
         try:
             ret = domain.undefine() # may use undefineFlags to handler managed save image or snapshots
         except libvirtError as error:
-            log.exception("Exception raise when delete domain [%s]: %s.", inst_name, error)
+            log.exception("Exception raise when undefine domain [%s]: %s.", inst_name, error)
             return False
 
         return ret == 0
@@ -784,12 +787,16 @@ class QemuVirtDriver(VirtDriver):
         </disk>""" % (disk_type, target_volume, dev)
         disk_elment = xmlEtree.fromstring(disk_xml_str)
         device_elment.append(disk_elment)
-        # new_xml = xmlEtree.tostring(tree)
-        # ret = self._hypervisor_handler.defineXML(new_xml)
-        if dom.isActive():
-            ret = dom.attachDeviceFlags(disk_xml_str, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
-        else:
-            ret = dom.attachDeviceFlags(disk_xml_str)
+
+        try:
+            if dom.isActive():
+                ret = dom.attachDeviceFlags(disk_xml_str, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+            else:
+                ret = dom.attachDeviceFlags(disk_xml_str)
+        except libvirtError as error:
+            log.exception("Exception when attach disk: %s", error)
+            return False
+
         return ret == 0
 
     def detach_disk_from_domain(self, inst_name, target_volume=None, force=False):
@@ -878,7 +885,12 @@ class QemuVirtDriver(VirtDriver):
             file_path = disk_elment.find('source').get('file')
             log.debug("Disks on domain [%s]: disk path: %s",inst_name, file_path)
 
-            volume_info = self._hypervisor_handler.storageVolLookupByPath(file_path).info()
+            try:
+                volume_info = self._hypervisor_handler.storageVolLookupByPath(file_path).info()
+            except libvirtError as error:
+                log.warn("Exception: %s", error)
+                continue
+
             disk_dize = volume_info[1]/1024.0/1024.0/1024.0
             disk_free = (volume_info[1] - volume_info[2])/1024.0/1024.0/1024.0
             disk_free = float("%.3f" %disk_free)
