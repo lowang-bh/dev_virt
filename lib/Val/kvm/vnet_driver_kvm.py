@@ -365,8 +365,6 @@ class QemuVnetDriver(VnetDriver):
         @:param bridge: bridge name, may be linux bridge or openvswitch bridge
         @return: a virtual interface xmlElement in guest VM
         """
-        vif_list = self._get_dom_interfaces_elements_list(inst_name)
-
         if bridge is not None:
             vif_element = self._create_vif_with_bridge(bridge, MAC)
         elif network is not None:
