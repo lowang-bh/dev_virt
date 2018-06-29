@@ -20,9 +20,9 @@ ReadME
 
         export DB_HOST=127.0.0.1:8000
 
-    5). setup the platform env: Xen for xenserver or QEMU for KVM platform, the default is Xen
+    5). setup the platform env: Xen for xenserver or KVM for KVM platform, the default is Xen
 
-        export PLATFORM=QEMU
+        export PLATFORM=KVM
 
     6). Log server is available to write the debug and exception infor to /var/log/virt.log. Remember to use sudo when
         start the log server in case of no permission to the directory /var/log

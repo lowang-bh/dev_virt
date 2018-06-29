@@ -15,7 +15,7 @@ if PLATFORM == "Xen":
     from lib.Val.Xen.virt_driver_xen import XenVirtDriver
     from lib.Val.Xen.vnet_driver_xen import XenVnetDriver
 
-if PLATFORM == "QEMU":
+if PLATFORM == "KVM":
     from lib.Val.kvm.virt_driver_kvm import QemuVirtDriver
     from lib.Val.kvm.vnet_driver_kvm import QemuVnetDriver
     VM_MAC_PREFIX = "52:54"
@@ -34,7 +34,7 @@ class VirtFactory(object):
         if PLATFORM == 'Xen':
             return XenVirtDriver(host_name, user, passwd)
 
-        if PLATFORM == 'QEMU':
+        if PLATFORM == 'KVM':
             return QemuVirtDriver(host_name, user=user, passwd=passwd)
 
         raise TypeError('No virtual driver supported')
@@ -47,7 +47,7 @@ class VirtFactory(object):
         if PLATFORM == 'Xen':
             return XenVnetDriver(host_name, user, passwd)
 
-        if PLATFORM == 'QEMU':
+        if PLATFORM == 'KVM':
             return  QemuVnetDriver(host_name, user, passwd)
 
         raise TypeError('No network driver supported')
