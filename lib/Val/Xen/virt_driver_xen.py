@@ -146,8 +146,13 @@ class XenVirtDriver(VirtDriver):
 
         return record['power_state'] == 'Halted'
 
-    def create_instance(self, inst_name, reference_vm):
+    # TODO
+    def create_instance(self, inst_name, reference_vm, storage_pool=None):
         '''
+        VM.clone doesn't support tartget storage, VM.copy support a new SR. Clone automatically exploits the capabilities
+        of the underlying storage repository in which the VM's disk images are stored (e.g. Copy on Write).
+        copy guarantees that the disk images of the newly created VM will be 'full disks' - i.e. not part of a CoW chain
+        @:param storage_pool: the storage in which new VM will be put
         @see: VM ref clone (session ref session_id, VM ref vm, string new_name)
         @see: void provision (session ref session_id, VM ref vm)
         '''
