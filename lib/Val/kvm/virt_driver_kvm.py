@@ -200,9 +200,14 @@ class QemuVirtDriver(VirtDriver):
             return True
         return False
 
-    def create_instance(self, vm_name, reference_vm):
-        '''
-        '''
+    # TODO: support new vm in different Pool
+    def create_instance(self, vm_name, reference_vm, storage_pool=None):
+        """
+        :param vm_name: new vm name
+        :param reference_vm: template name
+        :param storage_pool: pool name in which the new vm disk will be put
+        :return:
+        """
         log.info("enter create_instance %s", vm_name)
         if self.is_instance_exists(vm_name):
             log.error("Already exist domain: %s", vm_name)
@@ -237,7 +242,7 @@ class QemuVirtDriver(VirtDriver):
                 target_file = ".".join([self._get_available_vdisk_name(vm_name), suffix])
                 clone_path = os.path.join(os.path.dirname(source_file), target_file)
                 source_elm.set('file', clone_path)
-                self.clone_disk(source_file, target_file)
+                self.clone_disk(source_file, target_file, storage_pool=storage_pool)
                 disk_index += 1
 
         try:
@@ -732,7 +737,7 @@ class QemuVirtDriver(VirtDriver):
 
         return self.attach_disk_to_domain(inst_name, target_vol_path, disk_type)
 
-    def clone_disk(self, source_file_path, target_disk_name):
+    def clone_disk(self, source_file_path, target_disk_name, storage_pool=None):
         """
         :param source_file_path:
         :param target_disk_name:

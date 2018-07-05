@@ -72,7 +72,7 @@ class VirtDriver(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def create_instance(self, inst_name, reference_vm):
+    def create_instance(self, inst_name, reference_vm, storage_pool=None):
         '''
         @param inst_name: new instance name
         @param reference_vm: template name
