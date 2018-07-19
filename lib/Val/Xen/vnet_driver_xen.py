@@ -331,7 +331,6 @@ class XenVnetDriver(VnetDriver):
             log.error("No VM with name [%s].", inst_name)
             return None
 
-        network_dict = {}
         try:
             all_vifs = self.get_all_vifs_indexes(inst_name)
             guest_metrics_ref = self._hypervisor_handler.xenapi.VM.get_guest_metrics(vm_ref)
@@ -340,16 +339,15 @@ class XenVnetDriver(VnetDriver):
             log.debug("Except in get_vif_ip: %s", error)
             return None
 
-        try:
-            vif_key = sorted(all_vifs).index(str(vif_index))
-        except ValueError:
+        if str(vif_index) not in all_vifs:
             log.error("Vif index does not exist.")
             return None
 
         # by test, if there are vif 0,1,3, and each device with a ip, then the dic are about "2/ip: 192.168.1.122;  1/ip: 192.168.1.200;  0/ip: 10.143.248.253;"
         # if there are vif 0,1,2,3, with ip attached to 0,1,3, then the dic looks like "3/ip: 192.168.1.122;1/ip: 192.168.1.200;  0/ip: 10.143.248.253;"
-
-        return network_dict.get(str(vif_key)+"/ip", None)
+        # but if remove the device 2, before reboot, the ip keep same, but after reboot, the device index are keep 0,1,3, but ip change to "2/ip:, 1/ip:,0/ip:"
+        # assume the vif device are added in sequence, and device index keep same as eth index in vm, so use the device_index to get ip
+        return network_dict.get(str(vif_index)+"/ip", None)
 
     def get_vif_bridge_name(self, inst_name, vif_index):
         """
@@ -420,10 +418,10 @@ class XenVnetDriver(VnetDriver):
         vifs_info = {}
         all_vifs = self._hypervisor_handler.xenapi.VM.get_VIFs(vm_ref)
         for vif_ref in all_vifs:
-            vindex = self._hypervisor_handler.xenapi.VIF.get_device(vif_ref)
-            vifs_info.setdefault(vindex, {})
+            device_index = self._hypervisor_handler.xenapi.VIF.get_device(vif_ref)
+            vifs_info.setdefault(device_index, {})
             mac = self._hypervisor_handler.xenapi.VIF.get_MAC(vif_ref)
-            vifs_info[vindex]['mac'] = mac
+            vifs_info[device_index]['mac'] = mac
         try:
             guest_metrics_ref = self._hypervisor_handler.xenapi.VM.get_guest_metrics(vm_ref)
             # When vm first start up, the guest_metrics_ref is 'OpaqueRef:NULL', so no networks information
@@ -434,9 +432,10 @@ class XenVnetDriver(VnetDriver):
 
         # by test, if there are vif 0,1,3, and each device with a ip, then the dic are about "2/ip: 192.168.1.122;  1/ip: 192.168.1.200;  0/ip: 10.143.248.253;"
         # if there are vif 0,1,2,3, with ip attached to 0,1,3, then the dic looks like "3/ip: 192.168.1.122; 1/ip: 192.168.1.200;  0/ip: 10.143.248.253;"
-        for vkey, vindex in enumerate(sorted(vifs_info.keys())):
-            vifs_info[vindex].setdefault('ip', network_dict.get(str(vkey) + "/ip", None)) # should use the index, not device_index
-            #vifs_info[vindex].setdefault('ip', network_dict.get(str(vindex)+"/ip", None))
+        # but if remove the device 2, before reboot, the ip keep same, but after reboot, the device index are keep 0,1,3, but ip change to "2/ip:, 1/ip:,0/ip:"
+        for vkey, device_index in enumerate(sorted(vifs_info.keys())):
+            # assume the vif device are added in sequence, and device index keep same as eth index in vm, so use the device_index to get ip
+            vifs_info[device_index].setdefault('ip', network_dict.get(str(device_index) + "/ip", None))
         log.debug("All vif infor: %s", vifs_info)
 
         return vifs_info
