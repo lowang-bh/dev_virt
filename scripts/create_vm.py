@@ -9,6 +9,7 @@ from optparse import OptionParser
 from lib.Log.log import log
 from lib.Utils.vm_utils import VirtHostDomain
 
+
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
         create_vm.py -c new_vm_name -t template
@@ -17,6 +18,7 @@ if __name__ == "__main__":
         create_vm.py --list-vm       [--host=ip --user=user --pwd=passwd]
         create_vm.py --list-templ    [--host=ip --user=user --pwd=passwd]
         create_vm.py --list-network  [--host=ip --user=user --pwd=passwd]
+        create_vm.py --list-SR       [--host=ip --user=user --pwd=passwd]
         """
     parser = OptionParser(usage=usage)
     parser.add_option("--host", dest="host", help="IP for host server")
@@ -34,12 +36,17 @@ if __name__ == "__main__":
     parser.add_option("--cpu-max", dest="max_cores", help="Config the max VCPU cores.")
 
     parser.add_option("--vif", dest="vif_index", help="Configure on a virtual interface device")
-    parser.add_option("--device", dest="device", help="The target physic NIC name with an associated network vif attach(ed) to")
-    parser.add_option("--network", dest="network", help="The target network(in xen, it is same as bridge) which vif connect(ed) to")
-    parser.add_option("--bridge",  dest="bridge",  help="The target bridge which vif connect(ed) to")
+    parser.add_option("--device", dest="device",
+                      help="The target physic NIC name with an associated network vif attach(ed) to")
+    parser.add_option("--network", dest="network",
+                      help="The target network(in xen, it is same as bridge) which vif connect(ed) to")
+    parser.add_option("--bridge", dest="bridge", help="The target bridge which vif connect(ed) to")
 
     parser.add_option("--ip", dest="vif_ip", help="The ip assigned to the virtual interface")
     parser.add_option("--netmask", dest="vif_netmask", help="The netmask for the target virtual interface")
+
+    parser.add_option("--add-disk", dest="disk_size", help="The disk size(GB) add to the VM")
+    parser.add_option("--storage", dest="storage_name", help="The storage location where the virtual disk put")
 
     parser.add_option("--list-vm", dest="list_vm", action="store_true",
                       help="List all the vms in server.")
@@ -49,6 +56,8 @@ if __name__ == "__main__":
                       help="List the network in the host(in Xenserver, it is same as bridge)")
     parser.add_option("--list-bridge", dest="list_bridge", action="store_true",
                       help="List the bridge/switch names in the host")
+    parser.add_option("--list-SR", dest="list_sr", action="store_true",
+                      help="List the storage repository infor in the host")
 
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
@@ -97,6 +106,13 @@ if __name__ == "__main__":
             log.info(str(sorted(all_bridges)))
         else:
             log.info("No bridges found.")
+    elif options.list_sr:
+        log.info("All SR information:")
+        infor_formate = "%-20s\t%s"
+        log.info(infor_formate, "Storage_name", "Free_size(GB)")
+        storage = virthost.get_host_all_storage_info()
+        for k, v in storage.iteritems():
+            log.info(infor_formate, k, v[1])
 
     elif options.vm_name is not None:
         if options.template is None:
@@ -111,6 +127,7 @@ if __name__ == "__main__":
             log.fail("No template named: %s", template_name)
             exit(1)
 
+        # parse memory and vcpu config
         max_cores, memory_size, min_memory, max_memory = None, None, None, None
         try:
             if options.max_cores is not None:
@@ -135,7 +152,8 @@ if __name__ == "__main__":
             log.fail("Invalid input memory params, min_memory should be smaller than max memory.")
             exit(1)
 
-        if options.vif_ip is not None:  #if an IP is specify, please specify a device, vif_index
+        # parse ip config
+        if options.vif_ip is not None:  # if an IP is specify, please specify a device, vif_index
             if not options.vif_index:
                 log.fail("Please specify an VIF for configuring the IP.")
                 exit(1)
@@ -164,6 +182,28 @@ if __name__ == "__main__":
                 log.fail("IP check failed.")
                 exit(1)
 
+        # parse disk config
+        if options.disk_size is not None:
+            if not options.storage_name:
+                options.storage_name = virthost.get_max_free_size_storage()
+                if not options.storage_name:
+                    log.fail("Failed to get default SR, please specify a storage name for the new virtual disk.")
+                    exit(1)
+            try:
+                size = int(options.disk_size)
+            except ValueError:
+                log.fail("Wrong input of disk size, please input a integer number.")
+                exit(1)
+
+            storage_info = virt_driver.get_host_storage_info(storage_name=options.storage_name)
+            if not storage_info:
+                log.fail("Fail to get infor about storage [%s]", options.storage_name)
+                exit(1)
+            if size >= storage_info['size_free'] - 1:
+                log.fail("No enough volume on storage:[%s], at most [%s] GB is available",
+                         options.storage_name, storage_info['size_free'] - 1)
+                exit(1)
+
         # 1. create VM
         ret = virthost.create_vm(new_vm_name, template_name)
         if not ret:
@@ -190,16 +230,24 @@ if __name__ == "__main__":
             if not ret:
                 log.warn("Config target memory size failed, keep same as before...")
 
-        # 3. config VM
+        # 3. config VM IP
         if options.vif_ip is not None:
-            config_ret = virthost.config_vif(new_vm_name, options.vif_index, options.device, options.network, options.bridge, options.vif_ip)
+            config_ret = virthost.config_vif(new_vm_name, options.vif_index, options.device, options.network,
+                                             options.bridge, options.vif_ip)
             if not config_ret:
                 log.warn("Vif configure failed.")
             else:
                 log.info("Successfully configured the virtual interface device [%s] to VM [%s].",
                          options.vif_index, new_vm_name)
+        # 4. config VM disk
+        if options.disk_size is not None:
+            ret = virthost.add_vm_disk(new_vm_name, storage_name=options.storage_name, size=size)
+            if ret:
+                log.info("Successfully add a new disk with size [%s]GB to VM [%s].", size, new_vm_name)
+            else:
+                log.warn("Failed to add a new disk with size [%s]GB to VM [%s].", size, new_vm_name)
 
-        # 4. power on VM
+        # 5. power on VM
         ret = virthost.power_on_vm(new_vm_name)
         if ret:
             log.success("Create VM [%s] and power on successfully.", new_vm_name)
@@ -210,4 +258,3 @@ if __name__ == "__main__":
     else:
         parser.print_help()
         exit(1)
-
