@@ -65,13 +65,13 @@ if __name__ == "__main__":
             res_dict.setdefault(vm_name, 0)
             ret = virthost.power_off_vm(vm_name)
             if not ret:
-                log.error("VM [%s] power on failed.", vm_name)
+                log.error("VM [%s] power off failed.", vm_name)
                 res_dict[vm_name] = 1
             time.sleep(0.5)
 
         failed_vm_list = [item[0] for item in filter(lambda x:x[1] == 1, res_dict.items())]
         if failed_vm_list:
-            log.fail("VMs %s power on failed.", str(failed_vm_list))
+            log.fail("VMs %s power off failed.", str(failed_vm_list))
             exit(1)
         else:
             log.success("All VMs %s power off successfully.", args)

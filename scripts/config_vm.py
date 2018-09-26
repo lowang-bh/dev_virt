@@ -10,6 +10,7 @@ from optparse import OptionParser
 from lib.Log.log import log
 from lib.Utils.vm_utils import VirtHostDomain
 
+
 if __name__ == "__main__":
     usage = """usage: %prog [options] vm_name\n
         config_vm.py vm_name --add-vif=vif_index --device=eth0  [--host=ip --user=user --pwd=passwd]
@@ -32,9 +33,10 @@ if __name__ == "__main__":
     parser.add_option("--del-vif", dest="del_index", help="Delete a virtual interface device from guest VM")
     parser.add_option("--vif", dest="vif_index", help="Configure on a virtual interface device")
 
-    parser.add_option("--device", dest="device", help="The target physic NIC name with an associated network vif attach(ed) to")
+    parser.add_option("--device", dest="device",
+                      help="The target physic NIC name with an associated network vif attach(ed) to")
     parser.add_option("--network", dest="network", help="The target network which vif connect(ed) to")
-    parser.add_option("--bridge",  dest="bridge",  help="The target bridge which vif connect(ed) to")
+    parser.add_option("--bridge", dest="bridge", help="The target bridge which vif connect(ed) to")
 
     parser.add_option("--ip", dest="vif_ip", help="The ip assigned to the virtual interface")
     parser.add_option("--netmask", dest="vif_netmask", help="The netmask for the target virtual interface")
@@ -70,10 +72,10 @@ if __name__ == "__main__":
     passwd = str(options.passwd).replace('\\', '') if options.passwd else ""
 
     if not options.list_vif and not options.list_pif and not options.list_sr and not options.list_network and \
-        not options.list_bridge and \
-        (not options.vif_index and not options.del_index and not options.add_index and
-         not options.disk_size and not options.cpu_cores and not options.max_cores and
-         not options.memory_size and not options.min_memory and not options.max_memory):
+            not options.list_bridge and \
+            (not options.vif_index and not options.del_index and not options.add_index and
+             not options.disk_size and not options.cpu_cores and not options.max_cores and
+             not options.memory_size and not options.min_memory and not options.max_memory):
         parser.print_help()
         exit(1)
 
@@ -203,8 +205,12 @@ if __name__ == "__main__":
             if not options.storage_name:
                 log.fail("Failed to get default SR, please specify a storage name for the new virtual disk.")
                 exit(1)
+        try:
+            size = int(options.disk_size)
+        except ValueError:
+            log.fail("Wrong input of disk size, please input a integer number.")
+            exit(1)
 
-        size = int(options.disk_size)
         storage_info = virt_driver.get_host_storage_info(storage_name=options.storage_name)
         if not storage_info:
             log.fail("Fail to get infor about storage [%s]", options.storage_name)
