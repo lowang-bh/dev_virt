@@ -52,6 +52,7 @@ if [[ $mymac == 52:54:* ]];then
     grep_res=$(grep "IPADDR=" /etc/sysconfig/network-scripts/ifcfg-$myeth 2> /dev/null)
     if [[ $grep_res != IPADDR=* && -f /etc/sysconfig/network-scripts/ifcfg-$myeth ]];then
         echo "write ip to /etc/sysconfig/network-scripts/ifcfg-$myeth"
+        echo "PREFIX=24" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "IPADDR=$MyIP" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "GATEWAY=$MyGW" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "BROADCAST=$MyBC" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
@@ -66,12 +67,12 @@ if [[ $mymac == 52:54:* ]];then
     fi
     #write the MAC to configfile, in case of the ip will be randomly on interface when restart network
     hwaddr_res=$(grep "HWADDR" /etc/sysconfig/network-scripts/ifcfg-$myeth 2> /dev/null)
-    echo "Old HWADDR: $hwaddr_res, set to new: $mymac"
     if [[ $? -eq 0 ]];then
         sed -i "s/^HWADDR=.*$/HWADDR=$mymac/" /etc/sysconfig/network-scripts/ifcfg-$myeth
     else
         sed -i "/IPADDR/a\HWADDR=$mymac" /etc/sysconfig/network-scripts/ifcfg-$myeth
     fi
+    echo "Old HWADDR: $hwaddr_res, set to new: $mymac"
 
 #    #config the IP when system up
 #    ifconfig $myeth $MyIP netmask 255.255.255.0
