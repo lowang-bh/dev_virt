@@ -43,16 +43,17 @@ if __name__ == "__main__":
     if not os.path.isfile(filename):
         log.fail("Can not find xml file: %s, please check it.", filename)
         exit(1)
-    schema_filepath = os.path.dirname(__file__)
-    if not xml_utils.validate(os.path.join(schema_filepath, "../etc/schema.xsd"), filename):
+    schema_file = os.path.join(os.path.dirname(__file__), "../etc/schema.xsd")
+    if not xml_utils.validate(schema_file, filename):
         log.fail("XML file '%s' did not validate with the schema.xsd!", filename)
         exit(1)
 
     # start to create via xml
     parsed_xml = xml_utils.parse_xml(filename)
-    #[{'passwd': '123456', 'host': '192.168.1.10', 'user': 'root', 'vms': []}]
+    # [{'passwd': '123456', 'host': '192.168.1.10', 'user': 'root', 'vms': []}]
 
     # 1. validate xml items
+    iplist = []
     for server in parsed_xml:
         hostname, user, passwd = server['host'], server['user'], server['passwd']
         log.info("Start to validate VMs in server: %s", hostname)
@@ -71,7 +72,7 @@ if __name__ == "__main__":
         free_memory = virt_driver.get_host_mem_info()['size_free']
         total_memory = 0
         disk_size = {}
-        iplist = []
+
         device_list = virthost.get_all_devices()
         bridge_list = virthost.get_bridge_list()
         network_list = virthost.get_network_list()
@@ -84,10 +85,10 @@ if __name__ == "__main__":
                 exit(1)
             if vm['memory']:
                 total_memory += float(vm['memory'])
-            if vm['minMemory'] and  vm['memory'] and vm['minMemory'] > vm['memory']:
+            if vm['minMemory'] and vm['memory'] and vm['minMemory'] > vm['memory']:
                 log.fail("minMemory should not be more than memory!")
                 exit(1)
-            if vm['maxMemory'] and  vm['memory'] and vm['maxMemory'] < vm['memory']:
+            if vm['maxMemory'] and vm['memory'] and vm['maxMemory'] < vm['memory']:
                 log.fail("maxMemory should  be more than memory!")
                 exit(1)
             for diskdic in vm['disks']:
@@ -99,7 +100,7 @@ if __name__ == "__main__":
                     exit(1)
                 disk_size.setdefault(storage, 0)
                 disk_size[storage] += float(diskdic['size'])
-            #IP validation
+            # IP validation
             vif_index_list = []
             for ipdic in vm['ips']:
                 if ipdic['ip'] not in iplist:
@@ -122,18 +123,21 @@ if __name__ == "__main__":
                     log.fail("No available bridge [%s] in server [%s].", ipdic['bridge'], hostname)
                     exit(1)
                 log.debug("VM [%s] has a IP infor: %s", vm['vmname'], ipdic)
-                if not virthost.is_IP_available(ipdic['ip'], ipdic['netmask'], ipdic['device'], ipdic['network'], ipdic['bridge']):
+                if not virthost.is_IP_available(ipdic['ip'], ipdic['netmask'], ipdic['device'], ipdic['network'],
+                                                ipdic['bridge']):
                     log.fail("IP [%s] check failed in vm [%s].", ipdic['ip'], vm['vmname'])
                     exit(1)
 
         if total_memory > free_memory:
-            log.error("Total memory %s exceed the limit of free memory %s in server %s", total_memory, free_memory, virthost.server_name)
+            log.error("Total memory %s exceed the limit of free memory %s in server %s", total_memory, free_memory,
+                      virthost.server_name)
             log.fail("Validate memory failed in xml file %s.", filename)
             exit(1)
 
         for storage_key, storage_value in disk_size.iteritems():
-            if storage_value >  all_sr_info[storage_key][1] -1: #
-                log.error("There is only %sGB in storage: %s, but all VMs disk need: %sGB on '%s'.", all_sr_info[storage_key][1], storage_key, storage_value, storage_key)
+            if storage_value > all_sr_info[storage_key][1] - 1:  #
+                log.error("There is only %sGB in storage: %s, but all VMs disk need: %sGB on '%s'.",
+                          all_sr_info[storage_key][1], storage_key, storage_value, storage_key)
                 log.fail("Disk validate failed in xml: %s", filename)
                 exit(1)
 
@@ -170,12 +174,13 @@ if __name__ == "__main__":
                 virthost.config_memory(vmname, dynamic_min=vm['memory'], dynamic_max=vm['memory'])
 
             for ipdic in vm['ips']:
-                virthost.config_vif(vmname, ipdic['vifIndex'], ipdic['device'], ipdic['network'], ipdic['bridge'], ipdic['ip'])
+                virthost.config_vif(vmname, ipdic['vifIndex'], ipdic['device'], ipdic['network'], ipdic['bridge'],
+                                    ipdic['ip'])
 
             for diskdic in vm['disks']:
                 storage = diskdic['storage']
                 if not storage:
-                    storage = virthost.get_max_free_size_storage() # calc the default sr online
+                    storage = virthost.get_max_free_size_storage()  # calc the default sr online
                 virthost.add_vm_disk(vmname, storage, diskdic['size'])
 
             ret = virthost.power_on_vm(vmname)
@@ -183,7 +188,7 @@ if __name__ == "__main__":
                 log.warn("Create VM [%s] successfully, but power on vm return False.", vmname)
             else:
                 if vm['cpucores']:
-                    t =0
+                    t = 0
                     while t <= 10 and not virthost.allowed_set_vcpu_live(vmname):
                         log.info("Waiting vm to power on and set vcpu lively....")
                         time.sleep(2)
@@ -196,7 +201,3 @@ if __name__ == "__main__":
 
     log.success("All vms created on all servers.")
     exit(0)
-
-
-
-
