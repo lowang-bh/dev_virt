@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#! -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #########################################################################
 # File Name: Xen/virt_driver_xen.py
 # Attentions: provide command API for operations on Xenserver VMs, not using libvirtd
@@ -8,11 +8,13 @@
 # Created Time: 2018-02-08 11:34:12
 #########################################################################
 
-import time
 import signal
+import time
+
 from lib.Log.log import log
-from lib.Val.virt_driver import VirtDriver
 from lib.Val.Xen import XenAPI
+from lib.Val.virt_driver import VirtDriver
+
 
 API_VERSION_1_1 = '1.1'
 
@@ -43,15 +45,16 @@ class XenVirtDriver(VirtDriver):
             return self._hypervisor_handler
 
         if self.hostname is None:
-            self._hypervisor_handler = XenAPI.xapi_local()  #no __nonzero__, can not use if/not for bool test
+            self._hypervisor_handler = XenAPI.xapi_local()  # no __nonzero__, can not use if/not for bool test
         else:
             log.debug("connecting to %s with user:%s,passwd:%s", "http://" + str(self.hostname), self.user, self.passwd)
             self._hypervisor_handler = XenAPI.Session("http://" + str(self.hostname))
 
         old = signal.signal(signal.SIGALRM, self.timeout_handler)
-        signal.alarm(4)   #  connetctions timeout set to 5 secs
+        signal.alarm(4)  # connetctions timeout set to 5 secs
         try:
-            self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1, 'XenVirtDriver')
+            self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1,
+                                                                'XenVirtDriver')
         except Exception as error:
             log.warn("Exception raised: %s when get handler.", error)
             log.info("Retry connecting to :%s", "https://" + str(self.hostname))
@@ -59,7 +62,8 @@ class XenVirtDriver(VirtDriver):
 
             signal.alarm(4)
             try:
-                self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1, 'XenVirtDriver')
+                self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1,
+                                                                    'XenVirtDriver')
             except Exception as errors:
                 log.exception("Exception errors:%s when get handler", errors)
                 return None
@@ -89,8 +93,8 @@ class XenVirtDriver(VirtDriver):
         handler = self.get_handler()
         if handler is not None:
             vms = handler.xenapi.VM.get_all_records()
-            vm_instances = filter(lambda x:x['is_a_template'] == False and
-                                         x['is_control_domain'] == False, vms.values())
+            vm_instances = filter(lambda x: x['is_a_template'] == False and
+                                            x['is_control_domain'] == False, vms.values())
             vm_names = [vm['name_label'] for vm in vm_instances]
             return vm_names
         else:
@@ -159,7 +163,7 @@ class XenVirtDriver(VirtDriver):
         handler = self.get_handler()
         try:
             log.debug("Start to copy templates:%s", reference_vm)
-            templ_ref = handler.xenapi.VM.get_by_name_label(reference_vm)[0]  #get_by_name_label return a list
+            templ_ref = handler.xenapi.VM.get_by_name_label(reference_vm)[0]  # get_by_name_label return a list
             new_vm_ref = handler.xenapi.VM.clone(templ_ref, inst_name)
             handler.xenapi.VM.provision(new_vm_ref)
         except Exception as error:
@@ -291,8 +295,8 @@ class XenVirtDriver(VirtDriver):
         try:
             vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
             gb = 1024.0 * 1024.0 * 1024.0
-            if  memory_max:
-                memory_max = int(gb* float(memory_max))
+            if memory_max:
+                memory_max = int(gb * float(memory_max))
                 self._hypervisor_handler.xenapi.VM.set_memory_static_max(vm_ref, str(memory_max))
             if memory_min:
                 memory_min = int(gb * float(memory_min))
@@ -415,7 +419,8 @@ class XenVirtDriver(VirtDriver):
             # 0 < VCPUs_at_startup <= VCPUs_max
             cpu_at_start = self._hypervisor_handler.xenapi.VM.get_VCPUs_at_startup(vm_ref)
             if vcpu_num < int(cpu_at_start):
-                log.warn("The max cpu number is smaller than the live number [%s] and will change live cpu to it.", cpu_at_start)
+                log.warn("The max cpu number is smaller than the live number [%s] and will change live cpu to it.",
+                         cpu_at_start)
                 self._hypervisor_handler.xenapi.VM.set_VCPUs_at_startup(vm_ref, str(vcpu_num))
 
             self._hypervisor_handler.xenapi.VM.set_VCPUs_max(vm_ref, str(vcpu_num))
@@ -433,8 +438,8 @@ class XenVirtDriver(VirtDriver):
 
         try:
             vm_ref = self._hypervisor_handler.xenapi.VM.get_by_name_label(inst_name)[0]
-            cpu_max = self._hypervisor_handler.xenapi.VM.get_VCPUs_at_startup(vm_ref)
-            return int(cpu_max)
+            cpu_live = self._hypervisor_handler.xenapi.VM.get_VCPUs_at_startup(vm_ref)
+            return int(cpu_live)
         except Exception as error:
             log.exception("Raise exceptions: [%s].", error)
             return 0
@@ -494,7 +499,7 @@ class XenVirtDriver(VirtDriver):
         vm_record['memory_dynamic_min'] = float("%.3f" % (float(record.get('memory_dynamic_min', '0')) / GB))
         vm_record['memory_static_max'] = float("%.3f" % (float(record.get('memory_static_max', '0')) / GB))
         vm_record['memory_static_min'] = float("%.3f" % (float(record.get('memory_static_min', '0')) / GB))
-        #current target for memory available to this VM
+        # current target for memory available to this VM
         vm_record['memory_target'] = float("%.3f" % (float(record.get("memory_target", 0)) / GB))
         try:
             guest_metrics = handler.xenapi.VM.get_metrics(vm_ref)
@@ -594,7 +599,7 @@ class XenVirtDriver(VirtDriver):
             else:
                 disk_size = 0
 
-            device_dict.setdefault(int(device_number), {'device_name':device_name, 'disk_size': disk_size})
+            device_dict.setdefault(int(device_number), {'device_name': device_name, 'disk_size': disk_size})
 
         return device_dict
 
@@ -645,7 +650,7 @@ class XenVirtDriver(VirtDriver):
             return False
 
         record["SR"] = sr_ref
-        record["virtual_size"] = str(int(size) * 1024 * 1024 * 1024)  #size GB
+        record["virtual_size"] = str(int(size) * 1024 * 1024 * 1024)  # size GB
         record['type'] = "user"
         record['read_only'] = False
         record['sharable'] = False
@@ -656,7 +661,7 @@ class XenVirtDriver(VirtDriver):
             log.error("Create VDI raise error:[%s]", error)
             return False
 
-        vbd_record = {"VDI":vdi_ref, 'other_config': {}, 'mode': 'RW', 'type': 'Disk',
+        vbd_record = {"VDI": vdi_ref, 'other_config': {}, 'mode': 'RW', 'type': 'Disk',
                       'empty': False, 'qos_algorithm_type': '', 'qos_algorithm_params': {}}
         vbd_record['userdevice'] = str(userdevice)
         vbd_record['bootable'] = False
@@ -677,8 +682,9 @@ class XenVirtDriver(VirtDriver):
         try:
             log.info("Waiting for the virtual disk plug in...")
             sleep_time = 0
-            while((handler.xenapi.VBD.get_device(vbd_ref) == '') and (sleep_time < 10)):
-                log.debug("wait device [%s] to plug in, sleep time %s.", handler.xenapi.VBD.get_device(vbd_ref), sleep_time)
+            while ((handler.xenapi.VBD.get_device(vbd_ref) == '') and (sleep_time < 10)):
+                log.debug("wait device [%s] to plug in, sleep time %s.", handler.xenapi.VBD.get_device(vbd_ref),
+                          sleep_time)
                 time.sleep(2)
                 handler.xenapi.VBD.plug(vbd_ref)
                 sleep_time += 2
@@ -745,7 +751,8 @@ class XenVirtDriver(VirtDriver):
             # number of threads per core, xenserver6.5 has no infor about this, set default to 2
             ret_cpu_dict['thread_per_core'] = 2
             # number of cores per socket
-            ret_cpu_dict['cores_per_socket'] = int(ret_cpu_dict['cpu_cores']) / int(ret_cpu_dict['cpu_sockets']) / int(ret_cpu_dict['thread_per_core'])
+            ret_cpu_dict['cores_per_socket'] = int(ret_cpu_dict['cpu_cores']) / int(ret_cpu_dict['cpu_sockets']) / int(
+                    ret_cpu_dict['thread_per_core'])
         except Exception as error:
             log.exception("Exceptions when get host cpu infor: %s", error)
             return ret_cpu_dict
@@ -881,6 +888,8 @@ class XenVirtDriver(VirtDriver):
 
 if __name__ == "__main__":
     from optparse import OptionParser
+
+
     parser = OptionParser()
     parser.add_option("--host", dest="host", help="IP for host server")
     parser.add_option("-u", "--user", dest="user", help="User name for host server")

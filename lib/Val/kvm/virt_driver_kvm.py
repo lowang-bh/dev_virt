@@ -9,11 +9,14 @@
 
 import os
 import signal
-import libvirt
 import xml.etree.ElementTree as xmlEtree
+
+import libvirt
 from libvirt import libvirtError
-from lib.Val.virt_driver import VirtDriver
+
 from lib.Log.log import log
+from lib.Val.virt_driver import VirtDriver
+
 
 # power state: libvirt.
 # VIR_DOMAIN_NOSTATE,
@@ -40,9 +43,6 @@ DEFAULT_HV = "qemu:///session"
 HV_EXE_SUCCESS = 0
 HV_EXE_ERROR = -1
 
-# the vm's disk should be in VM_HOUSE
-VM_HOUSE = "/datastore/"
-
 # the xml file pool, which contains all the xml templates
 TEMPLATE_CFG_POOL = "/etc/libvirt/qemu/"  # default path
 
@@ -51,6 +51,7 @@ class QemuVirtDriver(VirtDriver):
     '''
     derived class of VirtDriver
     '''
+
     def __init__(self, hostname=None, user=None, passwd=None):
         VirtDriver.__init__(self, hostname, user, passwd)
 
@@ -92,7 +93,7 @@ class QemuVirtDriver(VirtDriver):
             hostname = self.hostname
         url = "{0}{1}{2}".format('qemu+tcp://', hostname, '/system')
         old = signal.signal(signal.SIGALRM, self.timeout_handler)
-        signal.alarm(4)   #  connetctions timeout set to 4 secs
+        signal.alarm(4)  # connetctions timeout set to 4 secs
         try:
             self._hypervisor_root_handler = libvirt.openAuth(url, self._auth, 0)
         except Exception as error:
@@ -130,7 +131,7 @@ class QemuVirtDriver(VirtDriver):
             return self._hypervisor_handler
 
         old = signal.signal(signal.SIGALRM, self.timeout_handler)
-        signal.alarm(4)   #  connetctions timeout set to 4 secs
+        signal.alarm(4)  # connetctions timeout set to 4 secs
 
         try:
             if self.hostname is None:
@@ -215,7 +216,7 @@ class QemuVirtDriver(VirtDriver):
 
         hv_handler = self.get_handler()
         template_dom = self._get_domain_handler(domain_name=reference_vm)
-        template_xml =  template_dom.XMLDesc(libvirt.VIR_DOMAIN_XML_SECURE)
+        template_xml = template_dom.XMLDesc(libvirt.VIR_DOMAIN_XML_SECURE)
         tree = xmlEtree.fromstring(template_xml)
         name = tree.find("name")
         name.text = vm_name
@@ -267,7 +268,7 @@ class QemuVirtDriver(VirtDriver):
 
         if domain.isActive():
             log.info("Try to power off vm [%s] gracefully.", inst_name)
-            ret =  domain.destroyFlags(flags=libvirt.VIR_DOMAIN_DESTROY_GRACEFUL)
+            ret = domain.destroyFlags(flags=libvirt.VIR_DOMAIN_DESTROY_GRACEFUL)
             if ret != 0:
                 log.info("Power off failed, try to poweroff forcely.")
                 domain.destroy()  # It will shutdown the domain force, if it is already shutdown, libvirtError will raise
@@ -278,7 +279,7 @@ class QemuVirtDriver(VirtDriver):
             pass
 
         try:
-            ret = domain.undefine() # may use undefineFlags to handler managed save image or snapshots
+            ret = domain.undefine()  # may use undefineFlags to handler managed save image or snapshots
         except libvirtError as error:
             log.exception("Exception raise when undefine domain [%s]: %s.", inst_name, error)
             return False
@@ -299,7 +300,7 @@ class QemuVirtDriver(VirtDriver):
             # flags will prevent the forceful termination of the guest, and will instead
             # return an error if the guest doesn't terminate by the end of the timeout
             if domain.isActive():
-                ret = domain.destroyFlags(flags=libvirt.VIR_DOMAIN_DESTROY_GRACEFUL) # VIR_DOMAIN_DESTROY_GRACEFUL = 1
+                ret = domain.destroyFlags(flags=libvirt.VIR_DOMAIN_DESTROY_GRACEFUL)  # VIR_DOMAIN_DESTROY_GRACEFUL = 1
                 if ret != 0:
                     ret = domain.destroyFlags(flags=libvirt.VIR_DOMAIN_DESTROY_DEFAULT)
                 return ret == 0
@@ -451,7 +452,7 @@ class QemuVirtDriver(VirtDriver):
         # number of NUMA nodes * number of sockets per node
         ret_cpu_dict['cpu_sockets'] = int(hv_info[4]) * int(hv_info[5])
         ret_cpu_dict['cores_per_socket'] = int(hv_info[6])
-        #number of threads per core
+        # number of threads per core
         ret_cpu_dict['thread_per_core'] = int(hv_info[7])
 
         return ret_cpu_dict
@@ -567,7 +568,8 @@ class QemuVirtDriver(VirtDriver):
             return False
 
         stats = domain.info()
-        if stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTDOWN or stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTOFF:
+        if stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTDOWN or stats[
+            DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTOFF:
             return True
         return False
 
@@ -582,12 +584,10 @@ class QemuVirtDriver(VirtDriver):
             return {}
 
         vm_record = {}
-        if self.is_instance_running(inst_name=inst_name):
-            vm_record['VCPUs_max'] = dom.maxVcpus()
-        else:
-            vm_record['VCPUs_max'] = 0
 
-        vm_record['VCPUs_live'] = vm_record['VCPUs_max']
+        vm_record['VCPUs_max'] = self.get_vm_vcpu_max(inst_name)
+
+        vm_record['VCPUs_live'] = self.get_vm_vcpu_current(inst_name)
         vm_record['domid'] = dom.ID()
         vm_record['uuid'] = dom.UUIDString()
         vm_record['name_label'] = inst_name
@@ -600,13 +600,14 @@ class QemuVirtDriver(VirtDriver):
 
         #  dom.info() consist of the state, max memory,memory, cpus and cpu time for the domain.
         stats = dom.info()
-        vm_record['memory_target'] = float("%.3f" % (stats[DOMAIN_INFO_MAX_MEM] / 1024.0 / 1024.0))
+        # target memory should be live memory
+        vm_record['memory_target'] = float("%.3f" % (stats[DOMAIN_INFO_MEM] / 1024.0 / 1024.0))
         vm_record['memory_actual'] = float("%.3f" % (stats[DOMAIN_INFO_MEM] / 1024.0 / 1024.0))
         vm_record['running'] = stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_RUNNING
         vm_record['halted'] = stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTDOWN or \
                               stats[DOMAIN_INFO_STATE] == libvirt.VIR_DOMAIN_SHUTOFF
 
-        return  vm_record
+        return vm_record
 
     # Disk API
     def __get_disk_elements_list(self, inst_name):
@@ -651,7 +652,7 @@ class QemuVirtDriver(VirtDriver):
             if self._hypervisor_handler is None:
                 self._hypervisor_handler = self.get_handler()
             for pool in self._hypervisor_handler.listAllStoragePools(libvirt.VIR_CONNECT_LIST_STORAGE_POOLS_ACTIVE):
-                file_name.extend(pool.listVolumes()) #  listAllVolumes(flags=0) return list of object, flags is not used
+                file_name.extend(pool.listVolumes())  # listAllVolumes(flags=0) return list of object, flags is not used
 
             return file_name
 
@@ -660,14 +661,15 @@ class QemuVirtDriver(VirtDriver):
         :param inst_name:
         :return: a available virtual disk name for a domain, different from all the volume name in all pools
         """
-        all_names = [str(filename).split(".")[0] for filename in filter(lambda x: inst_name in x, self._get_all_vdisk_name())]
+        all_names = [str(filename).split(".")[0] for filename in
+                     filter(lambda x: inst_name in x, self._get_all_vdisk_name())]
         log.debug("all vdisk name with inst name :%s, %s", inst_name, all_names)
         nextindex = len(all_names) - 1
 
         new_name = inst_name
         while new_name in all_names:
             nextindex += 1
-            new_name = inst_name+ "-" + str(nextindex)
+            new_name = inst_name + "-" + str(nextindex)
 
         return new_name
 
@@ -699,22 +701,22 @@ class QemuVirtDriver(VirtDriver):
         except libvirtError as error:
             log.error("No storage named: %s", storage_name)
             return False
-        pool_free = pool.info()[-1] # pool.info is a list [Pool state, Capacity, Allocation, Available]
-        if int(size) * (2**30) > pool_free:
+        pool_free = pool.info()[-1]  # pool.info is a list [Pool state, Capacity, Allocation, Available]
+        if int(size) * (2 ** 30) > pool_free:
             log.error("No such enough free size in storage %s", storage_name)
             return False
 
         pool_xml_tree = xmlEtree.fromstring(pool.XMLDesc())
         pool_path = pool_xml_tree.find("target/path")
         if pool_path is None:
-            path_str = "/var/lib/libvirt/images" #  the default path for pool in kvm
+            path_str = "/var/lib/libvirt/images"  # the default path for pool in kvm
         else:
             path_str = pool_path.text
         disk_name = "".join([self._get_available_vdisk_name(inst_name), ".", disk_type])
-        target_vol_path = os.path.join(path_str, disk_name )
+        target_vol_path = os.path.join(path_str, disk_name)
 
         # volume type: file, block, dir, network, netdir
-        #'GB' (gigabytes, 10^9 bytes), 'G' or 'GiB' (gibibytes, 2^30 bytes)
+        # 'GB' (gigabytes, 10^9 bytes), 'G' or 'GiB' (gibibytes, 2^30 bytes)
         storage_vol_xml = """
         <volume type="file">
             <name>%s</name>
@@ -732,7 +734,7 @@ class QemuVirtDriver(VirtDriver):
             </target>
         </volume>"""
 
-        storage_vol_xml = storage_vol_xml %(disk_name, size, target_vol_path, disk_type)
+        storage_vol_xml = storage_vol_xml % (disk_name, size, target_vol_path, disk_type)
         vol_obj = pool.createXML(storage_vol_xml)
 
         return self.attach_disk_to_domain(inst_name, target_vol_path, disk_type)
@@ -760,10 +762,10 @@ class QemuVirtDriver(VirtDriver):
                                     <label>virt_image_t</label>
                                 </permissions>
                             </target>
-                        </volume>""" %(target_disk_name, vol_format)
+                        </volume>""" % (target_disk_name, vol_format)
         log.info("Clone from %s to %s", source_file_path, target_disk_name)
         pool = vol.storagePoolLookupByVolume()
-        new_vol = pool.createXMLFrom(vol_clone_xml, vol, 0) # only (name, perms) are passed for a new volume
+        new_vol = pool.createXMLFrom(vol_clone_xml, vol, 0)  # only (name, perms) are passed for a new volume
         return new_vol
 
     def attach_disk_to_domain(self, inst_name, target_volume, disk_type):
@@ -777,12 +779,12 @@ class QemuVirtDriver(VirtDriver):
         if dom is None:
             return False
         xmlstr = dom.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
-        tree =  xmlEtree.fromstring(xmlstr)
+        tree = xmlEtree.fromstring(xmlstr)
         device_elment = tree.find("devices")
         target_dev = [target.get("dev") for target in device_elment.findall("disk[@device='disk']/target")]
 
         virtio_dev = [dev[2:] for dev in filter(lambda x: "vd" in x, target_dev)]
-        dev = "vd%c" %(ord(sorted(virtio_dev)[-1]) + 1 if virtio_dev else "a")
+        dev = "vd%c" % (ord(sorted(virtio_dev)[-1]) + 1 if virtio_dev else "a")
 
         disk_xml_str = """
         <disk type='file' device='disk'>
@@ -795,7 +797,8 @@ class QemuVirtDriver(VirtDriver):
 
         try:
             if dom.isActive():
-                ret = dom.attachDeviceFlags(disk_xml_str, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+                ret = dom.attachDeviceFlags(disk_xml_str,
+                                            libvirt.VIR_DOMAIN_AFFECT_LIVE | libvirt.VIR_DOMAIN_AFFECT_CONFIG)
             else:
                 ret = dom.attachDeviceFlags(disk_xml_str)
         except libvirtError as error:
@@ -818,7 +821,7 @@ class QemuVirtDriver(VirtDriver):
             return False
 
         xmlstr = dom.XMLDesc()
-        tree =  xmlEtree.fromstring(xmlstr)
+        tree = xmlEtree.fromstring(xmlstr)
         device_elment = tree.find("devices")
         disk_list = device_elment.findall("disk[@device='disk']")
         ret = None
@@ -833,7 +836,7 @@ class QemuVirtDriver(VirtDriver):
             log.info("Detach device: %s", file_path)
             if dom.isActive():
                 ret = dom.detachDeviceFlags(xmlEtree.tostring(disk_element),
-                                            libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+                                            libvirt.VIR_DOMAIN_AFFECT_LIVE | libvirt.VIR_DOMAIN_AFFECT_CONFIG)
             else:
                 ret = dom.detachDeviceFlags(xmlEtree.tostring(disk_element))
             # remove disk from host
@@ -872,7 +875,7 @@ class QemuVirtDriver(VirtDriver):
         try:
             volume_obj = self._hypervisor_handler.storageVolLookupByPath(file_path)
             # volume_list.info(): type, Capacity, Allocation(used)
-            return volume_obj.info()[1]/1024.0/1024.0/1024.0
+            return volume_obj.info()[1] / 1024.0 / 1024.0 / 1024.0
         except (TypeError, IndexError) as error:
             log.exception("Exceptions raise when get disk size: %s", error)
             return 0
@@ -888,7 +891,7 @@ class QemuVirtDriver(VirtDriver):
         for disk_num, disk_elment in enumerate(disk_list):
             device_name = disk_elment.find('target').get('dev')
             file_path = disk_elment.find('source').get('file')
-            log.debug("Disks on domain [%s]: disk path: %s",inst_name, file_path)
+            log.debug("Disks on domain [%s]: disk path: %s", inst_name, file_path)
 
             try:
                 volume_info = self._hypervisor_handler.storageVolLookupByPath(file_path).info()
@@ -896,9 +899,9 @@ class QemuVirtDriver(VirtDriver):
                 log.warn("Exception: %s", error)
                 continue
 
-            disk_dize = volume_info[1]/1024.0/1024.0/1024.0
-            disk_free = (volume_info[1] - volume_info[2])/1024.0/1024.0/1024.0
-            disk_free = float("%.3f" %disk_free)
+            disk_dize = volume_info[1] / 1024.0 / 1024.0 / 1024.0
+            disk_free = (volume_info[1] - volume_info[2]) / 1024.0 / 1024.0 / 1024.0
+            disk_free = float("%.3f" % disk_free)
 
             all_disk_info[disk_num] = {'disk_size': disk_dize, 'device_name': device_name, 'disk_free': disk_free}
 
@@ -924,13 +927,13 @@ class QemuVirtDriver(VirtDriver):
 
         vcpu_num = int(vcpu_num)
         if vcpu_num > self.get_vm_vcpu_max(inst_name):
-            log.error("vCpus number [%s] exceed the limit of max vcpus: %s",vcpu_num, dom.maxVcpus())
+            log.error("vCpus number [%s] exceed the limit of max vcpus: %s", vcpu_num, dom.maxVcpus())
             return False
 
         try:
             if dom.isActive():
                 # dom.setVcpus(vcpu_num) # only effect the live domain, when power off, the config lose
-                ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+                ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_LIVE | libvirt.VIR_DOMAIN_AFFECT_CONFIG)
             else:
                 ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_CURRENT)
         except libvirtError as error:
@@ -955,7 +958,7 @@ class QemuVirtDriver(VirtDriver):
         vcpu_num = int(vcpu_num)
         try:
             # Flag 'VIR_DOMAIN_AFFECT_CONFIG' is required by flag 'VIR_DOMAIN_VCPU_MAXIMUM'
-            ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_CONFIG|libvirt.VIR_DOMAIN_VCPU_MAXIMUM)
+            ret = dom.setVcpusFlags(vcpu_num, libvirt.VIR_DOMAIN_AFFECT_CONFIG | libvirt.VIR_DOMAIN_VCPU_MAXIMUM)
         except libvirtError as error:
             log.exception("Exception when set vcpu max: %s", error)
             return False
@@ -989,7 +992,7 @@ class QemuVirtDriver(VirtDriver):
         if dom is None:
             return 0
 
-        _, current_vcpu= self.__get_vcpu_from_xml(dom.XMLDesc())
+        _, current_vcpu = self.__get_vcpu_from_xml(dom.XMLDesc())
         return current_vcpu
 
     def get_vm_vcpu_max(self, inst_name):
@@ -1032,7 +1035,7 @@ class QemuVirtDriver(VirtDriver):
             log.error("Set domain max memory need it to be stopped.")
             return False
 
-        gitabyte = 1024 * 1024 # unit is KB
+        gitabyte = 1024 * 1024  # unit is KB
         if memory_max:
             memory_size = int(memory_max) * gitabyte
         elif memory_min:
@@ -1061,7 +1064,7 @@ class QemuVirtDriver(VirtDriver):
         dom = self._get_domain_handler(domain_name=inst_name)
         if dom is None:
             return False
-        gitabyte = 1024 * 1024 # unit is KB
+        gitabyte = 1024 * 1024  # unit is KB
         if memory_max:
             memory_size = int(memory_max) * gitabyte
         elif memory_min:
@@ -1072,9 +1075,9 @@ class QemuVirtDriver(VirtDriver):
             return False
         try:
             if dom.isActive():
-                ret = dom.setMemoryFlags(memory_size, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+                ret = dom.setMemoryFlags(memory_size, libvirt.VIR_DOMAIN_AFFECT_LIVE | libvirt.VIR_DOMAIN_AFFECT_CONFIG)
             else:
-                ret =dom.setMemoryFlags(memory_size) # dom.setMemory need dom to be active
+                ret = dom.setMemoryFlags(memory_size)  # dom.setMemory need dom to be active
         except libvirtError as error:
             log.exception("Exception: %s", error)
             return False
@@ -1095,15 +1098,18 @@ class QemuVirtDriver(VirtDriver):
 
         memory_size = int(memory_target) * 1024 * 1024  # memory in KB
         try:
-            ret = dom.setMemoryFlags(memory_size, libvirt.VIR_DOMAIN_AFFECT_LIVE|libvirt.VIR_DOMAIN_AFFECT_CONFIG)
+            ret = dom.setMemoryFlags(memory_size, libvirt.VIR_DOMAIN_AFFECT_LIVE | libvirt.VIR_DOMAIN_AFFECT_CONFIG)
         except libvirtError as error:
             log.exception("Exception: %s", error)
             return False
 
         return ret == 0
 
+
 if __name__ == "__main__":
     from optparse import OptionParser
+
+
     parser = OptionParser()
     parser.add_option("--host", dest="host", help="IP for host server")
     parser.add_option("-u", "--user", dest="user", help="User name for host server")
@@ -1113,11 +1119,11 @@ if __name__ == "__main__":
     filebeat = virt._get_domain_handler("filebeat")
     test = virt._get_domain_handler("test")
     # print virt.set_vm_vcpu_max("filebeat", 5)
-    #print virt.set_vm_vcpu_live("test", 3)
+    # print virt.set_vm_vcpu_live("test", 3)
     # print virt.get_disk_size(inst_name="test", device_num=0)
     # print virt.get_all_disk(inst_name="test")
     pool = virt._hypervisor_handler.storagePoolLookupByName("default")
-    for vol in  pool.listAllVolumes():
+    for vol in pool.listAllVolumes():
         if "test-1.qcow2" == vol.name():
             break
     # vol_obj= virt.add_vdisk_to_vm("test", "default",2)
@@ -1129,7 +1135,7 @@ if __name__ == "__main__":
     # print test.XMLDesc()
     # print test.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
 
-     # vol = virt.clone_disk("/var/lib/libvirt/images/test-7.qcow2", "clone-disk.qcow2")
+    # vol = virt.clone_disk("/var/lib/libvirt/images/test-7.qcow2", "clone-disk.qcow2")
     # ret = virt.create_instance("new_vm", "CentOS7Mini")
 
     # print ret
