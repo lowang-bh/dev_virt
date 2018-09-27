@@ -1,16 +1,16 @@
-ReadME
+# ReadME
 
-1. If run these scripts on Xenserver, please first configure the env for xenserver
-    with the scripts initial_env.sh
-2. If run those scripts locally, please specify an host IP and user/password with:
-    --host=HOST --user=USER --pwd=PASSWD
 
 ## Env Setting Up:
 
     1). create a virtual env with python2.7
 
         virtualenv -p python2 venv
-    2). add current dirctory to PYTHONPATH
+    2). add the root directory of this project to PYTHONPATH
+
+        eg: you clone this project in directory ~/mygit, please add ~/mygit/dev_virt to PYTHONPATH:
+
+        export PYTHONPATH=$PYTHONPATH:~/mygit/dev_virt
 
     3). install pip requirements
 
@@ -34,6 +34,45 @@ ReadME
 - VIF: virtual  interface, the eth on VM
 - SR:  storage repository, the storage pool on server
 
+# Create multiple VMs from xml config
+- `setup_vms.py --validate xmlFile`     Validate the given xml file
+- `setup_vms.py --create   xmlFile`     Do the create up according to the xml file
+
+Create VMs with xml just need to write a xml config following the xml-example. Before really creating VMs, please run
+*setup_system.py --validate* to check your xml.
+
+```xml
+<servers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="">
+  <SERVER serverIp="192.168.1.17" user="root" passwd="xxxxxx">
+        <!--VM element: vmname, template is required, others are options, if you want to keep those options params same with that in template, don't set it here -->
+        <VM vmname="createViaXml" cpucores="2" cpumax="4" memory="2" maxMemory="4" template="NewTemplate">
+
+            <!--IP element: vifIndex and ip is required, device/network/bridge is options, if no device/network/bridge, will choose manage network as default -->
+            <IP vifIndex="0" ip="192.168.1.240" network="xenbr1" />
+
+            <!--add multiple IPs here -->
+
+            <!--DISK element: size is required, storage is options, if no storage, it will choose the storage which has largest free size -->
+            <DISK size="2" storage="Local storage" />
+
+            <!-- add multiple DISK here -->
+        </VM>
+
+        <!-- add multiple VMs here in the same server -->
+
+  </SERVER>
+
+  <!--here you can add another server -->
+  <SERVER serverIp="192.168.1.15" user="root" passwd="xxxxxx">
+        <VM vmname="createViaXml2" cpucores="1" cpumax="2" minMemory="1" memory="2" maxMemory="3" template="NewTemplate">
+            <IP vifIndex="0" ip="192.168.1.241" device="eth1" />
+            <DISK size="2" />
+        </VM>
+  </SERVER>
+</servers>
+```
+
+
 # Scripts:
 
 ## 1. Sync information from exist server to database
@@ -46,6 +85,7 @@ ReadME
   - `--list-vm`             List all the vms in server.
   - `--list-templ`          List all the templates in the server.
   - `--list-network`        List the bridge/switch network in the host
+  - `--list-SR`             List the storage repository infor in the host
 
 #####  1). <b>**Create a new VM with a template:**<b>
   - `-c VM_NAME, --create=VM_NAME`                        Create a new VM with a template.
@@ -87,6 +127,14 @@ ReadME
   - `--min-mem will set the min static memory `
   - `--max-mem will set the max static memory `
     > create_vm.py -c "test2" -t "CentOS 7.2 template" --memory=2 --max-mem=4
+
+##### 5).Add new disk to VM, the storage_name is choosed from *--list-SR*
+  - `--add-disk=DISK_SIZE`  The disk size(GB) add to the VM
+  - `--storage=STORAGE_NAME` The storage location where the virtual disk put
+    > create_vm.py "test1"--add-disk=2 --storage=data2
+
+    **if no *--storage*, will use the storage which has a largest free volume**
+    > create_vm.py "test1"--add-disk=2
 
 
 ## 4. config_vm.py
@@ -138,5 +186,14 @@ ReadME
     **Note: a problem is that the VIF index given to xenserver, but it is not always the index of eth in VM guest, it depend on the create sequence of virtual interface.**
 
 ## 7. dump_host.py, list the memory, CPU, Disk, and system information of server
-  - dump_host.py    \[--host=ip --user=user --pwd=passwd\]
-  - dump_host.py --list-sr \[--host=ip --user=user --pwd=passwd\]
+  - `--list-sr`             List all the storage information
+  - `--list-pif`            List all the interface information
+  - `--list-bond`           List all the bond information
+  - `--list-vm`             List all the vms
+  - `--list-templ`          List all the templates in the server.
+  - `--list-network`        List the network in the host (in Xenserver, it is same as bridge)
+  - `--list-bridge`         List the bridge/switch names in the host
+
+    > dump_host.py    \[--host=ip --user=user --pwd=passwd\]
+
+    > dump_host.py --list-sr \[--host=ip --user=user --pwd=passwd\]
