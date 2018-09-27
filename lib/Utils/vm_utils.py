@@ -74,7 +74,8 @@ class VirtHostDomain(ServerDomain):
             mac_addr = None
 
         log.debug("Create VIF [%s] with IP: %s,  MAC: %s.", vif_index, ip, mac_addr)
-        new_vif = self.vnet_driver.create_new_vif(inst_name, vif_index, device_name, network, bridge=bridge, MAC=mac_addr)
+        new_vif = self.vnet_driver.create_new_vif(inst_name, vif_index, device_name, network, bridge=bridge,
+                                                  MAC=mac_addr)
         if new_vif is not None:
 
             self.update_ip_infor_to_database(inst_name, vif_index=vif_index, ip=ip)
@@ -204,7 +205,7 @@ class VirtHostDomain(ServerDomain):
         :param dynamic_max:
         :return:
         """
-        log.debug("config max memory in VM [%s]: static max:%s, dynamic max:%s",inst_name, static_max, dynamic_max)
+        log.debug("config max memory in VM [%s]: static max:%s, dynamic max:%s", inst_name, static_max, dynamic_max)
         if static_max:
             log.info("Start to config the static max memory to VM [%s]", inst_name)
             ret = self.virt_driver.set_vm_static_memory(inst_name, memory_max=static_max)
@@ -348,7 +349,7 @@ class VirtHostDomain(ServerDomain):
         disk_info = {}
         disk_dict = self.virt_driver.get_all_disk(inst_name=inst_name)
         for disk_num in disk_dict:
-            #size = str(self.virt_driver.get_disk_size(inst_name=inst_name, device_num=disk_num)) + " GB"
+            # size = str(self.virt_driver.get_disk_size(inst_name=inst_name, device_num=disk_num)) + " GB"
             size = str(disk_dict[disk_num]['disk_size']) + "  GB"
             disk_info.setdefault(disk_num, size)
 
@@ -364,7 +365,7 @@ class VirtHostDomain(ServerDomain):
 
         disk_dict = self.virt_driver.get_all_disk(inst_name=inst_name)
         for disk_num in sorted(disk_dict):
-            #size = str(self.virt_driver.get_disk_size(inst_name=inst_name, device_num=disk_num)) + " GB"
+            # size = str(self.virt_driver.get_disk_size(inst_name=inst_name, device_num=disk_num)) + " GB"
             size = str(disk_dict.get(disk_num, {}).get('disk_size')) + " GB"
             free = str(disk_dict.get(disk_num, {}).get('disk_free', None)) + " GB"
             log.info("\t%s\tTotal:%s\tFree:%s", disk_num, size, free)
@@ -415,10 +416,13 @@ class VirtHostDomain(ServerDomain):
 
         disk_info = self.virt_driver.get_all_disk(inst_name=inst_name)
         disk_num = len(disk_info)
-        #disk_size = self.virt_driver.get_disk_size(inst_name, 0)  # only write the system disk size when create
-        disk_size = disk_info.get(0, {}).get('disk_size', 0) #device_num with 0 default to be system disk
+        # disk_size = self.virt_driver.get_disk_size(inst_name, 0)  # only write the system disk size when create
+        disk_size = disk_info.get(0, {}).get('disk_size', 0)  # device_num with 0 default to be system disk
 
         vm_host_ip = self.vnet_driver.get_host_manage_interface_infor().get('IP', None)
+        # KVM platform cat not get host ip, get it from virt_driver.hostname
+        if not vm_host_ip:
+            vm_host_ip = self.virt_driver.hostname
 
         ret = self.db_driver.create(hostname, sn, cpu_cores, int(memory_size), int(disk_size), disk_num,
                                     vm_host_ip=vm_host_ip)
@@ -468,24 +472,24 @@ class VirtHostDomain(ServerDomain):
         disk_info = self.virt_driver.get_all_disk(inst_name=inst_name)
         disk_size, disk_num, disk_free = 0, 0, 0
         for disk in disk_info:
-            size = disk_info[disk]['disk_size'] # self.virt_driver.get_disk_size(inst_name, disk)
+            size = disk_info[disk]['disk_size']  # self.virt_driver.get_disk_size(inst_name, disk)
             if size >= 1:
                 disk_size += size
-                disk_num += 1 # exclude those cd
+                disk_num += 1  # exclude those cd
                 if disk_info[disk].get('disk_free', None) is not None:
                     disk_free += disk_info[disk].get('disk_free')
 
         vif_dic = self.vnet_driver.get_all_vif_info(inst_name)
-        #first_ip = vif_dic.get('0', {}).get('ip', None)
+        # first_ip = vif_dic.get('0', {}).get('ip', None)
         key_list = sorted(vif_dic)
         # get the first and second ip by device index
         first_ip, second_ip = None, None
         if key_list:
             first_ip = vif_dic.get(key_list[0], {}).get('ip', None)
-        if len(key_list) >=2 :
+        if len(key_list) >= 2:
             second_ip = vif_dic.get(key_list[1], {}).get('ip', None)
         # second_ip is local ip
-        #second_ip = vif_dic.get('1', {}).get('ip', None)
+        # second_ip = vif_dic.get('1', {}).get('ip', None)
         vm_host_ip = self.vnet_driver.get_host_manage_interface_infor().get('IP', None)
 
         os_info = self.virt_driver.get_os_type(inst_name, short_name=False)
@@ -577,7 +581,7 @@ class VirtHostDomain(ServerDomain):
         sn = vm_record['uuid']
 
         try:
-            ret = self.db_driver.update(sn=sn, json_data=sync_data)   # use sn in case of the same hostname in DB
+            ret = self.db_driver.update(sn=sn, json_data=sync_data)  # use sn in case of the same hostname in DB
         except Exception as error:
             log.warn("Delete ip information raise error: %s", error)
             ret = False
@@ -620,6 +624,7 @@ class VirtHostDomain(ServerDomain):
 if __name__ == "__main__":
     from optparse import OptionParser
 
+
     parser = OptionParser()
     parser.add_option("--host", dest="host", help="IP for host server")
     parser.add_option("-u", "--user", dest="user", help="User name for host server")
@@ -627,7 +632,7 @@ if __name__ == "__main__":
 
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
-    dom= VirtHostDomain(host_name=options.host, user=options.user, passwd=options.passwd)
+    dom = VirtHostDomain(host_name=options.host, user=options.user, passwd=options.passwd)
     if not dom:
         exit(1)
     print dom.get_all_disk_info(inst_name="test2")
