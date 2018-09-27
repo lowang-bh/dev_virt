@@ -491,6 +491,8 @@ class VirtHostDomain(ServerDomain):
         # second_ip is local ip
         # second_ip = vif_dic.get('1', {}).get('ip', None)
         vm_host_ip = self.vnet_driver.get_host_manage_interface_infor().get('IP', None)
+        if not vm_host_ip:
+            vm_host_ip = self.virt_driver.hostname
 
         os_info = self.virt_driver.get_os_type(inst_name, short_name=False)
 
