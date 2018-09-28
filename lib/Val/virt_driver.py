@@ -80,9 +80,10 @@ class VirtDriver(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def delete_instance(self, inst_name):
+    def delete_instance(self, inst_name, delete_disk=False):
         '''
         :param inst_name, instance name
+        :param delete_disk, remove disk or not
         :return True or False based on whether it is successful
         '''
         raise NotImplementedError()
@@ -278,4 +279,3 @@ class VirtDriver(object):
         :return: True if allowed to set vcpu lively, else False
         """
         raise NotImplementedError()
-

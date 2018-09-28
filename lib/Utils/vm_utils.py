@@ -35,14 +35,15 @@ class VirtHostDomain(ServerDomain):
 
         return db_ret
 
-    def delete_vm(self, vm_name):
+    def delete_vm(self, vm_name, force=False):
         """
         :param vm_name:
+        :param force: remove the disk if force=true, otherwise, don't remove it
         :return:
         """
         log.info("Start to delete VM [%s].", vm_name)
 
-        ret = self.virt_driver.delete_instance(vm_name)
+        ret = self.virt_driver.delete_instance(vm_name, delete_disk=force)
         if not ret:
             return False
 

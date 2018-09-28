@@ -229,22 +229,15 @@ class QemuVirtDriver(VirtDriver):
             interface.remove(elm)
 
         # clone disk for new domain
-        disk_index = 0
         for disk in tree.findall("devices/disk[@device='disk']"):
             source_elm = disk.find('source')
             source_file = source_elm.get('file')
-            suffix = str(os.path.basename(source_file)).split(".")[-1]
             if source_file:
-                # if disk_index == 0:
-                #     target_file = ".".join([vm_name, suffix])
-                # else:
-                #     target_file = ".".join([vm_name + "-" + str(disk_index), suffix])
-
+                suffix = str(os.path.basename(source_file)).split(".")[-1]
                 target_file = ".".join([self._get_available_vdisk_name(vm_name), suffix])
                 clone_path = os.path.join(os.path.dirname(source_file), target_file)
                 source_elm.set('file', clone_path)
                 self.clone_disk(source_file, target_file, storage_pool=storage_pool)
-                disk_index += 1
 
         try:
             # if failed it will raise libvirtError, return value is always a Domain object

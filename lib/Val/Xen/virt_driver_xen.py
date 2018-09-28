@@ -172,7 +172,7 @@ class XenVirtDriver(VirtDriver):
 
         return True
 
-    def delete_instance(self, inst_name):
+    def delete_instance(self, inst_name, delete_disk=False):
         """
         @see void destroy (session ref session_id, VM ref self), This function can
             only be called when the VM is in the Halted State.
@@ -186,6 +186,7 @@ class XenVirtDriver(VirtDriver):
             if handler is not None:
                 vm_ref = handler.xenapi.VM.get_by_name_label(inst_name)[0]
                 handler.xenapi.VM.destroy(vm_ref)
+                # TODO: remove disks if need to do it, just call self.__delete_virtual_disk_unused
                 return True
             else:
                 log.error("Cann't get handler while destroy vm [%s].", inst_name)

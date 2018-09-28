@@ -12,6 +12,7 @@ from lib.Log.log import log
 from lib.Utils.signal_utils import timeout_func
 from lib.Utils.vm_utils import VirtHostDomain
 
+
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
 
@@ -23,6 +24,7 @@ if __name__ == "__main__":
     parser.add_option("-u", "--user", dest="user", help="User name for host server")
     parser.add_option("-p", "--pwd", dest="passwd", help="Passward for host server")
     parser.add_option("--vm", dest="vm", help="Delete an unused VM in server, the disk will not be deleted")
+    parser.add_option("--force", dest="force", action="store_true", help="Remove disks when vm is deleted")
 
     (options, args) = parser.parse_args()
     log.debug("options:%s, args:%s", str(options), str(args))
@@ -56,7 +58,7 @@ if __name__ == "__main__":
         else:
             log.info("You input 'Yes' to confirm the deletion.")
 
-        ret = virthost.delete_vm(vm_name)
+        ret = virthost.delete_vm(vm_name, force=options.force)
         if not ret:
             log.fail("VM [%s] deleted failed.", vm_name)
             exit(1)
