@@ -366,18 +366,13 @@ class ServerDomain(object):
             log.info("No record found with server name [%s], don't update.", server_name)
             return True
 
-        storage_info = self.get_host_all_storage_info()
-        disk_size, disk_free, disk_num = 0, 0, 0
-        for sr, disk in storage_info.iteritems():
-            if int(disk[0]) > 10:
-                disk_num += 1
-                disk_size += disk[0]
-                disk_free += disk[1]
+        memory_info = self.virt_driver.get_host_mem_info()
+        memory_size = memory_info.get('size_total')
+        free_memory = memory_info.get('size_free')
 
         sync_data = {
-            "disk_num": int(disk_num),
-            "disk_size": int(disk_size),
-            "disk_free": int(disk_free)
+            "memory_size": int(memory_size),
+            "free_memory": int(free_memory)
             }
 
         comment = "Update server memory by virtualization API with data: %s" % sync_data
@@ -407,13 +402,18 @@ class ServerDomain(object):
             log.info("No record found with server name [%s], don't update.", server_name)
             return True
 
-        memory_info = self.virt_driver.get_host_mem_info()
-        memory_size = memory_info.get('size_total')
-        free_memory = memory_info.get('size_free')
+        storage_info = self.get_host_all_storage_info()
+        disk_size, disk_free, disk_num = 0, 0, 0
+        for sr, disk in storage_info.iteritems():
+            if int(disk[0]) > 10:
+                disk_num += 1
+                disk_size += disk[0]
+                disk_free += disk[1]
 
         sync_data = {
-            "memory_size": int(memory_size),
-            "free_memory": int(free_memory)
+            "disk_num": int(disk_num),
+            "disk_size": int(disk_size),
+            "disk_free": int(disk_free)
             }
 
         comment = "Update server storage by virtualization API with data: %s" % sync_data
