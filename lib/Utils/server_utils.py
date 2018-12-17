@@ -6,10 +6,10 @@
  Created Time: 2018-03-13 18:41:44
  Descriptions: API to get information about the Server/Host
 '''
-from lib.Log.log import log
-from lib.Val.virt_factory import VirtFactory
 from lib.Db.db_factory import DbFactory
+from lib.Log.log import log
 from lib.Utils.network_utils import IpCheck, is_IP_pingable
+from lib.Val.virt_factory import VirtFactory
 
 
 class ServerDomain(object):
@@ -97,7 +97,7 @@ class ServerDomain(object):
         log.info("All bond information with index number and MAC, IP:")
         all_bondinfo = self.vnet_driver.get_host_bond_info()
         for bond_name in sorted(all_bondinfo.keys()):
-            log.info("\tBond Device: %s",  bond_name)
+            log.info("\tBond Device: %s", bond_name)
             for device_infor in all_bondinfo[bond_name]:
                 log.info("%s\tMAC: %s, IP: %s", device_infor['device'], device_infor.get('MAC'), device_infor.get('IP'))
         return True
@@ -320,7 +320,7 @@ class ServerDomain(object):
         # disk_num = len(filter(lambda x: int(x[0]) > 10, self.get_host_all_storage_info().values()))
         for sr, disk in storage_info.iteritems():
             if int(disk[0]) > 10:
-                disk_num +=1
+                disk_num += 1
                 disk_size += disk[0]
                 disk_free += disk[1]
         # default_storage = self.virt_driver.get_host_storage_info()  # only write the system disk size
@@ -346,10 +346,86 @@ class ServerDomain(object):
         try:
             ret = self.db_driver.update(sn=sn, hostname=server_name, data=sync_data)
         except Exception as error:
-            log.exception("Exception raise when update vm database: %s", error)
+            log.exception("Exception raise when update server database: %s", error)
             ret = False
         if not ret:
-            log.warn("Update database information with ret: [%s], data: %s", ret, sync_data['comment'])
+            log.warn("Update server db information return ret: [%s], data: %s", ret, sync_data['comment'])
+
+        return ret
+
+    def update_memory_to_database(self):
+        """
+        sync server's memory to cmdb
+        :return: true or false
+        """
+        server_name = self.server_name
+        log.info("Start to update [%s] memory information to database.", server_name)
+
+        sn = self.virt_driver.get_host_plat_info().get('serial_number')
+        if not self.db_driver.query(sn=sn, hostname=server_name):
+            log.info("No record found with server name [%s], don't update.", server_name)
+            return True
+
+        storage_info = self.get_host_all_storage_info()
+        disk_size, disk_free, disk_num = 0, 0, 0
+        for sr, disk in storage_info.iteritems():
+            if int(disk[0]) > 10:
+                disk_num += 1
+                disk_size += disk[0]
+                disk_free += disk[1]
+
+        sync_data = {
+            "disk_num": int(disk_num),
+            "disk_size": int(disk_size),
+            "disk_free": int(disk_free)
+            }
+
+        comment = "Update server memory by virtualization API with data: %s" % sync_data
+        sync_data['comment'] = comment
+
+        try:
+            ret = self.db_driver.update(sn=sn, hostname=server_name, data=sync_data)
+        except Exception as error:
+            log.exception("Exception raise when update server memory to cmdb: %s", error)
+            ret = False
+        if not ret:
+            log.warn("Update server memory information return ret: [%s], data: %s", ret, sync_data['comment'])
+
+        return ret
+
+    def update_storage_to_database(self):
+        """
+        sync server's storage info to cmdb
+        :return: true or false
+        """
+
+        server_name = self.server_name
+        log.info("Start to update [%s] storage information to database.", server_name)
+
+        sn = self.virt_driver.get_host_plat_info().get('serial_number')
+        if not self.db_driver.query(sn=sn, hostname=server_name):
+            log.info("No record found with server name [%s], don't update.", server_name)
+            return True
+
+        memory_info = self.virt_driver.get_host_mem_info()
+        memory_size = memory_info.get('size_total')
+        free_memory = memory_info.get('size_free')
+
+        sync_data = {
+            "memory_size": int(memory_size),
+            "free_memory": int(free_memory)
+            }
+
+        comment = "Update server storage by virtualization API with data: %s" % sync_data
+        sync_data['comment'] = comment
+
+        try:
+            ret = self.db_driver.update(sn=sn, hostname=server_name, data=sync_data)
+        except Exception as error:
+            log.exception("Exception raise when update server storage to cmdb: %s", error)
+            ret = False
+        if not ret:
+            log.warn("Update server storage information return ret: [%s], data: %s", ret, sync_data['comment'])
 
         return ret
 

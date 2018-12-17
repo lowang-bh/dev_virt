@@ -6,12 +6,13 @@
  Created Time: 2018-03-27 10:14:53
 """
 
-import requests
 import json
 
-from lib.Log.log import log
-from lib.Db.db_driver import DatabaseDriver
+import requests
+
 from app.cmdb.settings import DB_HOST, LOGOUT_URL, LOGIN_URL
+from lib.Db.db_driver import DatabaseDriver
+from lib.Log.log import log
 
 
 class HostDbDriver(DatabaseDriver):
@@ -140,4 +141,3 @@ class HostDbDriver(DatabaseDriver):
             return self.resp.get("code", None)
 
         return None
-

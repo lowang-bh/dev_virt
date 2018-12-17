@@ -8,10 +8,10 @@
         the return value of update_database, except create/delete VM
 """
 
-from lib.Log.log import log
-from lib.Val.virt_factory import VirtFactory, VM_MAC_PREFIX
 from lib.Db.db_factory import DbFactory
+from lib.Log.log import log
 from lib.Utils.server_utils import ServerDomain
+from lib.Val.virt_factory import VirtFactory, VM_MAC_PREFIX
 
 
 class VirtHostDomain(ServerDomain):
@@ -196,6 +196,10 @@ class VirtHostDomain(ServerDomain):
             ret = self.virt_driver.set_vm_dynamic_memory(inst_name, memory_max=dynamic_max, memory_min=dynamic_min)
             if not ret:
                 return False
+            # update memory size to cmdb
+            ServerDomain.update_memory_to_database()
+            self.update_memory_to_database(inst_name)
+
         return True
 
     def config_max_memory(self, inst_name, static_max=None, dynamic_max=None):
@@ -237,6 +241,7 @@ class VirtHostDomain(ServerDomain):
             ret = self.virt_driver.set_vm_dynamic_memory(inst_name, memory_min=dynamic_min)
             if not ret:
                 return False
+
         return True
 
     def config_memory_lively(self, inst_name, target_memory):
@@ -247,7 +252,12 @@ class VirtHostDomain(ServerDomain):
         """
         log.info("Start to config the memory for a running VM.")
 
-        return self.virt_driver.set_vm_memory_live(inst_name, target_memory)
+        ret = self.virt_driver.set_vm_memory_live(inst_name, target_memory)
+        if ret:
+            ServerDomain.update_memory_to_database()
+            self.update_memory_to_database(inst_name)
+
+        return ret
 
     def power_on_vm(self, vm_name):
         """
@@ -308,6 +318,7 @@ class VirtHostDomain(ServerDomain):
         ret = self.virt_driver.add_vdisk_to_vm(inst_name, storage_name, size=size)
 
         if ret:
+            ServerDomain.update_storage_to_database()
             self.update_database_info(inst_name=inst_name)
 
         return ret
@@ -606,7 +617,7 @@ class VirtHostDomain(ServerDomain):
         memory_size = vm_record['memory_target']
         sn = vm_record['uuid']
 
-        return self.db_driver.update(sn=sn, data={"memory_size": memory_size})
+        return self.db_driver.update(sn=sn, data={"memory_size": int(memory_size)})
 
     def update_vcpu_to_database(self, inst_name):
         """
