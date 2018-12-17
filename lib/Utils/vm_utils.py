@@ -197,7 +197,7 @@ class VirtHostDomain(ServerDomain):
             if not ret:
                 return False
             # update memory size to cmdb
-            ServerDomain.update_memory_to_database()
+            ServerDomain.update_memory_to_database(self)
             self.update_memory_to_database(inst_name)
 
         return True
@@ -254,7 +254,7 @@ class VirtHostDomain(ServerDomain):
 
         ret = self.virt_driver.set_vm_memory_live(inst_name, target_memory)
         if ret:
-            ServerDomain.update_memory_to_database()
+            ServerDomain.update_memory_to_database(self)
             self.update_memory_to_database(inst_name)
 
         return ret
@@ -318,7 +318,7 @@ class VirtHostDomain(ServerDomain):
         ret = self.virt_driver.add_vdisk_to_vm(inst_name, storage_name, size=size)
 
         if ret:
-            ServerDomain.update_storage_to_database()
+            ServerDomain.update_storage_to_database(self)
             self.update_database_info(inst_name=inst_name)
 
         return ret
