@@ -273,7 +273,7 @@ class VirtHostDomain(ServerDomain):
         ret = self.virt_driver.power_on_vm(vm_name)
 
         if ret:
-            self.update_database_info(vm_name)
+            self.update_power_status_to_database(inst_name=vm_name, power_state="ON")
 
         return ret
 
@@ -291,7 +291,7 @@ class VirtHostDomain(ServerDomain):
         ret = self.virt_driver.power_off_vm(vm_name)
 
         if ret:
-            self.update_database_info(vm_name)
+            self.update_power_status_to_database(inst_name=vm_name, power_state="OFF")
 
         return ret
 
@@ -633,6 +633,24 @@ class VirtHostDomain(ServerDomain):
         sn = vm_record['uuid']
 
         return self.db_driver.update(sn=sn, data={"cpu_cores": cpu_cores})
+
+    def update_power_status_to_database(self, inst_name, power_state="ON"):
+        """
+        :param inst_name: instance name
+        :return: 
+        """
+        log.info("Update [%s] power status to database.", inst_name)
+
+        vm_record = self.virt_driver.get_vm_record(inst_name=inst_name)
+        if not vm_record:
+            return False
+        sn = vm_record['uuid']
+        if power_state == "ON" or power_state == "OFF":
+            sync_data = {"power_state": power_state}
+        else:
+            sync_data = {"power_state": "unknown"}
+
+        return self.db_driver.update(sn=sn, data=sync_data)
 
 
 if __name__ == "__main__":
