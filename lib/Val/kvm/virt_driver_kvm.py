@@ -748,7 +748,7 @@ class QemuVirtDriver(VirtDriver):
                             <allocation>0</allocation>
                             <target>
                                 <format type='%s'/>
-                                 <permissions>
+                                <permissions>
                                     <owner>107</owner>
                                     <group>107</group>
                                     <mode>0644</mode>
