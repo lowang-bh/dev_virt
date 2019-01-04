@@ -94,7 +94,8 @@ class XenVirtDriver(VirtDriver):
         if handler is not None:
             vms = handler.xenapi.VM.get_all_records()
             vm_instances = filter(lambda x: x['is_a_template'] == False and
-                                            x['is_control_domain'] == False, vms.values())
+                                            x['is_control_domain'] == False and
+                                            x['is_a_snapshot'] == False, vms.values())
             vm_names = [vm['name_label'] for vm in vm_instances]
             return vm_names
         else:
