@@ -376,7 +376,7 @@ class QemuVirtDriver(VirtDriver):
         hv_hander = self.get_handler()
         if hv_hander:
             all_domains = hv_hander.listAllDomains()
-            return [dom.name() for dom in all_domains]
+            return [dom.name() for dom in all_domains if "template" not in str.lower(dom.name())]
         else:
             return []
 
@@ -546,8 +546,13 @@ class QemuVirtDriver(VirtDriver):
         :description get all the templates on host
         :return a list of tempaltes names
         """
-        log.info("All powered-off VM can be used as a template. ")
-        vm_list = self.get_vm_list()
+        log.info("All powered-off VM and with 'template' in its name can be used as a template. ")
+        hv_hander = self.get_handler()
+        if hv_hander:
+            all_domains = hv_hander.listAllDomains()
+        else:
+            all_domains = []
+        vm_list = [dom.name() for dom in all_domains if "template" in str.lower(dom.name())]
         templist = [dom_name for dom_name in vm_list if self.is_instance_halted(dom_name)]
         return templist
 
@@ -1010,6 +1015,11 @@ class QemuVirtDriver(VirtDriver):
             self._hypervisor_handler = self.get_handler()
 
         hostname = self._hypervisor_handler.getHostname()
+        # hostname may be c2-app-kvm1.bdp.idc
+        split_name = str.split(hostname, ".")
+        if len(split_name) > 0:
+            hostname = split_name[0]
+
         return (hostname, hostname)
 
     def set_vm_static_memory(self, inst_name, memory_max=None, memory_min=None):

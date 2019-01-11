@@ -333,7 +333,7 @@ class ServerDomain(object):
         sync_data = {"cpu_cores": cpu_cores,
                      "memory_size": int(memory_size),
                      "free_memory": int(free_memory),
-                     "disk_num": int(disk_num),
+                     # "disk_num": int(disk_num), don't update disk num in case of raid
                      "disk_size": int(disk_size),
                      "disk_free": int(disk_free),
                      "first_ip": first_ip,
@@ -411,7 +411,6 @@ class ServerDomain(object):
                 disk_free += disk[1]
 
         sync_data = {
-            "disk_num": int(disk_num),
             "disk_size": int(disk_size),
             "disk_free": int(disk_free)
             }
