@@ -517,7 +517,8 @@ class VirtHostDomain(ServerDomain):
                      "second_ip": second_ip,
                      "vm_host_ip": vm_host_ip,
                      "os_info": os_info,
-                     "power_state": power_state
+                     "power_state": power_state,
+                     "hostname": inst_name
                      }
         comment = "Update VM by virtualization API with data: %s" % sync_data
         sync_data['comment'] = comment
