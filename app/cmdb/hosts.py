@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding:UTF-8 -*-
 
-import requests
 import json
-from lib.Log.log import log
+
+import requests
+
 from app.cmdb.host_driver import HostDbDriver
 from app.cmdb.settings import HOSTs_URL
+from lib.Log.log import log
 
 
 class HostDriver(HostDbDriver):
@@ -91,7 +93,7 @@ class HostDriver(HostDbDriver):
         if data:
             if not isinstance(data, dict):
                 log.error("Data should be a dict.")
-                return  False
+                return False
         elif json_data:
             if not isinstance(json_data, dict):
                 log.error("Json data should be a dict")
@@ -111,12 +113,13 @@ class HostDriver(HostDbDriver):
         if data:
             data['modified'] = str(modified)
             log.debug("Patch url:%s, data: %s", url, data.get('comment', data))
-            self.resp = self.session.patch(url, data=data) # When dict value is None, pass in data will not set db null
+            self.resp = self.session.patch(url, data=data)  # When dict value is None, pass in data will not set db null
         elif json_data:
             json_data['modified'] = str(modified)
             json_data = json.dumps(json_data)
             log.debug("Patch url:%s, json data: %s", url, json_data)
-            self.resp = self.session.patch(url, json=json_data) # when dict value is none, json value is null, set db null
+            # when dict value is none, json value is null, pass in json=null will set db null
+            self.resp = self.session.patch(url, json=json_data)
 
         if self.resp.status_code == requests.codes.ok:
             log.info("Update to database successfully.")
@@ -163,7 +166,7 @@ class HostDriver(HostDbDriver):
             log.debug(self.resp.content)
 
         if not self.respond_data_count:
-            log.warn("No records found with query data: %s.", data)
+            log.debug("No records found with query data: %s.", data)
             return []
         else:
             return self.respond_data_list

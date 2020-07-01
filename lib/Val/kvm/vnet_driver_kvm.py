@@ -6,13 +6,16 @@
  Created Time: 2018-03-14 13:01:13
 '''
 
-import libvirt
 import signal
 import xml.etree.ElementTree as xmlEtree
-from libvirt import libvirtError
+
+import libvirt
 from ipaddress import IPv4Address
-from lib.Val.vnet_driver import VnetDriver
+from libvirt import libvirtError
+
 from lib.Log.log import log
+from lib.Val.vnet_driver import VnetDriver
+
 
 DEFAULT_HV = "qemu:///session"
 
@@ -55,20 +58,20 @@ class QemuVnetDriver(VnetDriver):
             return self._hypervisor_handler
 
         old = signal.signal(signal.SIGALRM, self.timeout_handler)
-        signal.alarm(4)   #  connetctions timeout set to 4 secs
+        signal.alarm(4)  # connetctions timeout set to 4 secs
 
         try:
             if self.hostname is None:
                 url = DEFAULT_HV
                 self._hypervisor_handler = libvirt.open(url)
             else:
-                url = "{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system')
+                url = "{0}{1}{2}".format('qemu+tls://', self.hostname, '/system')
                 self._hypervisor_handler = libvirt.openAuth(url, self._auth, 0)
         except Exception as error:
             log.debug("Can not connect to url: %s, error: %s. Retrying...", url, error)
             signal.alarm(4)
             try:
-                url = "{0}{1}{2}".format('qemu+tls://', self.hostname, '/system')
+                url = "{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system')
                 self._hypervisor_handler = libvirt.openAuth(url, self._auth, 0)
             except Exception as error:
                 log.error("Can not connect to url: %s, error: %s ", url, error)
@@ -202,9 +205,9 @@ class QemuVnetDriver(VnetDriver):
             default_infor.setdefault('netmask', None)
 
         default_infor.setdefault('device', device_name)
-        default_infor.setdefault('DNS',  None)
+        default_infor.setdefault('DNS', None)
         default_infor.setdefault('MAC', device_dom.MACString())
-        default_infor.setdefault('gateway',  None)
+        default_infor.setdefault('gateway', None)
 
         return default_infor
 
@@ -225,18 +228,18 @@ class QemuVnetDriver(VnetDriver):
 
         default_infor = {}
         default_infor.setdefault('device', network_name)
-        default_infor.setdefault('IP',  None)
-        default_infor.setdefault('DNS',  None)
-        default_infor.setdefault('MAC',  None)
-        default_infor.setdefault('gateway',  None)
-        default_infor.setdefault('netmask',  None)
+        default_infor.setdefault('IP', None)
+        default_infor.setdefault('DNS', None)
+        default_infor.setdefault('MAC', None)
+        default_infor.setdefault('gateway', None)
+        default_infor.setdefault('netmask', None)
         if network_name not in self.get_network_list():
             return default_infor
 
         network_dom = self._hypervisor_handler.networkLookupByName(network_name)
         xmldesc = network_dom.XMLDesc()
         xml_tree = xmlEtree.fromstring(xmldesc)
-        macelment =  xml_tree.find("mac")
+        macelment = xml_tree.find("mac")
         if macelment is not None:
             default_infor['MAC'] = macelment.get("address")
         ip_element = xml_tree.find("ip")
@@ -268,7 +271,7 @@ class QemuVnetDriver(VnetDriver):
             mac_element = interface.find("mac")
             old_mac = mac_element.get("address")
         except IndexError:
-            log.exception("No interfaces at index [%s] find in domain [%s]",eth_index, inst_name)
+            log.exception("No interfaces at index [%s] find in domain [%s]", eth_index, inst_name)
             return False
 
         tree = xmlEtree.fromstring(domain.XMLDesc())
@@ -312,7 +315,7 @@ class QemuVnetDriver(VnetDriver):
             mac_element = interface.find("mac")
             return mac_element.get("address")
         except IndexError:
-            log.error("No interfaces at index [%s] find in domain [%s]",eth_index, inst_name)
+            log.error("No interfaces at index [%s] find in domain [%s]", eth_index, inst_name)
             return None
 
     def _get_dom_interfaces_elements_list(self, inst_name):
@@ -390,7 +393,7 @@ class QemuVnetDriver(VnetDriver):
         """
         """
         bridge_name = self.get_bridge_name(device_name)
-        if  bridge_name == "unKnown":
+        if bridge_name == "unKnown":
             log.error("Can not find a bridge with physical interface:%s", device_name)
             return None
 
@@ -539,7 +542,7 @@ class QemuVnetDriver(VnetDriver):
 
         for index, element in enumerate(vif_list):
             if index == int(vif_index):
-                log.warn("The ip was mapped from MAC, make sure your domain get IP mapped from MAC.")
+                log.debug("The ip was mapped from MAC, make sure your domain get IP mapped from MAC.")
                 _, ip_str = self.__get_mac_and_ip(element)
                 return ip_str
         else:
@@ -558,7 +561,7 @@ class QemuVnetDriver(VnetDriver):
 
         for index, element in enumerate(vif_list):
             if index == int(vif_index):
-                log.warn("The ip was mapped from MAC, make sure your domain get IP mapped from MAC.")
+                log.debug("The ip was mapped from MAC, make sure your domain get IP mapped from MAC.")
                 mac, ip_str = self.__get_mac_and_ip(element)
                 vif_dict.setdefault("mac", mac)
                 vif_dict.setdefault('ip', ip_str)
@@ -574,13 +577,12 @@ class QemuVnetDriver(VnetDriver):
         vif_list = self._get_dom_interfaces_elements_list(inst_name)
         vifs_info = {}
 
-        log.warn("The IP was mapped from MAC, make sure your domain get IP mapped from MAC.")
+        log.debug("The IP was mapped from MAC, make sure your domain get IP mapped from MAC.")
         for index, element in enumerate(vif_list):
             mac, ip_str = self.__get_mac_and_ip(element)
             vifs_info[index] = {'mac': mac, 'ip': ip_str}
 
         return vifs_info
-
 
     def get_vif_network_name(self, inst_name, vif_index):
         """
@@ -596,7 +598,7 @@ class QemuVnetDriver(VnetDriver):
             return None
         source_element = tree.find('source')
         try:
-            netwrok_name  = source_element.get('network', None)
+            netwrok_name = source_element.get('network', None)
             return netwrok_name
         except AttributeError:
             log.error("No interface with index %s on domain: %s", vif_index, inst_name)
@@ -617,11 +619,11 @@ class QemuVnetDriver(VnetDriver):
 
         source_element = tree.find('source')
         try:
-            bridge_name  = source_element.get('bridge', None)
+            bridge_name = source_element.get('bridge', None)
             if bridge_name is None:
                 network = source_element.get("network", None)
                 if network:
-                    network_dom =  self._hypervisor_handler.networkLookupByName(network)
+                    network_dom = self._hypervisor_handler.networkLookupByName(network)
                     bridge_name = network_dom.bridgeName()
 
             return bridge_name
@@ -635,12 +637,12 @@ class QemuVnetDriver(VnetDriver):
         The manage interface, or the default interface configured with a managed IP
         :return:
         """
-        try:
-            raise NotImplementedError()
-        except NotImplementedError:
-            log.warn("get host manage interface is not supported in KVM by now.")
+        from lib.Utils.constans import DEFAULT_NETWORK
 
-        return {}
+        log.info("KVM platform use default network [%s] as manage network", DEFAULT_NETWORK)
+        network_info = self.get_network_info(network_name=DEFAULT_NETWORK)
+
+        return self.get_device_infor(network_info.get("device"))
 
     def get_host_bond_info(self):
         """
@@ -667,18 +669,20 @@ class QemuVnetDriver(VnetDriver):
             interface_tree = xmlEtree.fromstring(interface_dom.XMLDesc())
             if interface_tree.get("type") == "bridge":
                 bridge_name = interface_tree.get("name")
-                if  bridge_name == device_name:
-                    return bridge_name # device name is bridge itself
+                if bridge_name == device_name:
+                    return bridge_name  # device name is bridge itself
                 else:
-                    target_device = interface_tree.find("bridge/interface[@name='%s']" %(device_name))
+                    target_device = interface_tree.find("bridge/interface[@name='%s']" % (device_name))
                     if target_device is not None:
-                        return bridge_name # device name belongs to this bridge
+                        return bridge_name  # device name belongs to this bridge
 
         return 'unKnown'
 
 
 if __name__ == "__main__":
     from optparse import OptionParser
+
+
     parser = OptionParser()
     parser.add_option("--host", dest="host", help="IP for host server")
     parser.add_option("-u", "--user", dest="user", help="User name for host server")

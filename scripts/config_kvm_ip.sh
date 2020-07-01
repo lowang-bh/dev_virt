@@ -24,9 +24,9 @@ fi
 
 GetMacNum()
 {
-	str=`echo $1 | cut -d':' -f$2`
-	num=`printf "%d" 0x$str`
-	echo $num
+    str=`echo $1 | cut -d':' -f$2`
+    num=`printf "%d" 0x$str`
+    echo $num
 }
 
 if [[ $mymac == 52:54:* ]];then
@@ -56,11 +56,9 @@ if [[ $mymac == 52:54:* ]];then
     grep_res=$(grep "IPADDR=" /etc/sysconfig/network-scripts/ifcfg-$myeth 2> /dev/null)
     if [[ $grep_res != IPADDR=* && -f /etc/sysconfig/network-scripts/ifcfg-$myeth ]];then
         echo "write ip to /etc/sysconfig/network-scripts/ifcfg-$myeth"
-        echo "PREFIX=24" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "IPADDR=$MyIP" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "GATEWAY=$MyGW" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "BROADCAST=$MyBC" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
-        echo "DNS1=8.8.8.8" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
     elif [[ $grep_res == IPADDR=* ]];then
         echo "origin IP on $myeth:$grep_res, set to new: $MyIP"
         sed -i "s/^IPADDR=.*$/IPADDR=$MyIP/" /etc/sysconfig/network-scripts/ifcfg-$myeth
@@ -89,4 +87,3 @@ if [[ $mymac == 52:54:* ]];then
 else
     echo "No MAC match the default pattern, exiting"
 fi
-

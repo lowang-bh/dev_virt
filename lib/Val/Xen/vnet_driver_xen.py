@@ -11,9 +11,11 @@
 '''
 
 import signal
+
 from lib.Log.log import log
-from lib.Val.vnet_driver import VnetDriver
 from lib.Val.Xen import XenAPI
+from lib.Val.vnet_driver import VnetDriver
+
 
 API_VERSION_1_1 = '1.1'
 
@@ -44,15 +46,16 @@ class XenVnetDriver(VnetDriver):
             return self._hypervisor_handler
 
         if self.hostname is None:
-            self._hypervisor_handler = XenAPI.xapi_local()  #no __nonzero__, can not use if/not for bool test
+            self._hypervisor_handler = XenAPI.xapi_local()  # no __nonzero__, can not use if/not for bool test
         else:
             log.debug("connecting to %s with user:%s,passwd:%s", "http://" + str(self.hostname), self.user, self.passwd)
             self._hypervisor_handler = XenAPI.Session("http://" + str(self.hostname))
 
         old = signal.signal(signal.SIGALRM, self.timeout_handler)
-        signal.alarm(4)   #  connetctions timeout set to 5 secs
+        signal.alarm(4)  # connetctions timeout set to 4 secs
         try:
-            self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1, 'XenVirtDriver')
+            self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1,
+                                                                'XenVirtDriver')
         except Exception as error:
             log.warn("Exception raised: %s when get handler.", error)
             log.info("Retry connecting to :%s", "https://" + str(self.hostname))
@@ -60,7 +63,8 @@ class XenVnetDriver(VnetDriver):
 
             signal.alarm(4)
             try:
-                self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1, 'XenVirtDriver')
+                self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1,
+                                                                    'XenVirtDriver')
             except Exception as errors:
                 log.exception("Exception errors:%s when get handler", errors)
                 return None
@@ -178,20 +182,37 @@ class XenVnetDriver(VnetDriver):
         default_infor.setdefault('netmask', pif_record.get('netmask', None))
         return default_infor
 
-    # TODO:
     def get_bridge_info(self, bridge_name):
         """
         :param bridge_name: bridge name, treat it as a device
         :return: return a dict with key, IP, MAC, network , etc
         """
-        raise NotImplementedError()
+        network_ref = self._get_network_ref_by_bridge(bridge_name=bridge_name)
+        network_uuid = self._hypervisor_handler.xenapi.network.get_uuid(network_ref)
+        all_pifs = self._hypervisor_handler.xenapi.PIF.get_all()
+        for pif in all_pifs:
+            network_ref = self._hypervisor_handler.xenapi.PIF.get_network(pif)
+            if self._hypervisor_handler.xenapi.network.get_uuid(network_ref) == network_uuid:
+                pif_record = self._hypervisor_handler.xenapi.PIF.get_record(pif)
+                break
+        else:
+            pif_record = {}
+
+        default_infor = {}
+        default_infor.setdefault('device', pif_record.get('device', None))
+        default_infor.setdefault('IP', pif_record.get('IP', None))
+        default_infor.setdefault('DNS', pif_record.get('DNS', None))
+        default_infor.setdefault('MAC', pif_record.get('MAC', None))
+        default_infor.setdefault('gateway', pif_record.get('gateway', None))
+        default_infor.setdefault('netmask', pif_record.get('netmask', None))
+        return default_infor
 
     def get_network_info(self, network_name):
         """
         :param network_name: network name defined by libvirt.
         :return: return a dict with key, IP, MAC, network , etc
         """
-        raise NotImplementedError()
+        return self.get_bridge_info(network_name)
 
     def get_host_bond_info(self):
         """
@@ -347,7 +368,7 @@ class XenVnetDriver(VnetDriver):
         # if there are vif 0,1,2,3, with ip attached to 0,1,3, then the dic looks like "3/ip: 192.168.1.122;1/ip: 192.168.1.200;  0/ip: 10.143.248.253;"
         # but if remove the device 2, before reboot, the ip keep same, but after reboot, the device index are keep 0,1,3, but ip change to "2/ip:, 1/ip:,0/ip:"
         # assume the vif device are added in sequence, and device index keep same as eth index in vm, so use the device_index to get ip
-        return network_dict.get(str(vif_index)+"/ip", None)
+        return network_dict.get(str(vif_index) + "/ip", None)
 
     def get_vif_bridge_name(self, inst_name, vif_index):
         """
@@ -457,7 +478,7 @@ class XenVnetDriver(VnetDriver):
         for vif in all_vifs:
             if str(vif_index) == self._hypervisor_handler.xenapi.VIF.get_device(vif):
                 return vif
-        #No vif match with vif_index
+        # No vif match with vif_index
         log.debug("No virtual interface with given index:[%s].", vif_index)
         return None
 
@@ -484,7 +505,6 @@ class XenVnetDriver(VnetDriver):
             log.error("No instance with name [%s].", inst_name)
             return None
 
-        network_ref = None
         if device_name is not None:
             network_ref = self._get_network_ref_by_device(device_name)
         elif network is not None:
@@ -503,7 +523,7 @@ class XenVnetDriver(VnetDriver):
         record['VM'] = vm_ref_list[0]
         record['network'] = network_ref
         record['device'] = str(vif_index)
-        if MAC is not None:  #if MAC given, MAC_autogenerated will be False
+        if MAC is not None:  # if MAC given, MAC_autogenerated will be False
             record['MAC'] = MAC
         log.debug("create new vif with record:%s", str(record))
         new_vif = handler.xenapi.VIF.create(record)
@@ -617,6 +637,8 @@ class XenVnetDriver(VnetDriver):
 
 if __name__ == "__main__":
     from optparse import OptionParser
+
+
     parser = OptionParser()
     parser.add_option("--host", dest="host", help="IP for host server")
     parser.add_option("-u", "--user", dest="user", help="User name for host server")

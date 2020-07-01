@@ -51,7 +51,7 @@ class XenVirtDriver(VirtDriver):
             self._hypervisor_handler = XenAPI.Session("http://" + str(self.hostname))
 
         old = signal.signal(signal.SIGALRM, self.timeout_handler)
-        signal.alarm(4)  # connetctions timeout set to 5 secs
+        signal.alarm(4)  # connetctions timeout set to 4 secs
         try:
             self._hypervisor_handler.xenapi.login_with_password(self.user, self.passwd, API_VERSION_1_1,
                                                                 'XenVirtDriver')
@@ -385,7 +385,7 @@ class XenVirtDriver(VirtDriver):
 
     def set_vm_vcpu_live(self, inst_name, vcpu_num):
         """
-        set the vcpu numbers for a running VM
+        set the vcpu numbers for a running VM when it is running, otherwise set the startup cpu numbers
         :param inst_name:
         :param vcpu_num: should be str of a int number
         :return: True or False
@@ -399,7 +399,10 @@ class XenVirtDriver(VirtDriver):
             if int(vcpu_num) > int(cpu_max):
                 log.warn("VCPU number exceed the max cpu number:%s, will set it to the max instead.", cpu_max)
                 vcpu_num = cpu_max
-            self._hypervisor_handler.xenapi.VM.set_VCPUs_number_live(vm_ref, str(vcpu_num))
+            if self.allowed_set_vcpu_live(inst_name=inst_name):
+                self._hypervisor_handler.xenapi.VM.set_VCPUs_number_live(vm_ref, str(vcpu_num))
+            else:
+                self._hypervisor_handler.xenapi.VM.set_VCPUs_at_startup(vm_ref, str(vcpu_num))
             return True
         except Exception as error:
             log.exception("Raise exceptions: [%s].", error)

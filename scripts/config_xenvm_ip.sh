@@ -24,9 +24,9 @@ fi
 
 GetMacNum()
 {
-	str=`echo $1 | cut -d':' -f$2`
-	num=`printf "%d" 0x$str`
-	echo $num
+    str=`echo $1 | cut -d':' -f$2`
+    num=`printf "%d" 0x$str`
+    echo $num
 }
 
 if [[ $mymac == 00:66* ]];then
@@ -44,7 +44,11 @@ if [[ $mymac == 00:66* ]];then
         touch /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "TYPE=Ethernet" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "BOOTPROTO=static" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
-        echo "DEFROUTE=no" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
+        if [[ $myeth == eth0 ]];then
+            echo "DEFROUTE=yes" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
+        else
+            echo "DEFROUTE=no" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
+        fi
         echo "NAME=$myeth" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "ONBOOT=yes" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "PREFIX=24" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
@@ -52,11 +56,9 @@ if [[ $mymac == 00:66* ]];then
     grep_res=$(grep "IPADDR=" /etc/sysconfig/network-scripts/ifcfg-$myeth 2> /dev/null)
     if [[ $grep_res != IPADDR=* && -f /etc/sysconfig/network-scripts/ifcfg-$myeth ]];then
         echo "write ip to /etc/sysconfig/network-scripts/ifcfg-$myeth"
-        echo "PREFIX=24" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "IPADDR=$MyIP" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "GATEWAY=$MyGW" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
         echo "BROADCAST=$MyBC" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
-        echo "DNS1=8.8.8.8" >> /etc/sysconfig/network-scripts/ifcfg-$myeth
     elif [[ $grep_res == IPADDR=* ]];then
         echo "origin IP on $myeth:$grep_res, set to new: $MyIP"
         sed -i "s/^IPADDR=.*$/IPADDR=$MyIP/" /etc/sysconfig/network-scripts/ifcfg-$myeth
@@ -73,7 +75,6 @@ if [[ $mymac == 00:66* ]];then
         sed -i "/IPADDR/a\HWADDR=$mymac" /etc/sysconfig/network-scripts/ifcfg-$myeth
     fi
     echo "Old HWADDR: $hwaddr_res, set to new: $mymac"
-
 
 #    #config the IP when system up
 #    ifconfig $myeth $MyIP netmask 255.255.255.0

@@ -73,7 +73,7 @@ class HostDbDriver(DatabaseDriver):
                 return json.loads(self.resp).get('data', {})
             elif isinstance(self.resp, dict):
                 return self.resp.get('data', {})
-        except ValueError, error:
+        except ValueError as error:
             log.exception(error)
 
         return {}

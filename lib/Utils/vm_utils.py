@@ -8,6 +8,7 @@
         the return value of update_database, except create/delete VM
 """
 
+import os
 from lib.Db.db_factory import DbFactory
 from lib.Log.log import log
 from lib.Utils.server_utils import ServerDomain
@@ -20,14 +21,14 @@ class VirtHostDomain(ServerDomain):
         self.vnet_driver = VirtFactory.get_vnet_driver(host_name, user, passwd)
         self.db_driver = DbFactory.get_db_driver("VirtHost")
 
-    def create_vm(self, new_vm_name, template_name):
+    def create_vm(self, new_vm_name, template_name, target_pool=None):
         """
         Create new instance with name and template
         :param new_vm_name:
         :param template_name:
         :return:
         """
-        ret = self.virt_driver.create_instance(new_vm_name, template_name)
+        ret = self.virt_driver.create_instance(new_vm_name, template_name, target_pool)
         if not ret:
             return False
 
@@ -160,15 +161,21 @@ class VirtHostDomain(ServerDomain):
 
         log.info("Start to configure the VCPU in VM [%s].", inst_name)
 
-        if vcpu_nums and self.virt_driver.is_instance_running(inst_name=inst_name):
+        if vcpu_max:
+            if self.virt_driver.is_instance_halted(inst_name=inst_name):
+                log.info("Start to configure max VCPU number in VM [%s], max vcpu num=[%s].", inst_name, str(vcpu_max))
+                ret = self.virt_driver.set_vm_vcpu_max(inst_name=inst_name, vcpu_num=vcpu_max)
+                if not ret:
+                    log.warn("Failed to set vm max VCPU number to [%s], return ret=%s", str(vcpu_max), str(ret))
+            else:
+                log.error("Only support set max cpu number on a halted VM.")
+                return False
+        log.info("Start to configure the live VCPU number in VM [%s], lively vcpu num=[%s].", inst_name, str(vcpu_nums))
+        if vcpu_nums:
             ret = self.virt_driver.set_vm_vcpu_live(inst_name=inst_name, vcpu_num=vcpu_nums)
+            if not ret:
 
-        elif vcpu_max and self.virt_driver.is_instance_halted(inst_name=inst_name):
-            ret = self.virt_driver.set_vm_vcpu_max(inst_name=inst_name, vcpu_num=vcpu_max)
-
-        else:
-            log.error("Only support set live cpu on a running VM  or set max cpu number on a halted VM.")
-            return False
+                log.warn("Failed to set vm lively VCPU number to [%s], return ret=%s", str(vcpu_nums), str(ret))
         # set vcpu max will change the start up vcpu when max < live cpu number
         if ret:
             # Don't need to check db sync ret, because there is crontab to sync it
@@ -502,6 +509,8 @@ class VirtHostDomain(ServerDomain):
             second_ip = vif_dic.get(key_list[1], {}).get('ip', None)
         # second_ip is local ip
         # second_ip = vif_dic.get('1', {}).get('ip', None)
+        if os.getenv("PLATFORM", "Xen") == "Xen":
+            first_ip = None
         vm_host_ip = self.vnet_driver.get_host_manage_interface_infor().get('IP', None)
         if not vm_host_ip:
             vm_host_ip = self.virt_driver.hostname
@@ -514,7 +523,7 @@ class VirtHostDomain(ServerDomain):
                      "disk_size": int(disk_size),
                      "disk_free": int(disk_free) if disk_free else None,
                      "first_ip": first_ip,
-                     "second_ip": second_ip,
+                     # "second_ip": second_ip,
                      "vm_host_ip": vm_host_ip,
                      "os_info": os_info,
                      "power_state": power_state,
