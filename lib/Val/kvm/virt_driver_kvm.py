@@ -91,14 +91,14 @@ class QemuVirtDriver(VirtDriver):
             hostname = "localhost"
         else:
             hostname = self.hostname
-        url = "{0}{1}{2}".format('qemu+tcp://', hostname, '/system')
+        url = "{0}{1}{2}".format('qemu+tls://', hostname, '/system')
         old = signal.signal(signal.SIGALRM, self.timeout_handler)
         signal.alarm(4)  # connetctions timeout set to 4 secs
         try:
             self._hypervisor_root_handler = libvirt.openAuth(url, self._auth, 0)
         except Exception as error:
             log.debug("Can not connect to %s, error: %s. Retrying...", url, error)
-            url = "{0}{1}{2}".format('qemu+tls://', hostname, '/system')
+            url = "{0}{1}{2}".format('qemu+tcp://', hostname, '/system')
             signal.alarm(4)
             try:
                 self._hypervisor_root_handler = libvirt.openAuth(url, self._auth, 0)
@@ -138,13 +138,13 @@ class QemuVirtDriver(VirtDriver):
                 url = DEFAULT_HV
                 self._hypervisor_handler = libvirt.open(url)
             else:
-                url = "{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system')
+                url = "{0}{1}{2}".format('qemu+tls://', self.hostname, '/system')
                 self._hypervisor_handler = libvirt.openAuth(url, self._auth, 0)
         except Exception as error:
             log.debug("Can not connect to url: %s, error: %s. Retrying...", url, error)
             signal.alarm(4)
             try:
-                url = "{0}{1}{2}".format('qemu+tls://', self.hostname, '/system')
+                url = "{0}{1}{2}".format('qemu+tcp://', self.hostname, '/system')
                 self._hypervisor_handler = libvirt.openAuth(url, self._auth, 0)
             except Exception as error:
                 log.error("Can not connect to url: %s, error: %s ", url, error)
@@ -201,7 +201,41 @@ class QemuVirtDriver(VirtDriver):
             return True
         return False
 
-    # TODO: support new vm in different Pool
+    def get_target_path_via_pool(self, storage_pool_name):
+        """
+        return the pool's path as base path
+        :param storage_pool_name: name of pool
+        :return: 
+        """
+        try:
+            pool = self._hypervisor_handler.storagePoolLookupByName(storage_pool_name)
+            pool_xml_tree = xmlEtree.fromstring(pool.XMLDesc())
+            pool_path = pool_xml_tree.find("target/path")
+            return pool_path.text
+        except libvirtError as error:
+            log.warn("Exception when get_target_path_via_pool: error %s", error)
+            return ""
+
+    def get_target_path_via_file(self, source_file):
+        """
+        return source file's path, if source file in a nfs pool, return the default pool's base path
+        :param source_file: 
+        :return: new target path and new pool name
+        """
+        from lib.Utils.constans import NETFS_POOL_TYPE, DISK_POOL
+        try:
+            vol = self._hypervisor_handler.storageVolLookupByPath(source_file)
+            pool = vol.storagePoolLookupByVolume()
+            pool_xml_tree = xmlEtree.fromstring(pool.XMLDesc())
+            if pool_xml_tree.attrib.get("type") == NETFS_POOL_TYPE:
+                return self.get_target_path_via_pool(DISK_POOL), DISK_POOL
+            else:
+                pool_path = pool_xml_tree.find("target/path")
+                return pool_path.text, None
+        except libvirtError as error:
+            log.warn("Exception raise when get_target_path_via_file, error: %s", error)
+            return "", None
+
     def create_instance(self, vm_name, reference_vm, storage_pool=None):
         """
         :param vm_name: new vm name
@@ -223,6 +257,10 @@ class QemuVirtDriver(VirtDriver):
         uuid = tree.find('uuid')
         tree.remove(uuid)
 
+        pool_path = None
+        if storage_pool:
+            pool_path = self.get_target_path_via_pool(storage_pool)
+
         # remove MAC for interface
         for interface in tree.findall("devices/interface"):
             elm = interface.find("mac")
@@ -235,9 +273,16 @@ class QemuVirtDriver(VirtDriver):
             if source_file:
                 suffix = str(os.path.basename(source_file)).split(".")[-1]
                 target_file = ".".join([self._get_available_vdisk_name(vm_name), suffix])
-                clone_path = os.path.join(os.path.dirname(source_file), target_file)
+                # set clone path in base path of storage_pool, so that clone disk locate that path
+                if pool_path is not None:
+                    clone_path = os.path.join(pool_path, target_file)
+                    self.clone_disk_in_pool(source_file, target_file, storage_pool)
+                else:
+                    base_path, new_pool_name = self.get_target_path_via_file(source_file)
+                    clone_path = os.path.join(base_path, target_file)
+                    self.clone_disk_in_pool(source_file, target_file, new_pool_name )
+                log.info("Cloned disk from %s to %s", source_file, clone_path)
                 source_elm.set('file', clone_path)
-                self.clone_disk(source_file, target_file, storage_pool=storage_pool)
 
         try:
             # if failed it will raise libvirtError, return value is always a Domain object
@@ -480,9 +525,34 @@ class QemuVirtDriver(VirtDriver):
 
         return ret_storage_dict
 
+    def get_storage_pool_free_size(self, storage_name):
+        """
+        Return storage pool physical free size and logic free size, Unit is GB
+        """
+        hv_driver = self.get_handler()
+        try:
+            pool_dom = hv_driver.storagePoolLookupByName(storage_name)
+            # pool.info is a list [Pool state, Capacity, Allocation, Available]
+            pool_dom.refresh()
+            pool_info = pool_dom.info()
+        except libvirtError as error:
+            log.exception("Exceptions: %s", error)
+            return 0, 0
+
+        GB = 1024 * 1024 * 1024
+        physic_total_size = float("%.3f" % (float(pool_info[1]) / GB))
+        physic_free_size = float("%.3f" % (float(pool_info[3]) / GB))
+        total_logic_allocated = 0
+        for volume_obj in pool_dom.listAllVolumes():
+            # volume_obj.info(): [type, Capacity, Allocation(used)]
+            total_logic_allocated += float("%.3f" % (volume_obj.info()[1] / GB))
+
+        logic_free_size = float("%.3f" % (physic_total_size - total_logic_allocated))
+        return physic_free_size, logic_free_size
+
     def get_host_mem_info(self):
         """
-        Return HV memory info
+        Return HV memory info: free memory include free and cache
         """
         ret_mem_dict = {}
         hv_handler = self.get_handler()
@@ -495,7 +565,43 @@ class QemuVirtDriver(VirtDriver):
             return ret_mem_dict
 
         ret_mem_dict['size_total'] = float("%.3f" % (mem_info['total'] / 1024.0 / 1024.0))
-        ret_mem_dict['size_free'] = float("%.3F" % (mem_info['free'] / 1024.0 / 1024.0))
+        ret_mem_dict['size_free'] = float("%.3F" % ((mem_info['free'] + mem_info['cached']) / 1024.0 / 1024.0))
+        ret_mem_dict['size_used'] = ret_mem_dict['size_total'] - ret_mem_dict['size_free']
+        return ret_mem_dict
+
+    def get_all_allocaled_mem(self):
+        """
+        :return: return the memorys allocated to vms in logic
+        """
+        hv_handler = self.get_handler()
+
+        total_mem = 0
+        id_list = hv_handler.listDomainsID()
+        domans_list = [hv_handler.lookupByID(domain_id) for domain_id in id_list]
+        for dom in domans_list:
+            stats = dom.info()
+            allocated_mem = float("%.3f" % (stats[DOMAIN_INFO_MEM] / 1024.0 / 1024.0))
+            total_mem += allocated_mem
+
+        return total_mem
+
+    def get_host_phymem(self):
+        """
+        Return HV memory info:  free mem = cached + free
+        :return: 
+        """
+        ret_mem_dict = {}
+        hv_handler = self.get_handler()
+        try:
+            # https://libvirt.org/docs/libvirt-appdev-guide-python/en-US/html/ch03s04s16.html
+            mem_info = hv_handler.getMemoryStats(libvirt.VIR_NODE_MEMORY_STATS_ALL_CELLS)
+        except libvirtError as e:
+            log.debug(str(e))
+            log.warn("Could not get memory info")
+            return ret_mem_dict
+
+        ret_mem_dict['size_total'] = float("%.3f" % (mem_info['total'] / 1024.0 / 1024.0))
+        ret_mem_dict['size_free'] = float("%.3F" % ((mem_info['free'] + mem_info['cached']) / 1024.0 / 1024.0))
         ret_mem_dict['size_used'] = ret_mem_dict['size_total'] - ret_mem_dict['size_free']
         return ret_mem_dict
 
@@ -650,6 +756,7 @@ class QemuVirtDriver(VirtDriver):
             if self._hypervisor_handler is None:
                 self._hypervisor_handler = self.get_handler()
             for pool in self._hypervisor_handler.listAllStoragePools(libvirt.VIR_CONNECT_LIST_STORAGE_POOLS_ACTIVE):
+                pool.refresh()
                 file_name.extend(pool.listVolumes())  # listAllVolumes(flags=0) return list of object, flags is not used
 
             return file_name
@@ -737,7 +844,7 @@ class QemuVirtDriver(VirtDriver):
 
         return self.attach_disk_to_domain(inst_name, target_vol_path, disk_type)
 
-    def clone_disk(self, source_file_path, target_disk_name, storage_pool=None):
+    def clone_disk_in_pool(self, source_file_path, target_disk_name, different_pool=None):
         """
         :param source_file_path:
         :param target_disk_name:
@@ -753,7 +860,7 @@ class QemuVirtDriver(VirtDriver):
                             <allocation>0</allocation>
                             <target>
                                 <format type='%s'/>
-                                <permissions>
+                                 <permissions>
                                     <owner>107</owner>
                                     <group>107</group>
                                     <mode>0644</mode>
@@ -761,8 +868,18 @@ class QemuVirtDriver(VirtDriver):
                                 </permissions>
                             </target>
                         </volume>""" % (target_disk_name, vol_format)
-        log.info("Clone from %s to %s", source_file_path, target_disk_name)
-        pool = vol.storagePoolLookupByVolume()
+
+        log.debug("Clone from %s to %s", source_file_path, target_disk_name)
+
+        # if given the target pool name, use it to store the new disk; otherwise, use the pool same as template
+        if different_pool is not None:
+            try:
+                pool = self._hypervisor_handler.storagePoolLookupByName(different_pool)
+            except libvirtError as error:
+                log.warn("No storage found with name: %s, will use the same pool as template use", different_pool)
+                pool = vol.storagePoolLookupByVolume()
+        else:
+            pool = vol.storagePoolLookupByVolume()
         new_vol = pool.createXMLFrom(vol_clone_xml, vol, 0)  # only (name, perms) are passed for a new volume
         return new_vol
 
@@ -894,7 +1011,7 @@ class QemuVirtDriver(VirtDriver):
             try:
                 volume_info = self._hypervisor_handler.storageVolLookupByPath(file_path).info()
             except libvirtError as error:
-                log.warn("Exception: %s", error)
+                log.warn("Exception raise in get all disk when look up storage vol by path: %s", error)
                 continue
 
             disk_dize = volume_info[1] / 1024.0 / 1024.0 / 1024.0
@@ -1138,7 +1255,7 @@ if __name__ == "__main__":
     # print test.XMLDesc()
     # print test.XMLDesc(libvirt.VIR_DOMAIN_XML_INACTIVE)
 
-    # vol = virt.clone_disk("/var/lib/libvirt/images/test-7.qcow2", "clone-disk.qcow2")
+    # vol = virt.clone_disk_in_pool("/var/lib/libvirt/images/test-7.qcow2", "clone-disk.qcow2")
     # ret = virt.create_instance("new_vm", "CentOS7Mini")
 
     # print ret

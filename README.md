@@ -28,18 +28,28 @@
         start the log server in case of no permission to the directory /var/log
 
         sudo nohup python ~/dev_virt/lib/Log/logging_server.py &
+## Xenserver API Architecture
+ ![highlevel](XenserverApi-Architecture.png)
 
 ## Some phrase:
 - PIF: physical interface, the eth on server
 - VIF: virtual  interface, the eth on VM
 - SR:  storage repository, the storage pool on server
 
+# Create KVM VMS
+  1. Auto schedual the target vm to a available server, this is only available on dev env
+
+  > lain3_node.py --role=rolename --cluster=<test|xyz|kvm>
+
+  2. manually given the target vm-name, host and vm-ip. Product env should use this command
+
+  > lain3_node.py --role=rolename --name=new_vm_name --host=hostip --ip=vm_ip
 # Create multiple VMs from xml config
 - `setup_vms.py --validate xmlFile`     Validate the given xml file
 - `setup_vms.py --create   xmlFile`     Do the create up according to the xml file
 
 Create VMs with xml just need to write a xml config following the xml-example. Before really creating VMs, please run
-*setup_system.py --validate* to check your xml.
+*setup_vms.py --validate* to check your xml.
 
 ```xml
 <servers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="">
@@ -64,8 +74,13 @@ Create VMs with xml just need to write a xml config following the xml-example. B
 
   <!--here you can add another server -->
   <SERVER serverIp="192.168.1.15" user="root" passwd="xxxxxx">
+      <!--VM element: vmname, template is required, others are options -->
         <VM vmname="createViaXml2" cpucores="1" cpumax="2" minMemory="1" memory="2" maxMemory="3" template="NewTemplate">
+            <!--IP element: vifIndex and ip is required, device/network/bridge is options, if no device/network/bridge, will choose manage network as default -->
             <IP vifIndex="0" ip="192.168.1.241" device="eth1" />
+            <IP vifIndex="1" ip="192.168.1.241" network="xenbr1" />
+            <IP vifIndex="2" ip="192.168.1.242" bridge="xenbr1" />
+            <!--DISK element: size is required, storage is options, is no storage, it will choose the storage which has largest free size -->
             <DISK size="2" />
         </VM>
   </SERVER>
@@ -107,10 +122,11 @@ Create VMs with xml just need to write a xml config following the xml-example. B
     **neither *--device* nor *--network*, the default manage network will be used**
     > create_vm.py -c "test2" -t "CentOS 7.2 template" --ip=192.168.1.100 --vif=0
 
-#####  3). <b>**Create a new VM with given max cpu cores:**<b>
+#####  3). <b>**Create a new VM with given max cpu cores and current cpu cores:**<b>
   - `--cpu-max=MAX_CORES`   Config the max VCPU cores.
+  - `--cpu-cores=CPU_CORES` Config the number of startup VCPUs for the new created VM
 
-    > create_vm.py -c "test2" -t "CentOS 7.2 template" --cpu-max=2
+    > create_vm.py -c "test2" -t "CentOS 7.2 template" --cpu-core=2 --cpu-max=4
 
     The max cpu cores can be configured when VM is power off only, and it affect the upper limit when set the cpu cores lively
 
@@ -136,6 +152,11 @@ Create VMs with xml just need to write a xml config following the xml-example. B
     **if no *--storage*, will use the storage which has a largest free volume**
     > create_vm.py "test1"--add-disk=2
 
+## 3. delete_vm.py
+  To delete a vm, please use *delete_vm.py --vm=vm_to_delete*, this will ask user to input 'yes' or 'no' to confirm
+  - `delete_vm.py  --vm=vm_name [--host=ip --user=user --pwd=passwd]`
+  
+  if `--force` is set, then the additional disk on vm will also be deleted, this feature is only support on kvm now.
 
 ## 4. config_vm.py
 #### The IP and memory configuration is same as that in create VM.
@@ -154,7 +175,7 @@ Create VMs with xml just need to write a xml config following the xml-example. B
     > config_vm.py "test1"  --add-vif=1 --device=eth1 --ip=192.168.1.200 --netmask=255.255.255.0
 
 ##### 2). <b>**config a VM' cpu when it is running**<b>
-  - `--cpu-cores=CPU_CORES` Config the VCPU cores lively
+  - `--cpu-cores=CPU_CORES` Config the VCPU cores lively for a running VM or the number of startup VCPUs for a halted VM
 
       > config_vm.py "test1" --cpu-core=4
 

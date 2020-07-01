@@ -1,0 +1,34 @@
+{
+    "master": {
+        "cpu": 8,
+        "memory": 16,
+        "template": "k8s-template"
+    },
+    "ingress": {
+        "cpu": 8,
+        "memory": 16,
+        "template": "k8s-template"
+    },
+    "node": {
+        "cpu": 16,
+        "memory": 48,
+        "template": "k8s-template"
+    },
+    "etcd": {
+        "cpu": 4,
+        "memory": 8,
+        "template": "k8s-template"
+    },
+    "jenkins": {
+        "cpu": 8,
+        "memory": 32,
+        "template": "template",
+        "disk_size": 100,
+        "add_disk_num": 2
+    },
+    "normal": {
+       "cpu": 4,
+       "memory": 8,
+       "template": "nfs-template"
+    }
+}

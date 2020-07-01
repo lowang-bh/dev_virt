@@ -199,13 +199,12 @@ class ServerDomain(object):
 
     def check_ip_used(self, ip):
         """
-        check the ip from database
+        check the ip from database, include vip, first ip, and second ip
         :param ip:
         :return:
         """
-        query_data = self.db_driver.query()
-        ip_list = [d["first_ip"] for d in query_data]
-        ip_list.extend([d['second_ip'] for d in query_data])
+        from lib.Utils.schedule import fetch_used_ips_from_db
+        ip_list = fetch_used_ips_from_db()
 
         if ip in ip_list:
             return True
@@ -222,16 +221,21 @@ class ServerDomain(object):
 
         dest_metmask = ""
         dest_gateway = None
+
+        if network is not None or bridge is not None:
+            if network is not None:
+                device = self.vnet_driver.get_network_info(network).get("device", None)
+            elif bridge is not None:
+                device = self.vnet_driver.get_bridge_info(bridge).get("device", None)
+
         if device is not None:
             try:
                 device_info = self.vnet_driver.get_device_infor(device_name=device)
-                dest_metmask = device_info["netmask"]
-                dest_gateway = device_info['gateway']
+                dest_metmask = device_info.get("netmask", None)
+                dest_gateway = device_info.get('gateway', None)
+                bridge_ip = device_info.get('IP', None)
             except KeyError as error:
                 log.exception(str(error))
-        elif network is not None or bridge is not None:
-            # TODO: need to add API to get network infor accroding to network or bridge
-            pass
 
         if vif_netmask:
             if dest_metmask and dest_metmask != vif_netmask:
@@ -240,11 +244,11 @@ class ServerDomain(object):
         else:  # get the netmask on device as the default one
             vif_netmask = dest_metmask
         log.debug("VIF IP is: %s, netmask is: %s", vif_ip, vif_netmask)
-        if not vif_netmask:  # No default netmask and no given
+        if not vif_netmask:  # No default netmask on device and no given
             log.warn("No netmask given, the default one is '255.255.255.0'.")
         else:
             vif_gateway = dest_gateway if dest_gateway else None
-            if not IpCheck.is_valid_ipv4_parameter(vif_ip, vif_netmask, gateway=vif_gateway):
+            if not IpCheck.is_valid_ipv4_parameter(vif_ip, bridge_ip, vif_netmask, gateway=vif_gateway):
                 return False
 
         #  First check it from database

@@ -6,6 +6,7 @@
  Created Time: 2018-03-01 13:20:26
 '''
 from optparse import OptionParser
+
 from lib.Log.log import log
 from lib.Utils.vm_utils import VirtHostDomain
 
@@ -33,7 +34,8 @@ if __name__ == "__main__":
     parser.add_option("--memory", dest="memory_size", help="Config the target memory size in GB.")
     parser.add_option("--min-mem", dest="min_memory", help="Config the min static memory size in GB.")
     parser.add_option("--max-mem", dest="max_memory", help="Config the max static memory size in GB.")
-    parser.add_option("--cpu-max", dest="max_cores", help="Config the max VCPU cores.")
+    parser.add_option("--cpu-cores", dest="cpu_cores", help="Config the number of startup VCPUs for the new created VM")
+    parser.add_option("--cpu-max", dest="max_cores", help="Config the max number of VCPUs.")
 
     parser.add_option("--vif", dest="vif_index", help="Configure on a virtual interface device")
     parser.add_option("--device", dest="device",
@@ -128,10 +130,12 @@ if __name__ == "__main__":
             exit(1)
 
         # parse memory and vcpu config
-        max_cores, memory_size, min_memory, max_memory = None, None, None, None
+        max_cores, cpu_cores, memory_size, min_memory, max_memory =None, None, None, None, None
         try:
             if options.max_cores is not None:
                 max_cores = int(options.max_cores)
+            if options.cpu_cores is not None:
+                cpu_cores = int(options.cpu_cores)
             if options.memory_size is not None:
                 memory_size = float(options.memory_size)
             if options.min_memory is not None:
@@ -212,7 +216,7 @@ if __name__ == "__main__":
         log.info("New instance [%s] created successfully.", new_vm_name)
 
         # 2. config cpu cores and memory
-        ret = virthost.config_vcpus(new_vm_name, vcpu_max=max_cores)
+        ret = virthost.config_vcpus(new_vm_name, vcpu_max=max_cores, vcpu_nums=cpu_cores)
         if not ret:
             log.warn("Config VCPU cores failed, keep same as before...")
 

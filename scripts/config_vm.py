@@ -7,6 +7,7 @@
 '''
 
 from optparse import OptionParser
+
 from lib.Log.log import log
 from lib.Utils.vm_utils import VirtHostDomain
 
@@ -17,7 +18,7 @@ if __name__ == "__main__":
         config_vm.py vm_name --del-vif=vif_index   [--host=ip --user=user --pwd=passwd]
         config_vm.py vm_name --vif=vif_index --device=eth0 --ip=ip [--host=ip --user=user --pwd=passwd]
         config_vm.py vm_name --add-disk=size --storage=storage_name    [--host=ip --user=user --pwd=passwd]
-        config_vm.py vm_name --cpu-core=num | --cpu-max=max      [--host=ip --user=user --pwd=passwd]
+        config_vm.py vm_name --cpu-core=num --cpu-max=max      [--host=ip --user=user --pwd=passwd]
         config_vm.py vm_name --list-vif            [--host=ip --user=user --pwd=passwd]
         config_vm.py         --list-pif            [--host=ip --user=user --pwd=passwd]
         config_vm.py         --list-network        [--host=ip --user=user --pwd=passwd]
@@ -44,7 +45,8 @@ if __name__ == "__main__":
     parser.add_option("--add-disk", dest="disk_size", help="The disk size(GB) add to the VM")
     parser.add_option("--storage", dest="storage_name", help="The storage location where the virtual disk put")
 
-    parser.add_option("--cpu-cores", dest="cpu_cores", help="Config the VCPU cores lively")
+    parser.add_option("--cpu-cores", dest="cpu_cores",
+                      help="Config the number of VCPUs for a running vm or the number of VCPUs at start up for a halted vm")
     parser.add_option("--cpu-max", dest="max_cores", help="Config the max VCPU cores.")
     parser.add_option("--memory", dest="memory_size", help="Config the target memory size in GB.")
     parser.add_option("--min-mem", dest="min_memory", help="Config the min static memory size in GB.")

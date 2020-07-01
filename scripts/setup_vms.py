@@ -17,8 +17,8 @@ from lib.Utils.vm_utils import VirtHostDomain
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
-        setup_system.py --validate xmlFile
-        setup_system.py --create   xmlFile
+        setup_vms.py --validate xmlFile
+        setup_vms.py --create   xmlFile
         """
     parser = OptionParser(usage=usage)
     parser.add_option("--validate", dest="validate", action="store_true", help="Validate the given xml file")
