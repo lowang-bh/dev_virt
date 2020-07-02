@@ -36,14 +36,35 @@
 - VIF: virtual  interface, the eth on VM
 - SR:  storage repository, the storage pool on server
 
-# Create KVM VMS
-  1. Auto schedual the target vm to a available server, this is only available on dev env
+# Create KVM VMs Auto Schedule
 
-  > lain3_node.py --role=rolename --cluster=<test|xyz|kvm>
+  Note: `schedule_node.py` can auto schedule the wanted vm to a available server  
+  you can list the supported role with `--list-roles`, if there is no role you want, you can define a new one  
+  in `etc/Nodeconfig.json`, each role is a dict defined the cpu, memory, etc. You can define `k8s-master`,  
+  `k8s-node`, `etcd` template as you want.  
+  
+  for example:
+  
+  ```
+      "jenkins": {
+        "cpu": 8,
+        "memory": 32,
+        "template": "template",
+        "disk_size": 100,
+        "add_disk_num": 2
+    }
+  ```
 
-  2. manually given the target vm-name, host and vm-ip. Product env should use this command
+##  1. Auto schedual the target vm to a available server
 
-  > lain3_node.py --role=rolename --name=new_vm_name --host=hostip --ip=vm_ip
+  > schedule_node.py --role=rolename --cluster=<dev|test|prod>
+  
+  > Note: user can define the vm-name rule at function `generate_vmname_key(role, cluster)` in file `lib/Utils/schedule.py`
+
+##  2. manually given the target vm-name, host and vm-ip.
+
+  > schedule_node.py --role=rolename --name=new_vm_name --host=hostip --ip=vm_ip
+  
 # Create multiple VMs from xml config
 - `setup_vms.py --validate xmlFile`     Validate the given xml file
 - `setup_vms.py --create   xmlFile`     Do the create up according to the xml file
@@ -102,13 +123,13 @@ Create VMs with xml just need to write a xml config following the xml-example. B
   - `--list-network`        List the bridge/switch network in the host
   - `--list-SR`             List the storage repository infor in the host
 
-#####  1). <b>**Create a new VM with a template:**<b>
+#####  2.1). <b>**Create a new VM with a template:**<b>
   - `-c VM_NAME, --create=VM_NAME`                        Create a new VM with a template.
   - `-t TEMPLATE, --templ=TEMPLATE`                       Template used to create a new VM.
 
-    > create_vm.py -c "test_vm" -t "CentOS 7.2 for Lain"
+    > create_vm.py -c "test_vm" -t "CentOS 7.2 Template"
 
-#####  2). <b>**Create a new VM with a given IP: if a IP specified**<b>
+#####  2.2). <b>**Create a new VM with a given IP: if a IP specified**<b>
   - `--vif=VIF_INDEX`      The index of virtual interface on which configure will be
   - `--device=DEVICE`      The target physic NIC name with an associated network VIF attach(ed) to
   - `--network=NETWORK`    The target bridge/switch network which VIF connect(ed) to
@@ -122,7 +143,7 @@ Create VMs with xml just need to write a xml config following the xml-example. B
     **neither *--device* nor *--network*, the default manage network will be used**
     > create_vm.py -c "test2" -t "CentOS 7.2 template" --ip=192.168.1.100 --vif=0
 
-#####  3). <b>**Create a new VM with given max cpu cores and current cpu cores:**<b>
+#####  2.3). <b>**Create a new VM with given max cpu cores and current cpu cores:**<b>
   - `--cpu-max=MAX_CORES`   Config the max VCPU cores.
   - `--cpu-cores=CPU_CORES` Config the number of startup VCPUs for the new created VM
 
@@ -130,7 +151,7 @@ Create VMs with xml just need to write a xml config following the xml-example. B
 
     The max cpu cores can be configured when VM is power off only, and it affect the upper limit when set the cpu cores lively
 
-#####  4). <b>**Create a new VM with memory size:**<b>
+#####  2.4). <b>**Create a new VM with memory size:**<b>
   - `--memory=MEMORY_SIZE`  Config the target memory size in GB.
   - `--min-mem=MIN_MEMORY`  Config the min static memory size in GB.
   - `--max-mem=MAX_MEMORY`  Config the max static memory size in GB.
@@ -144,7 +165,7 @@ Create VMs with xml just need to write a xml config following the xml-example. B
   - `--max-mem will set the max static memory `
     > create_vm.py -c "test2" -t "CentOS 7.2 template" --memory=2 --max-mem=4
 
-##### 5).Add new disk to VM, the storage_name is choosed from *--list-SR*
+##### 2.5).Add new disk to VM, the storage_name is choosed from *--list-SR*
   - `--add-disk=DISK_SIZE`  The disk size(GB) add to the VM
   - `--storage=STORAGE_NAME` The storage location where the virtual disk put
     > create_vm.py "test1"--add-disk=2 --storage=data2
@@ -165,7 +186,7 @@ Create VMs with xml just need to write a xml config following the xml-example. B
   - `--list-network`        List the bridge/switch network in the host
   - `--list-SR`             List the storage repository information in the host
 
-##### 1). <b>**Config a VM's interface, add a VIF, delete a VIF, config a VIF(will delete old one if exist, otherwise create it newly), and the *--ip*, *--device*, *--network* is same as that when create vm**<b>
+##### 4.1). <b>**Config a VM's interface, add a VIF, delete a VIF, config a VIF(will delete old one if exist, otherwise create it newly), and the *--ip*, *--device*, *--network* is same as that when create vm**<b>
   - `--add-vif=ADD_INDEX`   Add a virtual interface device to guest VM
   - `--del-vif=DEL_INDEX`   Delete a virtual interface device from guest VM
   - `--vif=VIF_INDEX`      Configure on a virtual interface device
@@ -174,17 +195,17 @@ Create VMs with xml just need to write a xml config following the xml-example. B
 
     > config_vm.py "test1"  --add-vif=1 --device=eth1 --ip=192.168.1.200 --netmask=255.255.255.0
 
-##### 2). <b>**config a VM' cpu when it is running**<b>
+##### 4.2). <b>**config a VM' cpu when it is running**<b>
   - `--cpu-cores=CPU_CORES` Config the VCPU cores lively for a running VM or the number of startup VCPUs for a halted VM
 
       > config_vm.py "test1" --cpu-core=4
 
-##### 3). <b>**config a VM' memory when it is running**<b>
+##### 4.3). <b>**config a VM' memory when it is running**<b>
   - `--memory=MEMORY_SIZE`  Config the target memory size in GB.
 
     > config_vm.py "test1" --memory=1
 
-##### 4).Add new disk to VM, the storage_name is choosed from *--list-SR*
+##### 4.4).Add new disk to VM, the storage_name is choosed from *--list-SR*
   - `--add-disk=DISK_SIZE`  The disk size(GB) add to the VM
   - `--storage=STORAGE_NAME` The storage location where the virtual disk put
     > config_vm.py "test1"--add-disk=2 --storage=data2

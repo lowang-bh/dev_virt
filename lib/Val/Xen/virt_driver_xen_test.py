@@ -14,7 +14,7 @@ class XenVirtDriverTestCase(unittest.TestCase):
 
     def setUp(self):
         self.virt_driver = XenVirtDriver(hostname="192.168.1.2", user="root", passwd="123456")
-        self.vms = ['t2-dev16', 't2-jenkins-lain2', 't2-dev24', 't2-dev23', 't2-dev25', 't2-dev26', 't2-dev22']
+        self.vms = ['t2-dev16', 't2-jenkins', 't2-dev24', 't2-dev23', 't2-dev25', 't2-dev26', 't2-dev22']
 
     def tearDown(self):
         self.virt_driver.delete_handler()
@@ -29,7 +29,7 @@ class XenVirtDriverTestCase(unittest.TestCase):
             self.assertEqual(vm in dst_vms, True, "%s not there" % vm)
 
     def test_get_template_list(self):
-        templates = ["CentOS 7.2 for Lain"]
+        templates = ["CentOS 7.2 Template"]
         dst_templates = self.virt_driver.get_templates_list()
         self.assertNotEqual(dst_templates, [], "get_templates_list() return []")
         for templ in templates:

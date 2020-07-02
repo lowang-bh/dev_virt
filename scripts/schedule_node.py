@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
- File Name: lain3_node.py
+ File Name: schedule_node.py
  Author: longhui
  Created Time: 2019-04-24 10:44:45
- Description: Add  lain3 node for k8s cluster 
+ Description: schedule different type of node to server, for k8s, jenkins, etcd cluster and so on 
 """
 import json
 import os
@@ -19,9 +19,9 @@ from lib.Utils.vm_utils import VirtHostDomain
 
 if __name__ == "__main__":
     usage = """usage: %prog [options] arg1 arg2\n
-        lain3_node.py --role=rolename --cluster=[test|xyz|kvm]
-        lain3_node.py --role=rolename --name=new_vm_name --host=hostip --ip=vm_ip
-        lain3_node.py --list-roles
+        schedule_node.py --role=rolename --cluster=[test|xyz|kvm]
+        schedule_node.py --role=rolename --name=new_vm_name --host=hostip --ip=vm_ip
+        schedule_node.py --list-roles
         """
     parser = OptionParser(usage=usage)
     parser.add_option("--role", dest="rolename", help="Config the target role of vm to create.")
@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     config_dict = template_dict
     try:
-        config_file = os.path.join(os.path.dirname(__file__), "../etc/lain3Nodeconfig.json")
+        config_file = os.path.join(os.path.dirname(__file__), "../etc/Nodeconfig.json")
         with open(config_file, "r") as f:
             try:
                 config = json.load(f)
@@ -69,7 +69,7 @@ if __name__ == "__main__":
         log.fail("Does not support role: %s", options.rolename)
         exit(1)
 
-    # if "--cluster" is given, use  command "lain3_node.py --role=rolename --cluster=cluster-name" 
+    # if "--cluster" is given, use  command "schedule_node.py --role=rolename --cluster=cluster-name" 
     if options.cluster is not None:
         cluster_name = options.cluster
         #  when no input, find default server and default vmname and IP
@@ -90,7 +90,7 @@ if __name__ == "__main__":
             exit(1)
 
     else:
-        # use command "lain3_node.py --role=rolename  --name=new_vm_name --host=hostip --ip=vm_ip"
+        # use command "schedule_node.py --role=rolename  --name=new_vm_name --host=hostip --ip=vm_ip"
         if options.hostip is None or options.new_vm_name is None or options.vm_ip is None:
             log.fail("'--name=new_vm_name --host=hostip --ip=vm_ip' is required when with no '--cluster'.")
             exit(1)

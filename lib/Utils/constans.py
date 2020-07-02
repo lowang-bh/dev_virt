@@ -4,13 +4,13 @@
  File Name: constans.py
  Author: longhui
  Created Time: 2019-04-24 11:07:34
- Description: lain3 node for k8s cluster default config
+ Description: different role of node with default config
 """
 template_dict = {
 
-    "master": {"cpu": 8, "memory": 16, "template": "k8s-template"},
-    "ingress": {"cpu": 8, "memory": 16, "template": "k8s-template"},
-    "node": {"cpu": 16, "memory": 32, "template": "k8s-template", "disk_size": 200, "add_disk_num": 1},
+    "k8s-master": {"cpu": 8, "memory": 16, "template": "k8s-template"},
+    "k8s-ingress": {"cpu": 8, "memory": 16, "template": "k8s-template"},
+    "k8s-node": {"cpu": 16, "memory": 32, "template": "k8s-template", "disk_size": 200, "add_disk_num": 1},
     "etcd": {"cpu": 4, "memory": 8, "template": "k8s-template", "disk_size": 100, "add_disk_num": 1},
     "jenkins": {"cpu": 8, "memory": 32, "template": "template", "disk_size": 100, "add_disk_num": 2},
     }
