@@ -18,9 +18,9 @@ class DbFactory(object):
         :param table_class: the table class define in app folder
         :return:
         """
-        if table_class == "Host": # Physical server
+        if table_class == "Host":  # Physical server
             return HostDriver()
-        elif table_class == "VirtHost": # Virtual machine
+        elif table_class == "VirtHost":  # Virtual machine
             return VirtualHostDriver()
         else:
             raise NotImplementedError()
