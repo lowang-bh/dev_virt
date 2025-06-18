@@ -1,7 +1,7 @@
 six
 ipaddress
 requests
-urllib3==1.26.19
+urllib3==2.5.0
 chardet
 certifi
 idna
